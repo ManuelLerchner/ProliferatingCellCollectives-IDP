@@ -1,5 +1,5 @@
 import numpy as np
-from matplotlib import transforms
+from matplotlib import cm, transforms
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Arrow, Circle, Rectangle
 
@@ -40,7 +40,6 @@ class Spherocylinder:
         self.text = None
         self.ax = None
         self.to_delete = False
-        self.debug = []
 
     def grow(self, dt, tao, lamb):
         """Grow the particle based on stress and growth rate."""
@@ -143,7 +142,7 @@ class Spherocylinder:
         # Update text position
         if hasattr(self, 'text'):
             self.text.set_position(
-                (self.position[0], self.position[1] + self.diameter))
+                (self.position[0], self.position[1]))
 
             # Show velocity and other information
             lin_vel = np.linalg.norm(self.linear_velocity)
@@ -153,7 +152,7 @@ class Spherocylinder:
                 self.text.set_alpha(alpha)
             else:
                 self.text.set_text(
-                    f'L:{self.length:.1f} S:{self.stress:.1f} V:{lin_vel:.1f} ω:{np.linalg.norm(self.angular_velocity):.1f}')
+                    f'L:{self.length:.1f}\nS:{self.stress:.1f}')
 
         # Update rod body
         self.rod.set_width(self.length - self.diameter)
@@ -161,12 +160,16 @@ class Spherocylinder:
 
         # Set color based on length
         # length = black and l = white transition via green. Smooth transition
-        colors = [(0, 0.2, 0), (0, 1, 0), (0.8, 1, 0.8)]
+        colors = [(0.1, 0.3, 0), (0.6, 1, 0), (0.5, 1, 0.2)]
         cmap = LinearSegmentedColormap.from_list(
             'mycmap', colors, N=256)
         color_index = int((self.length / self.max_length) * 255)
         color_index = min(color_index, 255)
         color = cmap(color_index)
+
+        cmap_border = cm.get_cmap('Reds', 256)
+        color_index_border = int((self.stress) * 255)
+        color_index_border = min(color_index_border, 255)
 
         # For ghost particles, use a different color or adjust transparency
         if ghost:
@@ -178,6 +181,10 @@ class Spherocylinder:
         self.rod.set_facecolor(color)
         self.cap1.set_facecolor(color)
         self.cap2.set_facecolor(color)
+
+        self.rod.set_edgecolor(cmap_border(color_index_border))
+        self.cap1.set_edgecolor(cmap_border(color_index_border))
+        self.cap2.set_edgecolor(cmap_border(color_index_border))
 
         # Set alpha for all elements
         self.rod.set_alpha(alpha)
@@ -191,6 +198,17 @@ class Spherocylinder:
         t.rotate_around(
             self.position[0], self.position[1], self.orientation)
         self.rod.set_transform(t + ax.transData)
+
+    def delete_visual_elements(self):
+        """Delete the visual elements of the spherocylinder."""
+        if self.rod is not None:
+            self.rod.remove()
+        if self.cap1 is not None:
+            self.cap1.remove()
+        if self.cap2 is not None:
+            self.cap2.remove()
+        if self.text is not None:
+            self.text.remove()
 
     def check_overlap(self, other):
         """
@@ -237,13 +255,9 @@ class Spherocylinder:
             # Contact point is halfway between the closest points
             contact_point = (closest_p1 + closest_p2) / 2
 
-            # Add debug visualization
-            c1 = Circle(contact_point, 0.1, color='red', zorder=100)
-            self.debug.append(c1)
-
             return True, overlap, contact_point, normal
 
-        return False, 0, None, None
+        return False, overlap, None, None
 
     def minimum_distance_between_line_segments(self, a0, a1, b0, b1, clampAll=False, clampA0=False, clampA1=False, clampB0=False, clampB1=False):
         ''' Given two lines defined by numpy.array pairs (a0,a1,b0,b1)

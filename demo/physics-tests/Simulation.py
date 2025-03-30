@@ -2,6 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
 from Spherocylinder import Spherocylinder
+from tqdm import tqdm
+import time
+
+import nest_asyncio
+nest_asyncio.apply()
 
 
 class Simulation:
@@ -44,6 +49,11 @@ class Simulation:
         self.energy_text = self.ax.text(
             0.02, 0.98, f'',
             transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
+        self.time_text = self.ax.text(
+            0.02, 0.92, f'',
+            transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
+        self.total_time = 0.0
+        self.time_last_frame = 0.0
 
     def create_ghost_particles(self):
         """
@@ -51,6 +61,8 @@ class Simulation:
         Ghost particles are copies of real particles that are placed just outside
         the boundary to simulate periodic interactions.
         """
+        for ghost in self.ghost_particles:
+            ghost.delete_visual_elements()
         self.ghost_particles = []  # Clear previous ghosts
 
         # Define offsets for ghost particles (8 surrounding regions)
@@ -127,11 +139,13 @@ class Simulation:
         for i, particle_i in enumerate(self.particles):
             # Real-to-real particle interactions
             for j, particle_j in enumerate(self.particles[i+1:], i+1):
-                overlapping, _, _, _ = particle_i.check_overlap(particle_j)
-                if overlapping:
+                overlapping, overlap, _, _ = particle_i.check_overlap(
+                    particle_j)
+                penalty = np.exp(overlap) - np.exp(-0.5)
+                if overlap > -0.5:
                     # Simple model: each overlap adds to stress
-                    particle_i.stress += 1
-                    particle_j.stress += 1
+                    particle_i.stress += penalty
+                    particle_j.stress += penalty
 
             # Real-to-ghost particle interactions
             for ghost_j in self.ghost_particles:
@@ -139,23 +153,11 @@ class Simulation:
                 if hasattr(ghost_j, 'real_particle') and ghost_j.real_particle == particle_i:
                     continue
 
-                overlapping, _, _, _ = particle_i.check_overlap(ghost_j)
-                if overlapping:
-                    # Add stress to the real particle
-                    particle_i.stress += 1
-                    # Add stress to the real particle that the ghost represents
-                    if hasattr(ghost_j, 'real_particle'):
-                        ghost_j.real_particle.stress += 1
-
-        # Normalize stresses
-        max_stress = 1.0
-        for particle in self.particles:
-            if particle.stress > max_stress:
-                max_stress = particle.stress
-
-        if max_stress > 0:
-            for particle in self.particles:
-                particle.stress /= max_stress
+                overlapping, overlap, _, _ = particle_i.check_overlap(ghost_j)
+                penalty = np.exp(overlap) - np.exp(-0.5)
+                if overlap > -0.5:
+                    # Simple model: each overlap adds to stress
+                    particle_i.stress += penalty
 
     def handle_collisions(self):
         """Apply torque-based collision response between particles."""
@@ -291,11 +293,13 @@ class Simulation:
                 self.particles.append(new_particle_right)
 
                 particle.to_delete = True  # Mark for deletion
+                particle.delete_visual_elements()
         # Remove marked particles
         self.particles = [p for p in self.particles if not p.to_delete]
 
-    def update(self, dt=0.1):
+    def update(self, dt):
         """Update the simulation for one time step."""
+
         # Handle collisions and apply torques
         self.handle_collisions()
 
@@ -322,6 +326,7 @@ class Simulation:
 
         # Calculate total energy
         self.calculate_energy()
+        self.total_time += dt
 
     def calculate_energy(self):
         """Calculate the total energy of the system."""
@@ -335,52 +340,38 @@ class Simulation:
             total_energy += translational_energy + rotational_energy
 
         self.energy_text.set_text(
-            f'Total Energy: {total_energy:.2f}'
+            f'Total Energy: {total_energy:.2E}'
         )
 
-    def animate(self, frame, dt=0.1):
+    def animate(self, frame, base_dt, scaling_factor):
         """Animation function for matplotlib."""
+
+        dt = base_dt / (1 + len(self.particles) * scaling_factor)
+
         # Update the simulation
         self.update(dt)
 
         # Return all visual elements that need to be redrawn
-        visual_elements = [self.energy_text]
+        visual_elements = [self.energy_text, self.time_text]
+        self.time_text.set_text(
+            f'Frame:{frame}, Time: {self.total_time:.2f}, Δt: {dt:.2f}')
 
         # Draw real particles
         for particle in self.particles:
             visual_elements.extend(
                 [particle.rod, particle.cap1, particle.cap2, particle.text])
-            # Add debug circles
-            for circle in particle.debug:
-                visual_elements.append(circle)
-                self.ax.add_patch(circle)
-            # Clear debug circles after drawing
-            particle.debug = []
 
         # Optionally, draw ghost particles for visualization (with different color/transparency)
         if hasattr(self, 'show_ghosts') and self.show_ghosts:
             for ghost in self.ghost_particles:
                 ghost.update_visual_elements(
                     self.ax, alpha=0.3, ghost=True)  # Lower alpha for ghosts
-                visual_elements.extend([ghost.rod, ghost.cap1, ghost.cap2])
+                visual_elements.extend([ghost.rod, ghost.cap1, ghost.cap2,ghost.text])
 
         return visual_elements
 
-    def run_simulation(self, num_frames=500, dt=0.1, interval=50, show_ghosts=False):
-        """
-        Run the animation for the specified number of frames.
+    def run_simulation(self, frames=500, base_dt=0.1, scaling_factor=0.5, interval=50, show_ghosts=False):
 
-        Parameters:
-        -----------
-        num_frames : int
-            Number of frames to simulate
-        dt : float
-            Time step for simulation
-        interval : int
-            Interval between animation frames in milliseconds
-        show_ghosts : bool
-            Whether to visualize ghost particles
-        """
         self.show_ghosts = show_ghosts
 
         # Initial update of visual elements
@@ -388,7 +379,9 @@ class Simulation:
             particle.update_visual_elements(self.ax)
 
         # Create and run animation
-        anim = FuncAnimation(self.fig, self.animate, frames=num_frames,
-                             interval=interval, blit=True, fargs=(dt,))
-        plt.show()
+        anim = FuncAnimation(self.fig, self.animate,
+                             repeat=False,
+                             frames=frames,
+                             interval=interval, blit=True, fargs=(base_dt,
+                                                                  scaling_factor))
         return anim
