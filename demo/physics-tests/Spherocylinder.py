@@ -153,7 +153,7 @@ class Spherocylinder:
                 self.text.set_alpha(alpha)
             else:
                 self.text.set_text(
-                    f'L:{self.length:.1f} S:{self.stress:.1f} V:{lin_vel:.1f} ω:{self.angular_velocity:.1f}')
+                    f'L:{self.length:.1f} S:{self.stress:.1f} V:{lin_vel:.1f} ω:{np.linalg.norm(self.angular_velocity):.1f}')
 
         # Update rod body
         self.rod.set_width(self.length - self.diameter)
@@ -214,6 +214,11 @@ class Spherocylinder:
         # Calculate minimum distance between the two line segments
         closest_p1, closest_p2, min_dist = self.minimum_distance_between_line_segments(
             p1, p2, q1, q2, clampA0=True, clampA1=True, clampB0=True, clampB1=True)
+
+        if closest_p1 is not None:
+            closest_p1 = closest_p1[:2]
+        if closest_p2 is not None:
+            closest_p2 = closest_p2[:2]
 
         # Calculate sum of radii
         sum_radii = (diameter1 + diameter2) / 2.0

@@ -6,10 +6,10 @@ from Spherocylinder import Spherocylinder
 if __name__ == "__main__":
     # Create and run simulation with drag
     l0 = 1.0
-    lambbda = 1e-4
+    lambbda = 1e-3
     friction_factor = 0.1
 
-    tao_growtscale = 100
+    tao_growtscale = 30
     lambda_dimensionless = (tao_growtscale / friction_factor) * l0**2 * lambbda
 
     sim = Simulation(
@@ -66,4 +66,4 @@ if __name__ == "__main__":
     sim.fig.canvas.mpl_connect('button_press_event', on_click)
     sim.fig.canvas.mpl_connect('key_press_event', on_key)
 
-    sim.run_simulation(num_frames=500, dt=0.1, interval=50, show_ghosts=True)
+    sim.run_simulation(num_frames=500, dt=0.01, interval=50, show_ghosts=True)
