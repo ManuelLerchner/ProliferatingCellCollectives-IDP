@@ -1,297 +1,51 @@
+from timeit import timeit
 import numpy as np
 from matplotlib import cm, transforms
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Arrow, Circle, Rectangle
+from numba import jit
 
 
 class Spherocylinder:
     """
     Class representing a single spherocylinder particle with growth dynamics, torque-based collision response,
-    and background drag.
+    and background drag. Uses velocity Verlet integration for better numerical stability.
     """
 
-    def __init__(self, position, linear_velocity, angular_velocity, orientation, l0):
-        self.position = np.array(position, dtype=float)
-        self.orientation = float(orientation)
-        self.l0 = float(l0)
-        self.length = float(l0)
-        self.max_length = float(2 * l0)
-        self.diameter = 0.5 * l0
+    # Pre-compute color maps for reuse across all instances
+    _length_colors = [(0.2, 0.5, 0.2), (0, 0.5, 0),
+                      (0, 1, 0), (0.5, 1, 0.5), (0.5, 1, 0.5)]
+    _length_cmap = LinearSegmentedColormap.from_list(
+        'length_cmap', _length_colors, N=256)
+    _stress_cmap = cm.get_cmap('Reds', 256)
 
-        # Derived properties
-        self.stress = 0.0
-
-        # Physical properties for collision response
-        self.angular_velocity = angular_velocity
-        self.linear_velocity = linear_velocity
-        self.mass = l0 * self.diameter  # Simple mass model
-        # Simple moment of inertia for a rod
-        self.moment_of_inertia = (l0**3 * self.diameter) / 12
-
-        # Collision parameters
-        self.restitution = 0.5  # Coefficient of restitution
-        self.friction = 0.3     # Friction coefficient
-        self.torque = 0.0       # Current torque applied to particle
-
-        # Visual representation
-        self.rod = None
-        self.cap1 = None
-        self.cap2 = None
-        self.text = None
-        self.ax = None
-        self.to_delete = False
-
-    def grow(self, dt, tao, lamb):
-        """Grow the particle based on stress and growth rate."""
-        growth = (self.length/tao) * np.exp(
-            -lamb * self.stress)
-
-        self.length += growth * dt
-        self.length = min(self.length, self.max_length)
-
-        # Update mass and moment of inertia as the particle grows
-        self.mass = self.length * self.diameter
-        self.moment_of_inertia = (self.length**3 * self.diameter) / 12
-
-    def move(self, dt, box_size):
-        """
-        Move the particle with background drag effects.
-
-        Parameters:
-        -----------
-        base_velocity : float
-            Base self-propulsion speed
-        dt : float
-            Time step
-        box_size : float
-            Size of the simulation box for periodic boundaries
-        linear_drag_coeff : float
-            Coefficient for linear drag (resistance to linear motion)
-        angular_drag_coeff : float
-            Coefficient for angular drag (resistance to rotation)
-        """
-
-        # Combine self-propulsion with collision-induced velocity
-        total_velocity = self.linear_velocity
-
-        # Apply motion
-        self.position += dt * total_velocity
-
-        # Apply torque to update orientation
-        self.apply_torque(dt)
-
-        # Apply periodic boundary conditions
-        self.position[0] = self.position[0] % box_size
-        self.position[1] = self.position[1] % box_size
-
-    def apply_torque(self, dt):
-        """Apply torque to update angular velocity and orientation."""
-        # Update angular velocity based on torque
-        angular_acceleration = self.torque / self.moment_of_inertia
-        self.angular_velocity += angular_acceleration * dt
-
-        # Update orientation based on angular velocity
-        self.orientation += self.angular_velocity * dt
-        self.orientation = self.orientation % (2 * np.pi)
-
-        # Reset torque
-        self.torque = 0.0
-
-    def get_endpoints(self):
-        """Get the coordinates of the two endpoints of the spherocylinder."""
-        half_length = self.length / 2
-        orientation_vector = np.array(
-            [np.cos(self.orientation), np.sin(self.orientation)])
-        end1 = self.position + \
-            (half_length - self.diameter / 2.0) * orientation_vector
-        end2 = self.position - \
-            (half_length - self.diameter / 2.0) * orientation_vector
-        return end1, end2
-
-    def initialize_visual_elements(self, ax):
-        """Initialize the visual representation of the spherocylinder."""
-        # Create rod body
-        self.ax = ax
-
-        self.rod = Rectangle((0, 0), 0, 0, fill=True, ec='black', zorder=3)
-        ax.add_patch(self.rod)
-
-        # Create end caps
-        self.cap1 = Circle((0, 0), self.diameter / 2, fill=True,
-                           ec='black', zorder=2)
-        self.cap2 = Circle((0, 0), self.diameter / 2, fill=True,
-                           ec='black', zorder=2)
-        ax.add_patch(self.cap1)
-        ax.add_patch(self.cap2)
-
-        # add text with current length
-        self.text = ax.text(0, 0, '', fontsize=8,
-                            ha='center', va='center', color='black',
-                            zorder=3)
-
-    def update_visual_elements(self, ax, alpha=1.0, ghost=False):
-        # Initialize visual elements if they don't exist
-        if not hasattr(self, 'rod') or not all([self.rod, self.cap1, self.cap2, self.text]):
-            self.initialize_visual_elements(ax)
-
-        # Update end caps positions
-        end1, end2 = self.get_endpoints()
-        self.cap1.set_center(end1)
-        self.cap2.set_center(end2)
-
-        # Update text position
-        if hasattr(self, 'text'):
-            self.text.set_position(
-                (self.position[0], self.position[1]))
-
-            # Show velocity and other information
-            lin_vel = np.linalg.norm(self.linear_velocity)
-            if ghost:
-                # If this is a ghost particle, use a different label
-                self.text.set_text('Ghost')
-                self.text.set_alpha(alpha)
-            else:
-                self.text.set_text(
-                    f'L:{self.length:.1f}\nS:{self.stress:.1f}')
-
-        # Update rod body
-        self.rod.set_width(self.length - self.diameter)
-        self.rod.set_height(self.diameter)
-
-        # Set color based on length
-        # length = black and l = white transition via green. Smooth transition
-        colors = [(0.1, 0.3, 0), (0.6, 1, 0), (0.5, 1, 0.2)]
-        cmap = LinearSegmentedColormap.from_list(
-            'mycmap', colors, N=256)
-        color_index = int((self.length / self.max_length) * 255)
-        color_index = min(color_index, 255)
-        color = cmap(color_index)
-
-        cmap_border = cm.get_cmap('Reds', 256)
-        color_index_border = int((self.stress) * 255)
-        color_index_border = min(color_index_border, 255)
-
-        # For ghost particles, use a different color or adjust transparency
-        if ghost:
-            # Option 1: Use different color for ghosts (light blue)
-            color = (0.5, 0.5, 1.0, alpha)
-            # Option 2: Just adjust transparency of normal color
-            # color = (*color[:3], alpha)
-
-        self.rod.set_facecolor(color)
-        self.cap1.set_facecolor(color)
-        self.cap2.set_facecolor(color)
-
-        self.rod.set_edgecolor(cmap_border(color_index_border))
-        self.cap1.set_edgecolor(cmap_border(color_index_border))
-        self.cap2.set_edgecolor(cmap_border(color_index_border))
-
-        # Set alpha for all elements
-        self.rod.set_alpha(alpha)
-        self.cap1.set_alpha(alpha)
-        self.cap2.set_alpha(alpha)
-
-        # Update rod position and rotation
-        t = transforms.Affine2D().translate(
-            self.position[0] - (self.length - self.diameter) / 2,
-            self.position[1] - self.diameter / 2)
-        t.rotate_around(
-            self.position[0], self.position[1], self.orientation)
-        self.rod.set_transform(t + ax.transData)
-
-    def delete_visual_elements(self):
-        """Delete the visual elements of the spherocylinder."""
-        if self.rod is not None:
-            self.rod.remove()
-        if self.cap1 is not None:
-            self.cap1.remove()
-        if self.cap2 is not None:
-            self.cap2.remove()
-        if self.text is not None:
-            self.text.remove()
-
-    def check_overlap(self, other):
-        """
-        Check if two spherocylinders overlap.
-
-        Parameters:
-        other (Spherocylinder): Another spherocylinder to check against
-
-        Returns:
-        bool: True if the spherocylinders overlap, False otherwise
-        distance: Minimum distance between line segments (negative if overlapping)
-        contact_point: Point of contact between the two spherocylinders
-        normal: Normal vector at the point of contact
-        """
-        # Get line segments
-        p1, p2 = self.get_endpoints()
-        q1, q2 = other.get_endpoints()
-        diameter1 = self.diameter
-        diameter2 = other.diameter
-
-        # Calculate minimum distance between the two line segments
-        closest_p1, closest_p2, min_dist = self.minimum_distance_between_line_segments(
-            p1, p2, q1, q2, clampA0=True, clampA1=True, clampB0=True, clampB1=True)
-
-        if closest_p1 is not None:
-            closest_p1 = closest_p1[:2]
-        if closest_p2 is not None:
-            closest_p2 = closest_p2[:2]
-
-        # Calculate sum of radii
-        sum_radii = (diameter1 + diameter2) / 2.0
-        overlap = sum_radii - min_dist
-
-        # If they overlap, return contact information
-        if overlap > 0:
-            # Normal vector pointing from other to self at contact point
-            normal = closest_p1 - closest_p2
-            if np.linalg.norm(normal) > 0:
-                normal = normal / np.linalg.norm(normal)
-            else:
-                # If points are exactly the same, use an arbitrary normal
-                normal = np.array([1.0, 0.0])
-
-            # Contact point is halfway between the closest points
-            contact_point = (closest_p1 + closest_p2) / 2
-
-            return True, overlap, contact_point, normal
-
-        return False, overlap, None, None
-
-    def minimum_distance_between_line_segments(self, a0, a1, b0, b1, clampAll=False, clampA0=False, clampA1=False, clampB0=False, clampB1=False):
-        ''' Given two lines defined by numpy.array pairs (a0,a1,b0,b1)
-            Return the closest points on each segment and their distance
-        '''
-        # Convert to 3d
-        a0 = np.array([a0[0], a0[1], 0])
-        a1 = np.array([a1[0], a1[1], 0])
-        b0 = np.array([b0[0], b0[1], 0])
-        b1 = np.array([b1[0], b1[1], 0])
-
+    # Static method for distance calculation
+    @staticmethod
+    @jit(nopython=True)
+    def minimum_distance_between_line_segments(a0: np.ndarray, a1: np.ndarray, b0: np.ndarray, b1: np.ndarray,
+                                               clampAll=False, clampA0=False, clampA1=False, clampB0=False, clampB1=False):
         # If clampAll=True, set all clamps to True
         if clampAll:
-            clampA0 = True
-            clampA1 = True
-            clampB0 = True
-            clampB1 = True
+            clampA0 = clampA1 = clampB0 = clampB1 = True
 
-        # Calculate denomitator
+        # Direction vectors
         A = a1 - a0
         B = b1 - b0
+
+        # Magnitudes
         magA = np.linalg.norm(A)
         magB = np.linalg.norm(B)
 
-        _A = A / magA
-        _B = B / magB
+        # Normalized direction vectors
+        _A = A / magA if magA > 0 else np.zeros_like(A)
+        _B = B / magB if magB > 0 else np.zeros_like(B)
 
-        cross = np.cross(_A, _B)
-        denom = np.linalg.norm(cross)**2
+        # Cross product in 2D space (scalar)
+        cross = _A[0] * _B[1] - _A[1] * _B[0]
+        denom = cross * cross
 
-        # If lines are parallel (denom=0) test if lines overlap.
-        # If they don't overlap then there is a closest point solution.
-        # If they do overlap, there are infinite closest positions, but there is a closest distance
-        if not denom:
+        # If lines are parallel (denom=0)
+        if denom < 1e-8:  # Use small epsilon instead of exactly 0
             d0 = np.dot(_A, (b0-a0))
 
             # Overlap only possible with clamping
@@ -316,12 +70,10 @@ class Spherocylinder:
             return None, None, np.linalg.norm(((d0*_A)+a0)-b0)
 
         # Lines criss-cross: Calculate the projected closest points
-        t = (b0 - a0)
-        detA = np.linalg.det([t, _B, cross])
-        detB = np.linalg.det([t, _A, cross])
-
-        t0 = detA/denom
-        t1 = detB/denom
+        # Use direct calculation instead of determinants
+        t = b0 - a0
+        t0 = (t[0] * _B[1] - t[1] * _B[0]) / cross
+        t1 = (t[0] * _A[1] - t[1] * _A[0]) / cross
 
         pA = a0 + (_A * t0)  # Projected closest point on segment A
         pB = b0 + (_B * t1)  # Projected closest point on segment B
@@ -357,3 +109,219 @@ class Spherocylinder:
                 pA = a0 + (_A * dot)
 
         return pA, pB, np.linalg.norm(pA-pB)
+
+    def __init__(self, position, linear_velocity, angular_velocity, orientation, l0):
+        # Initialize basic properties
+        self.position = np.array(position, dtype=float)
+        self.orientation = float(orientation)
+        self.l0 = float(l0)
+        self.length = float(l0)
+        self.max_length = float(2 * l0)
+        self.diameter = 0.5 * l0
+        self.stress = 0.0
+
+        # Physical properties
+        self.angular_velocity = angular_velocity
+        self.linear_velocity = linear_velocity
+
+        # Collision parameters
+        self.restitution = 0.5  # Coefficient of restitution
+        self.friction = 0.3     # Friction coefficient
+
+        # Force and torque tracking
+        self.torque = 0.0
+        self.force = np.zeros(2)
+        self.old_force = np.zeros(2)
+        self.old_torque = 0.0
+
+        # Visual representation (initialize as None)
+        self.rod = None
+        self.cap1 = None
+        self.cap2 = None
+        self.text = None
+        self.ax = None
+        self.to_delete = False
+
+    def grow(self, dt, tao, lamb):
+        """Grow the particle based on stress and growth rate."""
+        growth = (self.length/tao) * np.exp(-lamb * self.stress)
+        self.length += growth * dt
+        self.length = min(self.length, self.max_length)
+
+    def move(self, dt, box_size):
+        """Move the particle using velocity Verlet integration."""
+        # Store current force as old force for next step
+        self.old_force = self.force.copy()
+        self.old_torque = self.torque
+
+        # Update position and half-update velocity
+        self.position += self.linear_velocity * dt + 0.5 * self.old_force * dt**2
+        self.linear_velocity += 0.5 * self.old_force * dt
+
+        # Update orientation and half-update angular velocity
+        self.orientation += self.angular_velocity * dt + 0.5 * self.old_torque * dt**2
+        self.angular_velocity += 0.5 * self.old_torque * dt
+
+        # Wrap around box boundaries (using modulo for efficiency)
+        self.position[0] = self.position[0] % box_size
+        self.position[1] = self.position[1] % box_size
+
+        # Normalize orientation to [0, 2*pi]
+        self.orientation = self.orientation % (2 * np.pi)
+
+        # Reset force and torque
+        self.force = np.zeros(2)
+        self.torque = 0.0
+
+    def update_velocity(self, dt):
+        """Second half of velocity Verlet - update velocities with new forces"""
+        self.linear_velocity += 0.5 * self.force * dt
+        self.angular_velocity += 0.5 * self.torque * dt
+
+    def get_endpoints(self):
+        """Get the coordinates of the two endpoints of the spherocylinder with caching."""
+        half_length = self.length / 2
+        orientation_vector = np.array(
+            [np.cos(self.orientation), np.sin(self.orientation)])
+        offset = (half_length - self.diameter / 2.0) * orientation_vector
+        end1 = self.position + offset
+        end2 = self.position - offset
+
+        return end1, end2
+
+    def initialize_visual_elements(self, ax):
+        """Initialize the visual representation of the spherocylinder."""
+        self.ax = ax
+
+        # Create rod body and end caps
+        self.rod = Rectangle((0, 0), 0, 0, fill=True, ec='black', zorder=3)
+        self.cap1 = Circle((0, 0), self.diameter / 2,
+                           fill=True, ec='black', zorder=2)
+        self.cap2 = Circle((0, 0), self.diameter / 2,
+                           fill=True, ec='black', zorder=2)
+
+        # Add all elements to the axis
+        ax.add_patch(self.rod)
+        ax.add_patch(self.cap1)
+        ax.add_patch(self.cap2)
+
+        # Add text with current length
+        self.text = ax.text(0, 0, '', fontsize=8, ha='center',
+                            va='center', color='black', zorder=3)
+
+    def update_visual_elements(self, ax, alpha=1.0, ghost=False):
+        """Update the visual representation of the spherocylinder."""
+        # Initialize visual elements if they don't exist
+        if self.rod is None or self.cap1 is None or self.cap2 is None or self.text is None:
+            self.initialize_visual_elements(ax)
+
+        # Get endpoints
+        end1, end2 = self.get_endpoints()
+
+        # Update end caps positions
+        self.cap1.set_center(end1)
+        self.cap2.set_center(end2)
+
+        # Update text position
+        self.text.set_position((self.position[0], self.position[1]))
+
+        # Update rod body
+        rod_width = self.length - self.diameter
+        self.rod.set_width(rod_width)
+        self.rod.set_height(self.diameter)
+
+        # Set color based on length
+        color_index = int((self.length - self.l0) * 255 /
+                          (self.max_length - self.l0))
+        color_index = min(color_index, 255)
+        color = self._length_cmap(color_index)
+
+        # Set border color based on stress
+        color_index_border = min(int(self.stress * 255), 255)
+        border_color = self._stress_cmap(color_index_border)
+
+        # For ghost particles, adjust color and transparency
+        if ghost:
+            color = (0.5, 0.5, 1.0, alpha)
+
+        # Apply colors to all elements
+        self.rod.set_facecolor(color)
+        self.cap1.set_facecolor(color)
+        self.cap2.set_facecolor(color)
+
+        self.rod.set_edgecolor(border_color)
+        self.cap1.set_edgecolor(border_color)
+        self.cap2.set_edgecolor(border_color)
+
+        # Apply alpha to all elements
+        self.rod.set_alpha(alpha)
+        self.cap1.set_alpha(alpha)
+        self.cap2.set_alpha(alpha)
+
+        t = transforms.Affine2D()
+
+        t.translate(
+            self.position[0] - rod_width / 2,
+            self.position[1] - self.diameter / 2)
+        t.rotate_around(
+            self.position[0], self.position[1], self.orientation)
+        self.rod.set_transform(t + ax.transData)
+
+    def delete_visual_elements(self):
+        """Delete the visual elements of the spherocylinder."""
+        for element in [self.rod, self.cap1, self.cap2, self.text]:
+            if element is not None:
+                element.remove()
+
+        # Reset visual elements to None
+        self.rod = None
+        self.cap1 = None
+        self.cap2 = None
+        self.text = None
+
+    def bounding_box(self):
+        """Calculate the bounding box of the spherocylinder."""
+        end1, end2 = self.get_endpoints()
+        half_diameter = self.diameter / 2.0
+
+        # Calculate min/max coordinates
+        min_x = min(end1[0], end2[0]) - half_diameter
+        max_x = max(end1[0], end2[0]) + half_diameter
+        min_y = min(end1[1], end2[1]) - half_diameter
+        max_y = max(end1[1], end2[1]) + half_diameter
+
+        return min_x, max_x, min_y, max_y
+
+    def check_overlap(self, other):
+        """Check if this spherocylinder overlaps with another one."""
+        # Get line segments
+        p1, p2 = self.get_endpoints()
+        q1, q2 = other.get_endpoints()
+        sum_radii = (self.diameter + other.diameter) / 2.0
+
+        # Calculate minimum distance between line segments
+        closest_p1, closest_p2, min_dist = self.minimum_distance_between_line_segments(
+            p1, p2, q1, q2, clampA0=True, clampA1=True, clampB0=True, clampB1=True)
+
+        # Check for overlap
+        overlap = sum_radii - min_dist
+        if overlap > 0:
+            # Normal vector
+            if closest_p1 is None or closest_p2 is None:
+                # If closest points are None, use the center of the particles
+                closest_p1 = self.position
+                closest_p2 = other.position
+
+            # Calculate normalized normal vector
+            normal = closest_p1 - closest_p2
+            normal_mag = np.linalg.norm(normal)
+            if normal_mag > 0:
+                normal = normal / normal_mag
+            else:
+                normal = np.array([1.0, 0.0])
+
+            # Contact point is the midpoint between closest points
+            contact_point = (closest_p1 + closest_p2) / 2
+            return True, overlap, contact_point, normal
+
+        return False, overlap, None, None

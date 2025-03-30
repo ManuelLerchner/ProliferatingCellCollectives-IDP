@@ -14,24 +14,30 @@ class Simulation:
     Simulation environment for a collection of spherocylinder particles
     with torque-based collision response and background drag.
     Uses ghost particles to implement periodic boundary conditions.
+    Uses linked cells for efficient collision detection.
     """
 
-    def __init__(self, box_size=20, tao_growthrate=0.1, lambda_sensitivity=0.5):
+    def __init__(self, box_size=20, tao_growthrate=0.1, lambda_sensitivity=0.5, friction=100):
         """
         Initialize the simulation of growing spherocylinder particles.
         """
         self.box_size = box_size
         self.tao_growthrate = tao_growthrate
         self.lambda_sensitivity = lambda_sensitivity
+        self.friction = friction  # Friction coefficient for drag
 
         # Collision parameters
-        self.collision_stiffness = 2.0  # Spring constant for collision response
-        self.damping = 0.5  # Damping coefficient
+        self.friction = 0.5  # Damping coefficient
 
         # Create particles
         self.particles = []
         # Will store temporary ghost particles for boundary interactions
         self.ghost_particles = []
+
+        # Initialize linked cell grid
+        self.cell_size = 0  # Will be updated based on particles
+        self.grid_size = 0  # Number of cells per dimension
+        self.cell_grid = {}  # Dictionary to store particles in each cell
 
         # Initialize figure for animation
         self.fig, self.ax = plt.subplots(figsize=(10, 10))
@@ -39,7 +45,7 @@ class Simulation:
         self.ax.set_ylim(0, box_size)
         self.ax.set_aspect('equal')
         self.ax.set_title(
-            'Growing Spherocylinder Simulation with Periodic Boundaries')
+            'Growing Spherocylinder Simulation with Periodic Boundaries and Linked Cells')
 
         border = plt.Rectangle(
             (0, 0), box_size, box_size, fill=False, color='black', lw=2)
@@ -52,146 +58,62 @@ class Simulation:
         self.time_text = self.ax.text(
             0.02, 0.92, f'',
             transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
+        self.cell_text = self.ax.text(
+            0.02, 0.86, f'',
+            transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.total_time = 0.0
         self.time_last_frame = 0.0
 
-    def create_ghost_particles(self):
+    def sweep_and_prune(self):
         """
-        Create ghost particles for periodic boundary conditions.
-        Ghost particles are copies of real particles that are placed just outside
-        the boundary to simulate periodic interactions.
+        Broad-phase collision detection using Sweep and Prune.
+        Sort particles along one axis and check for overlapping intervals.
         """
-        for ghost in self.ghost_particles:
-            ghost.delete_visual_elements()
-        self.ghost_particles = []  # Clear previous ghosts
 
-        # Define offsets for ghost particles (8 surrounding regions)
-        offsets = [
-            (-self.box_size, -self.box_size),  # bottom-left
-            (0, -self.box_size),               # bottom
-            (self.box_size, -self.box_size),   # bottom-right
-            (-self.box_size, 0),               # left
-            (self.box_size, 0),                # right
-            (-self.box_size, self.box_size),   # top-left
-            (0, self.box_size),                # top
-            (self.box_size, self.box_size)     # top-right
-        ]
+        def bounding_box_overlap(box1, box2):
+            """Check if two bounding boxes overlap."""
+            " box1: (x_min, x_max, y_min, y_max) "
+            " box2: (x_min, x_max, y_min, y_max) "
 
-        # Distance from boundary to create ghosts (based on max particle length)
-        ghost_margin = max(
-            [p.length for p in self.particles]) if self.particles else 0
+            return (box1[0] < box2[1] and box1[1] > box2[0] and
+                    box1[2] < box2[3] and box1[3] > box2[2])
 
-        for particle in self.particles:
-            # Create ghost particles near boundaries
-            particle_x, particle_y = particle.position
+        # Sort particles by their min x-coordinate
+        self.particles.sort(key=lambda p: p.bounding_box()[0])
 
-            # Check if particle is near any boundary
-            near_left = particle_x < ghost_margin
-            near_right = particle_x > self.box_size - ghost_margin
-            near_bottom = particle_y < ghost_margin
-            near_top = particle_y > self.box_size - ghost_margin
+        for i in range(len(self.particles)):
+            particle = self.particles[i]
 
-            # Create ghost particles as needed
-            for offset_x, offset_y in offsets:
-                # Create ghost if the particle is near a relevant boundary
-                if ((offset_x < 0 and near_right) or
-                    (offset_x > 0 and near_left) or
-                    (offset_x == 0 and (near_left or near_right)) or
-                    (offset_y < 0 and near_top) or
-                    (offset_y > 0 and near_bottom) or
-                        (offset_y == 0 and (near_bottom or near_top))):
+            for j in range(i + 1, len(self.particles)):
+                other_particle = self.particles[j]
 
-                    # Skip the no-offset case (would create duplicate of the original)
-                    position_x = particle_x + offset_x
-                    position_y = particle_y + offset_y
+                # Check if the bounding boxes overlap
+                if particle.bounding_box()[1] < other_particle.bounding_box()[0]:
+                    break
 
-                    # Skip if the ghost particle is outside the box
-                    if (position_x < -ghost_margin or
-                            position_x > self.box_size + ghost_margin or
-                            position_y < -ghost_margin or
-                            position_y > self.box_size + ghost_margin):
-                        continue
+                if bounding_box_overlap(particle.bounding_box(), other_particle.bounding_box()):
+                    # Check if the particles are close enough to collide
+                    yield particle, other_particle
 
-                    # Create a ghost particle
-                    ghost = Spherocylinder(
-                        position=[position_x, position_y],
-                        orientation=particle.orientation,
-                        linear_velocity=particle.linear_velocity,
-                        angular_velocity=particle.angular_velocity,
-                        l0=particle.l0
-                    )
-                    ghost.length = particle.length
-                    ghost.diameter = particle.diameter
-                    ghost.real_particle = particle  # Reference to the real particle
-                    ghost.is_ghost = True  # Mark as a ghost
-                    self.ghost_particles.append(ghost)
+    def handle_interactions(self):
+        """Apply torque-based collision response between particles using linked cells."""
+        # Get potential pairs of particles that may collide
 
-    def calculate_stresses(self):
-        """Calculate compressive stress on each particle due to contacts."""
-        # Reset all stresses
         for particle in self.particles:
             particle.stress = 0.0
 
-        # Create ghost particles
-        self.create_ghost_particles()
+        potential_pairs = self.sweep_and_prune()
 
-        # Check all particle pairs for overlap (including ghosts)
-        for i, particle_i in enumerate(self.particles):
-            # Real-to-real particle interactions
-            for j, particle_j in enumerate(self.particles[i+1:], i+1):
-                overlapping, overlap, _, _ = particle_i.check_overlap(
-                    particle_j)
-                penalty = np.exp(overlap) - np.exp(-0.5)
-                if overlap > -0.5:
-                    # Simple model: each overlap adds to stress
-                    particle_i.stress += penalty
-                    particle_j.stress += penalty
+        for p1, p2 in potential_pairs:
+            overlapping, overlap, contact_point, normal = p1.check_overlap(p2)
+            if overlapping:
+                self.apply_collision_response(
+                    p1, p2, overlap, contact_point, normal)
 
-            # Real-to-ghost particle interactions
-            for ghost_j in self.ghost_particles:
-                # Skip if the ghost is a copy of the current particle
-                if hasattr(ghost_j, 'real_particle') and ghost_j.real_particle == particle_i:
-                    continue
-
-                overlapping, overlap, _, _ = particle_i.check_overlap(ghost_j)
-                penalty = np.exp(overlap) - np.exp(-0.5)
-                if overlap > -0.5:
-                    # Simple model: each overlap adds to stress
-                    particle_i.stress += penalty
-
-    def handle_collisions(self):
-        """Apply torque-based collision response between particles."""
-        # Create ghost particles for boundary collisions
-        self.create_ghost_particles()
-
-        # Check all real particle pairs for collision
-        for i, particle_i in enumerate(self.particles):
-            # Real-to-real particle interactions
-            for j, particle_j in enumerate(self.particles[i+1:], i+1):
-                overlapping, overlap, contact_point, normal = particle_i.check_overlap(
-                    particle_j)
-
-                if overlapping:
-                    # Calculate collision forces and torques
-                    self.apply_collision_response(
-                        particle_i, particle_j, overlap, contact_point, normal)
-
-            # Real-to-ghost particle interactions
-            for ghost_j in self.ghost_particles:
-                # Skip if the ghost is a copy of the current particle
-                if hasattr(ghost_j, 'real_particle') and ghost_j.real_particle == particle_i:
-                    continue
-
-                overlapping, overlap, contact_point, normal = particle_i.check_overlap(
-                    ghost_j)
-
-                if overlapping:
-                    # For ghost collisions, apply force to the real particle and update the ghost's real particle
-                    real_particle_j = ghost_j.real_particle if hasattr(
-                        ghost_j, 'real_particle') else None
-                    if real_particle_j:
-                        self.apply_collision_response(
-                            particle_i, real_particle_j, overlap, contact_point, normal)
+            penalty = np.exp(overlap) - np.exp(-0.5)
+            if overlap > -0.5:
+                p1.stress += penalty
+                p2.stress += penalty
 
     def apply_collision_response(self, particle1, particle2, overlap, contact_point, normal):
         """
@@ -208,34 +130,31 @@ class Simulation:
         normal : numpy.ndarray
             Normal vector at contact point (pointing from particle2 to particle1)
         """
-        # Move particles apart to resolve overlap
-        particle1.position += normal * overlap / 2
-        particle2.position -= normal * overlap / 2
 
-        # Calculate repulsive force magnitude based on overlap
-        force_magnitude = self.collision_stiffness * overlap
+        # move particles apart based on overlap
+        # Calculate the distance to move apart
+        move_distance = overlap / 2.0
+        particle1.position += move_distance * normal
+        particle2.position -= move_distance * normal
 
-        # Calculate force vector (from particle2 to particle1)
-        force = force_magnitude * normal
+        # Calculate the force vector based on overlap and normal
+        force_magnitude = self.friction * overlap
+        force_vector = force_magnitude * normal
 
-        # Apply opposite forces to each particle
-        linear_impulse = force / particle1.mass
-        particle1.linear_velocity += linear_impulse
+        # Apply forces to particles
+        particle1.force += force_vector
+        particle2.force -= force_vector
 
-        linear_impulse = -force / particle2.mass
-        particle2.linear_velocity += linear_impulse
-
-        # Calculate torque for each particle
-        # Torque = r × F where r is the vector from center of mass to contact point
+        # Calculate the torque based on the contact point and normal
+        # Calculate the distance vector from the center of particle2 to the contact point
         r1 = contact_point - particle1.position
-        torque1 = np.cross(r1, force)  # Scalar in 2D
-
         r2 = contact_point - particle2.position
-        torque2 = np.cross(r2, -force)  # Scalar in 2D
 
-        # Apply torques
+        torque1 = np.cross(r1, force_vector)
+        torque2 = np.cross(r2, -force_vector)
+
         particle1.torque += torque1
-        particle2.torque += torque2
+        particle2.torque -= torque2
 
     def enforce_periodic_boundaries(self, particle):
         """
@@ -277,7 +196,7 @@ class Simulation:
                 )
                 new_particle_right = Spherocylinder(
                     position=center_right,
-                    orientation=particle.orientation + noise,
+                    orientation=particle.orientation - noise,
                     linear_velocity=particle.linear_velocity,
                     angular_velocity=particle.angular_velocity,
                     l0=particle.l0,
@@ -300,11 +219,11 @@ class Simulation:
     def update(self, dt):
         """Update the simulation for one time step."""
 
+        # remove debug lines
+        for line in self.ax.lines:
+            line.remove()
         # Handle collisions and apply torques
-        self.handle_collisions()
-
-        # Calculate stresses
-        self.calculate_stresses()
+        self.handle_interactions()
 
         # Divide particles if necessary
         self.divide_particles()
@@ -325,34 +244,20 @@ class Simulation:
             particle.update_visual_elements(self.ax)
 
         # Calculate total energy
-        self.calculate_energy()
         self.total_time += dt
-
-    def calculate_energy(self):
-        """Calculate the total energy of the system."""
-        total_energy = 0.0
-        for particle in self.particles:
-            # Kinetic energy
-            translational_energy = 0.5 * particle.mass * \
-                np.linalg.norm(particle.linear_velocity)**2
-            rotational_energy = 0.5 * particle.moment_of_inertia * \
-                np.linalg.norm(particle.angular_velocity)**2
-            total_energy += translational_energy + rotational_energy
-
-        self.energy_text.set_text(
-            f'Total Energy: {total_energy:.2E}'
-        )
 
     def animate(self, frame, base_dt, scaling_factor):
         """Animation function for matplotlib."""
 
-        dt = base_dt / (1 + len(self.particles) * scaling_factor)
+        for i in range(10):
 
-        # Update the simulation
-        self.update(dt)
+            dt = base_dt / (1 + len(self.particles) * scaling_factor)
+
+            # Update the simulation
+            self.update(dt)
 
         # Return all visual elements that need to be redrawn
-        visual_elements = [self.energy_text, self.time_text]
+        visual_elements = [self.energy_text, self.time_text, self.cell_text]
         self.time_text.set_text(
             f'Frame:{frame}, Time: {self.total_time:.2f}, Δt: {dt:.2f}')
 
@@ -361,18 +266,12 @@ class Simulation:
             visual_elements.extend(
                 [particle.rod, particle.cap1, particle.cap2, particle.text])
 
-        # Optionally, draw ghost particles for visualization (with different color/transparency)
-        if hasattr(self, 'show_ghosts') and self.show_ghosts:
-            for ghost in self.ghost_particles:
-                ghost.update_visual_elements(
-                    self.ax, alpha=0.3, ghost=True)  # Lower alpha for ghosts
-                visual_elements.extend([ghost.rod, ghost.cap1, ghost.cap2,ghost.text])
-
         return visual_elements
 
-    def run_simulation(self, frames=500, base_dt=0.1, scaling_factor=0.5, interval=50, show_ghosts=False):
-
+    def run_simulation(self, frames=500, base_dt=0.1, scaling_factor=0.5, interval=50, show_ghosts=False, show_grid=False):
+        """Run the simulation animation."""
         self.show_ghosts = show_ghosts
+        self.show_grid = show_grid
 
         # Initial update of visual elements
         for particle in self.particles:
