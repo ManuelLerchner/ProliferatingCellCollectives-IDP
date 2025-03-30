@@ -1,21 +1,38 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from matplotlib.animation import FuncAnimation
 from Spherocylinder import Spherocylinder
+from scipy.spatial.transform import Rotation
 
 
 class Simulation:
     """
-    Simulation environment for a collection of spherocylinder particles
+    Simulation environment for a collection of 3D spherocylinder particles
     with torque-based collision response and background drag.
     Uses ghost particles to implement periodic boundary conditions.
     """
 
     def __init__(self, box_size=20, tao_growthrate=0.1, lambda_sensitivity=0.5):
         """
-        Initialize the simulation of growing spherocylinder particles.
+        Initialize the simulation of growing 3D spherocylinder particles.
+
+        Parameters:
+        -----------
+        box_size : float or list/tuple
+            Size of the simulation box. If float, creates a cubic box.
+            If list/tuple, specifies [x_size, y_size, z_size]
+        tao_growthrate : float
+            Base growth rate parameter
+        lambda_sensitivity : float
+            Stress sensitivity parameter for growth
         """
-        self.box_size = box_size
+        # Handle different box size specifications
+        if isinstance(box_size, (int, float)):
+            self.box_size = [box_size, box_size, box_size]  # Cubic box
+        else:
+            self.box_size = list(box_size)  # Custom dimensions
+
         self.tao_growthrate = tao_growthrate
         self.lambda_sensitivity = lambda_sensitivity
 
@@ -28,84 +45,131 @@ class Simulation:
         # Will store temporary ghost particles for boundary interactions
         self.ghost_particles = []
 
-        # Initialize figure for animation
-        self.fig, self.ax = plt.subplots(figsize=(10, 10))
-        self.ax.set_xlim(0, box_size)
-        self.ax.set_ylim(0, box_size)
-        self.ax.set_aspect('equal')
+        # Initialize figure for 3D animation
+        self.fig = plt.figure(figsize=(10, 10))
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.ax.set_xlim(0, self.box_size[0])
+        self.ax.set_ylim(0, self.box_size[1])
+        self.ax.set_zlim(0, self.box_size[2])
+        self.ax.set_box_aspect(self.box_size)  # Equal aspect ratio for axes
         self.ax.set_title(
-            'Growing Spherocylinder Simulation with Periodic Boundaries')
+            '3D Growing Spherocylinder Simulation with Periodic Boundaries')
 
-        border = plt.Rectangle(
-            (0, 0), box_size, box_size, fill=False, color='black', lw=2)
-        self.ax.add_patch(border)
+        # Add axis labels
+        self.ax.set_xlabel('X')
+        self.ax.set_ylabel('Y')
+        self.ax.set_zlabel('Z')
+
+        # Draw the simulation box edges
+        self.draw_simulation_box()
 
         # Add energy indicator
-        self.energy_text = self.ax.text(
-            0.02, 0.98, f'',
+        self.energy_text = self.ax.text2D(
+            0.02, 0.98, '',
             transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
+
+        # Store for tracking cylinders in 3D
+        self.cylinder_actors = []
+
+    def draw_simulation_box(self):
+        """Draw the edges of the simulation box in 3D."""
+        x_size, y_size, z_size = self.box_size
+
+        # Define the 8 corners of the box
+        points = np.array([
+            [0, 0, 0],
+            [x_size, 0, 0],
+            [x_size, y_size, 0],
+            [0, y_size, 0],
+            [0, 0, z_size],
+            [x_size, 0, z_size],
+            [x_size, y_size, z_size],
+            [0, y_size, z_size]
+        ])
+
+        # Define the 12 edges of the box
+        edges = [
+            # Bottom face
+            [0, 1], [1, 2], [2, 3], [3, 0],
+            # Top face
+            [4, 5], [5, 6], [6, 7], [7, 4],
+            # Connecting edges
+            [0, 4], [1, 5], [2, 6], [3, 7]
+        ]
+
+        # Draw each edge
+        for edge in edges:
+            self.ax.plot3D(
+                [points[edge[0]][0], points[edge[1]][0]],
+                [points[edge[0]][1], points[edge[1]][1]],
+                [points[edge[0]][2], points[edge[1]][2]],
+                color='black', linestyle='-', linewidth=1
+            )
 
     def create_ghost_particles(self):
         """
-        Create ghost particles for periodic boundary conditions.
+        Create ghost particles for periodic boundary conditions in 3D.
         Ghost particles are copies of real particles that are placed just outside
         the boundary to simulate periodic interactions.
         """
         self.ghost_particles = []  # Clear previous ghosts
 
-        # Define offsets for ghost particles (8 surrounding regions)
-        offsets = [
-            (-self.box_size, -self.box_size),  # bottom-left
-            (0, -self.box_size),               # bottom
-            (self.box_size, -self.box_size),   # bottom-right
-            (-self.box_size, 0),               # left
-            (self.box_size, 0),                # right
-            (-self.box_size, self.box_size),   # top-left
-            (0, self.box_size),                # top
-            (self.box_size, self.box_size)     # top-right
-        ]
+        # Define offsets for ghost particles (26 surrounding regions in 3D)
+        offsets = []
+        for x_offset in [-self.box_size[0], 0, self.box_size[0]]:
+            for y_offset in [-self.box_size[1], 0, self.box_size[1]]:
+                for z_offset in [-self.box_size[2], 0, self.box_size[2]]:
+                    # Skip the (0,0,0) offset which would duplicate the original particle
+                    if x_offset == 0 and y_offset == 0 and z_offset == 0:
+                        continue
+                    offsets.append((x_offset, y_offset, z_offset))
 
         # Distance from boundary to create ghosts (based on max particle length)
-        ghost_margin = max(
-            [p.length for p in self.particles]) if self.particles else 0
+        ghost_margin = max([p.length for p in self.particles]
+                           ) if self.particles else 0
 
         for particle in self.particles:
             # Create ghost particles near boundaries
-            particle_x, particle_y = particle.position
+            pos_x, pos_y, pos_z = particle.position
 
             # Check if particle is near any boundary
-            near_left = particle_x < ghost_margin
-            near_right = particle_x > self.box_size - ghost_margin
-            near_bottom = particle_y < ghost_margin
-            near_top = particle_y > self.box_size - ghost_margin
+            near_x_min = pos_x < ghost_margin
+            near_x_max = pos_x > self.box_size[0] - ghost_margin
+            near_y_min = pos_y < ghost_margin
+            near_y_max = pos_y > self.box_size[1] - ghost_margin
+            near_z_min = pos_z < ghost_margin
+            near_z_max = pos_z > self.box_size[2] - ghost_margin
 
             # Create ghost particles as needed
-            for offset_x, offset_y in offsets:
+            for offset_x, offset_y, offset_z in offsets:
                 # Create ghost if the particle is near a relevant boundary
-                if ((offset_x < 0 and near_right) or
-                    (offset_x > 0 and near_left) or
-                    (offset_x == 0 and (near_left or near_right)) or
-                    (offset_y < 0 and near_top) or
-                    (offset_y > 0 and near_bottom) or
-                        (offset_y == 0 and (near_bottom or near_top))):
+                if ((offset_x < 0 and near_x_max) or
+                    (offset_x > 0 and near_x_min) or
+                    (offset_x == 0 and (near_x_min or near_x_max)) or
+                    (offset_y < 0 and near_y_max) or
+                    (offset_y > 0 and near_y_min) or
+                    (offset_y == 0 and (near_y_min or near_y_max)) or
+                    (offset_z < 0 and near_z_max) or
+                    (offset_z > 0 and near_z_min) or
+                        (offset_z == 0 and (near_z_min or near_z_max))):
 
-                    # Skip the no-offset case (would create duplicate of the original)
-                    position_x = particle_x + offset_x
-                    position_y = particle_y + offset_y
+                    # Create ghost position
+                    position_x = pos_x + offset_x
+                    position_y = pos_y + offset_y
+                    position_z = pos_z + offset_z
 
-                    # Skip if the ghost particle is outside the box
-                    if (position_x < -ghost_margin or
-                            position_x > self.box_size + ghost_margin or
-                            position_y < -ghost_margin or
-                            position_y > self.box_size + ghost_margin):
+                    # Skip if the ghost particle is too far outside the box
+                    if (position_x < -ghost_margin or position_x > self.box_size[0] + ghost_margin or
+                        position_y < -ghost_margin or position_y > self.box_size[1] + ghost_margin or
+                            position_z < -ghost_margin or position_z > self.box_size[2] + ghost_margin):
                         continue
 
                     # Create a ghost particle
                     ghost = Spherocylinder(
-                        position=[position_x, position_y],
+                        position=[position_x, position_y, position_z],
                         orientation=particle.orientation,
-                        linear_velocity=particle.linear_velocity,
-                        angular_velocity=particle.angular_velocity,
+                        linear_velocity=particle.linear_velocity.copy(),
+                        angular_velocity=particle.angular_velocity.copy(),
                         l0=particle.l0
                     )
                     ghost.length = particle.length
@@ -158,7 +222,7 @@ class Simulation:
                 particle.stress /= max_stress
 
     def handle_collisions(self):
-        """Apply torque-based collision response between particles."""
+        """Apply torque-based collision response between particles in 3D."""
         # Create ghost particles for boundary collisions
         self.create_ghost_particles()
 
@@ -193,7 +257,7 @@ class Simulation:
 
     def apply_collision_response(self, particle1, particle2, overlap, contact_point, normal):
         """
-        Apply collision response between two particles with torque effects.
+        Apply collision response between two particles with torque effects in 3D.
 
         Parameters:
         -----------
@@ -202,9 +266,9 @@ class Simulation:
         overlap : float
             Magnitude of overlap between particles
         contact_point : numpy.ndarray
-            Point of contact between particles
+            Point of contact between particles (3D)
         normal : numpy.ndarray
-            Normal vector at contact point (pointing from particle2 to particle1)
+            Normal vector at contact point (pointing from particle2 to particle1) (3D)
         """
         # Move particles apart to resolve overlap
         particle1.position += normal * overlap / 2
@@ -223,13 +287,13 @@ class Simulation:
         linear_impulse = -force / particle2.mass
         particle2.linear_velocity += linear_impulse
 
-        # Calculate torque for each particle
+        # Calculate torque for each particle in 3D
         # Torque = r × F where r is the vector from center of mass to contact point
         r1 = contact_point - particle1.position
-        torque1 = np.cross(r1, force)  # Scalar in 2D
+        torque1 = np.cross(r1, force)  # 3D cross product
 
         r2 = contact_point - particle2.position
-        torque2 = np.cross(r2, -force)  # Scalar in 2D
+        torque2 = np.cross(r2, -force)  # 3D cross product
 
         # Apply torques
         particle1.torque += torque1
@@ -237,49 +301,60 @@ class Simulation:
 
     def enforce_periodic_boundaries(self, particle):
         """
-        Apply periodic boundary conditions to a particle.
+        Apply periodic boundary conditions to a particle in 3D.
         """
-        # Apply periodic boundary conditions
-        if particle.position[0] < 0:
-            particle.position[0] += self.box_size
-        elif particle.position[0] > self.box_size:
-            particle.position[0] -= self.box_size
-
-        if particle.position[1] < 0:
-            particle.position[1] += self.box_size
-        elif particle.position[1] > self.box_size:
-            particle.position[1] -= self.box_size
+        # Apply periodic boundary conditions for all three dimensions
+        for i in range(3):
+            if particle.position[i] < 0:
+                particle.position[i] += self.box_size[i]
+            elif particle.position[i] > self.box_size[i]:
+                particle.position[i] -= self.box_size[i]
 
     def divide_particles(self):
         """Divide particles if they exceed a certain length."""
-        for i in range(len(self.particles)):
-            particle = self.particles[i]
+        new_particles = []
+
+        for particle in self.particles:
             if particle.length >= particle.max_length:
+                # Get the cylinder axis direction
+                direction_vector = particle.get_direction_vector()
+
                 # Calculate new positions for child particles
-                orientation_vector = np.array(
-                    [np.cos(particle.orientation), np.sin(particle.orientation)])
+                center_left = particle.position - 0.25 * particle.length * direction_vector
+                center_right = particle.position + 0.25 * particle.length * direction_vector
 
-                center_left = particle.position - 1/4. * particle.length * orientation_vector
-                center_right = particle.position + 1/4. * particle.length * orientation_vector
+                # Create new particles with small orientation noise
+                # Create a random rotation matrix for small angular perturbation
+                noise_angle = np.random.uniform(-np.pi/32, np.pi/32)
+                noise_axis = np.random.randn(3)
+                noise_axis = noise_axis / np.linalg.norm(noise_axis)
+                noise_rot = Rotation.from_rotvec(noise_angle * noise_axis)
 
-                # Random orientation noise
-                noise = np.random.uniform(-np.pi/32, np.pi/32)
+                # Apply noise to the orientation quaternion
+                noise_quat = noise_rot.as_quat()  # [x, y, z, w] format
+                noise_quat = np.array(
+                    [noise_quat[3], noise_quat[0], noise_quat[1], noise_quat[2]])  # [w, x, y, z]
 
-                # Create new particles. Maintain total energy
+                # Create new particles with perturbed orientations
                 new_particle_left = Spherocylinder(
                     position=center_left,
-                    orientation=particle.orientation + noise,
-                    linear_velocity=particle.linear_velocity,
-                    angular_velocity=particle.angular_velocity,
+                    orientation=self.quaternion_multiply(
+                        particle.orientation, noise_quat),
+                    linear_velocity=particle.linear_velocity.copy(),
+                    angular_velocity=particle.angular_velocity.copy(),
                     l0=particle.l0,
                 )
+
                 new_particle_right = Spherocylinder(
                     position=center_right,
-                    orientation=particle.orientation + noise,
-                    linear_velocity=particle.linear_velocity,
-                    angular_velocity=particle.angular_velocity,
+                    orientation=self.quaternion_multiply(
+                        particle.orientation, noise_quat),
+                    linear_velocity=particle.linear_velocity.copy(),
+                    angular_velocity=particle.angular_velocity.copy(),
                     l0=particle.l0,
                 )
+
+                # Set lengths to half of the parent
                 new_particle_left.length = particle.length / 2
                 new_particle_right.length = particle.length / 2
 
@@ -287,12 +362,63 @@ class Simulation:
                 self.enforce_periodic_boundaries(new_particle_left)
                 self.enforce_periodic_boundaries(new_particle_right)
 
-                self.particles.append(new_particle_left)
-                self.particles.append(new_particle_right)
+                new_particles.append(new_particle_left)
+                new_particles.append(new_particle_right)
 
                 particle.to_delete = True  # Mark for deletion
+
+        # Add all new particles
+        self.particles.extend(new_particles)
+
         # Remove marked particles
         self.particles = [p for p in self.particles if not p.to_delete]
+
+    def quaternion_multiply(self, q1, q2):
+        """
+        Multiply two quaternions q1 and q2 (format: [w, x, y, z])
+        This is a utility function to handle orientation changes in 3D
+        """
+        w1, x1, y1, z1 = q1
+        w2, x2, y2, z2 = q2
+
+        w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+        x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+        y = w1*y2 - x1*z2 + y1*w2 + z1*x2
+        z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+
+        return np.array([w, x, y, z])
+
+    def add_particle(self, position, orientation, linear_velocity=None, angular_velocity=None, l0=1.0):
+        """
+        Add a particle to the simulation.
+
+        Parameters:
+        -----------
+        position : list or numpy.ndarray
+            3D position [x, y, z]
+        orientation : list or numpy.ndarray
+            Orientation as quaternion [w, x, y, z] or Euler angles [roll, pitch, yaw]
+        linear_velocity : list or numpy.ndarray, optional
+            Linear velocity [vx, vy, vz]
+        angular_velocity : list or numpy.ndarray, optional
+            Angular velocity [wx, wy, wz]
+        l0 : float, optional
+            Initial length of the particle
+        """
+        if linear_velocity is None:
+            linear_velocity = np.zeros(3)
+        if angular_velocity is None:
+            angular_velocity = np.zeros(3)
+
+        particle = Spherocylinder(
+            position=position,
+            orientation=orientation,
+            linear_velocity=linear_velocity,
+            angular_velocity=angular_velocity,
+            l0=l0
+        )
+        self.particles.append(particle)
+        return particle
 
     def update(self, dt=0.1):
         """Update the simulation for one time step."""
@@ -317,11 +443,10 @@ class Simulation:
             # Apply periodic boundary conditions
             self.enforce_periodic_boundaries(particle)
 
-            # Update visual representation
-            particle.update_visual_elements(self.ax)
-
         # Calculate total energy
         self.calculate_energy()
+
+        # Update visual representation later in draw_particles
 
     def calculate_energy(self):
         """Calculate the total energy of the system."""
@@ -330,45 +455,81 @@ class Simulation:
             # Kinetic energy
             translational_energy = 0.5 * particle.mass * \
                 np.linalg.norm(particle.linear_velocity)**2
-            rotational_energy = 0.5 * particle.moment_of_inertia * \
-                np.linalg.norm(particle.angular_velocity)**2
+
+            # For rotational energy in 3D, use the full inertia tensor
+            # E_rot = 0.5 * ω · (I · ω)
+            # For a diagonal inertia tensor, this simplifies to:
+            rotational_energy = 0.5 * np.sum(particle.inertia_tensor.diagonal() *
+                                             particle.angular_velocity**2)
+
             total_energy += translational_energy + rotational_energy
 
         self.energy_text.set_text(
-            f'Total Energy: {total_energy:.2f}'
-        )
+            f'Total Energy: {total_energy:.2f} | Particles: {len(self.particles)}')
 
-    def animate(self, frame, dt=0.1):
-        """Animation function for matplotlib."""
+        return total_energy
+
+    def draw_particles(self, show_ghosts=False):
+        """
+        Draw all particles in 3D with proper spherocylinder representation.
+
+        This method creates a complete surface representation of spherocylinders
+        by generating the cylindrical body and hemispherical caps.
+
+        Parameters:
+        -----------
+        show_ghosts : bool
+            Whether to visualize ghost particles
+        """
+        # Clear all existing drawings
+        for artist in self.ax.collections:
+            artist.remove()
+
+        # Create the combined list of particles to draw
+        particles_to_draw = self.particles
+        if show_ghosts:
+            particles_to_draw = particles_to_draw + self.ghost_particles
+
+        # Draw each particle
+        for particle in particles_to_draw:
+            particle.draw(self.ax)
+
+    def animate(self, frame, dt=0.1, show_ghosts=False):
+        """Animation function for matplotlib in 3D."""
         # Update the simulation
         self.update(dt)
 
-        # Return all visual elements that need to be redrawn
-        visual_elements = [self.energy_text]
+        # Clear axis and redraw
+        self.ax.cla()
 
-        # Draw real particles
-        for particle in self.particles:
-            visual_elements.extend(
-                [particle.rod, particle.cap1, particle.cap2, particle.text])
-            # Add debug circles
-            for circle in particle.debug:
-                visual_elements.append(circle)
-                self.ax.add_patch(circle)
-            # Clear debug circles after drawing
-            particle.debug = []
+        # Reset axis limits
+        self.ax.set_xlim(0, self.box_size[0])
+        self.ax.set_ylim(0, self.box_size[1])
+        self.ax.set_zlim(0, self.box_size[2])
 
-        # Optionally, draw ghost particles for visualization (with different color/transparency)
-        if hasattr(self, 'show_ghosts') and self.show_ghosts:
-            for ghost in self.ghost_particles:
-                ghost.update_visual_elements(
-                    self.ax, alpha=0.3, ghost=True)  # Lower alpha for ghosts
-                visual_elements.extend([ghost.rod, ghost.cap1, ghost.cap2])
+        # Redraw box
+        self.draw_simulation_box()
 
-        return visual_elements
+        # Draw all particles
+        self.draw_particles(show_ghosts)
+
+        # Update energy text
+        self.energy_text = self.ax.text2D(
+            0.02, 0.98, f'Total Energy: {self.calculate_energy():.2f} | Particles: {len(self.particles)}',
+            transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
+
+        # Add axis labels
+        self.ax.set_xlabel('X')
+        self.ax.set_ylabel('Y')
+        self.ax.set_zlabel('Z')
+        self.ax.set_title('3D Growing Spherocylinder Simulation')
+
+        # For 3D, we need to return an empty list since we're redrawing the whole scene
+        return []
 
     def run_simulation(self, num_frames=500, dt=0.1, interval=50, show_ghosts=False):
         """
-        Run the animation for the specified number of frames.
+        Run the animation for the specified number of frames in 3D.
 
         Parameters:
         -----------
@@ -381,14 +542,9 @@ class Simulation:
         show_ghosts : bool
             Whether to visualize ghost particles
         """
-        self.show_ghosts = show_ghosts
-
-        # Initial update of visual elements
-        for particle in self.particles:
-            particle.update_visual_elements(self.ax)
-
         # Create and run animation
         anim = FuncAnimation(self.fig, self.animate, frames=num_frames,
-                             interval=interval, blit=True, fargs=(dt,))
+                             interval=interval, blit=False,
+                             fargs=(dt, show_ghosts))
         plt.show()
         return anim
