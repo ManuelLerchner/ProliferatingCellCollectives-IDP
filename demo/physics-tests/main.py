@@ -19,7 +19,7 @@ def main():
     lambda_dimensionless = (tao_growtscale) * l0**2 * lambbda
 
     sim = Simulation(
-        box_size=20,
+        box_size=60,
         tao_growthrate=tao_growtscale,
         lambda_sensitivity=lambda_dimensionless,
     )
@@ -40,9 +40,9 @@ def main():
     sim.ax.set_xlim(-bounding_radius, sim.box_size + bounding_radius)
     sim.ax.set_ylim(-bounding_radius, sim.box_size + bounding_radius)
 
-    frames = 250
+    end_time = 250
 
-    ani = sim.run_simulation(frames=frames, base_dt=0.1, scaling_factor=0.0,
+    ani = sim.run_simulation(end_time=end_time, base_dt=0.01, scaling_factor=0.0,
                              interval=10, show_ghosts=True, show_grid=True)
 
     plt.show(block=False)
@@ -51,12 +51,13 @@ def main():
 
     def update_func(i, n):
         plt.pause(.01)
-        progress_bar.update(1)
+        progress_bar.n = sim.total_time
+        progress_bar.refresh()
 
-    with tqdm(total=frames, bar_format="{l_bar}{bar} [ time left: {remaining}, time spent: {elapsed}]") as progress_bar:
+    with tqdm(total=end_time, bar_format="{l_bar}{bar} [ time left: {remaining}, time spent: {elapsed}]") as progress_bar:
 
         ani.save("simulation.mp4", writer="ffmpeg",
-                 dpi=100, progress_callback=update_func, fps=60)
+                 dpi=100, progress_callback=update_func, fps=30)
 
 
 if __name__ == "__main__":

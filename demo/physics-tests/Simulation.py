@@ -56,7 +56,7 @@ class Simulation:
             0.02, 0.98, f'',
             transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.time_text = self.ax.text(
-            0.02, 0.92, f'',
+            0.02, 0.995, f'',
             transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.cell_text = self.ax.text(
             0.02, 0.86, f'',
@@ -78,8 +78,11 @@ class Simulation:
             return (box1[0] < box2[1] and box1[1] > box2[0] and
                     box1[2] < box2[3] and box1[3] > box2[2])
 
+        for particle in self.particles:
+            particle.update_bounding_box()
+
         # Sort particles by their min x-coordinate
-        self.particles.sort(key=lambda p: p.bounding_box()[0])
+        self.particles.sort(key=lambda p: p.bounding_box_coords[0])
 
         for i in range(len(self.particles)):
             particle = self.particles[i]
@@ -88,10 +91,10 @@ class Simulation:
                 other_particle = self.particles[j]
 
                 # Check if the bounding boxes overlap
-                if particle.bounding_box()[1] < other_particle.bounding_box()[0]:
+                if particle.bounding_box_coords[1] < other_particle.bounding_box_coords[0]:
                     break
 
-                if bounding_box_overlap(particle.bounding_box(), other_particle.bounding_box()):
+                if bounding_box_overlap(particle.bounding_box_coords, other_particle.bounding_box_coords):
                     # Check if the particles are close enough to collide
                     yield particle, other_particle
 
@@ -235,7 +238,7 @@ class Simulation:
                           self.lambda_sensitivity)
 
             # Move particle with collision effects and drag
-            particle.move(dt, self.box_size)
+            particle.move(dt)
 
             # Apply periodic boundary conditions
             self.enforce_periodic_boundaries(particle)
@@ -246,20 +249,18 @@ class Simulation:
         # Calculate total energy
         self.total_time += dt
 
-    def animate(self, frame, base_dt, scaling_factor):
+    def animate(self, time, base_dt, scaling_factor):
         """Animation function for matplotlib."""
 
-        for i in range(10):
-
+        for i in range(20):
             dt = base_dt / (1 + len(self.particles) * scaling_factor)
-
             # Update the simulation
             self.update(dt)
 
         # Return all visual elements that need to be redrawn
         visual_elements = [self.energy_text, self.time_text, self.cell_text]
         self.time_text.set_text(
-            f'Frame:{frame}, Time: {self.total_time:.2f}, Δt: {dt:.2f}')
+            f't={time:.2f}, Δt: {dt:.2f}, Particles: {len(self.particles)}')
 
         # Draw real particles
         for particle in self.particles:
@@ -268,7 +269,7 @@ class Simulation:
 
         return visual_elements
 
-    def run_simulation(self, frames=500, base_dt=0.1, scaling_factor=0.5, interval=50, show_ghosts=False, show_grid=False):
+    def run_simulation(self, end_time=500, base_dt=0.1, scaling_factor=0.5, interval=50, show_ghosts=False, show_grid=False):
         """Run the simulation animation."""
         self.show_ghosts = show_ghosts
         self.show_grid = show_grid
@@ -277,10 +278,15 @@ class Simulation:
         for particle in self.particles:
             particle.update_visual_elements(self.ax)
 
+        def frame_generator():
+            """Generator for frames."""
+            while self.total_time < end_time:
+                yield self.total_time
+
         # Create and run animation
         anim = FuncAnimation(self.fig, self.animate,
                              repeat=False,
-                             frames=frames,
+                             frames=frame_generator,
                              interval=interval, blit=True, fargs=(base_dt,
                                                                   scaling_factor))
         return anim

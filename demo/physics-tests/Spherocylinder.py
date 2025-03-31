@@ -142,13 +142,15 @@ class Spherocylinder:
         self.ax = None
         self.to_delete = False
 
+        self.bounding_box_coords = None
+
     def grow(self, dt, tao, lamb):
         """Grow the particle based on stress and growth rate."""
         growth = (self.length/tao) * np.exp(-lamb * self.stress)
         self.length += growth * dt
         self.length = min(self.length, self.max_length)
 
-    def move(self, dt, box_size):
+    def move(self, dt):
         """Move the particle using velocity Verlet integration."""
         # Store current force as old force for next step
         self.old_force = self.force.copy()
@@ -161,10 +163,6 @@ class Spherocylinder:
         # Update orientation and half-update angular velocity
         self.orientation += self.angular_velocity * dt + 0.5 * self.old_torque * dt**2
         self.angular_velocity += 0.5 * self.old_torque * dt
-
-        # Wrap around box boundaries (using modulo for efficiency)
-        self.position[0] = self.position[0] % box_size
-        self.position[1] = self.position[1] % box_size
 
         # Normalize orientation to [0, 2*pi]
         self.orientation = self.orientation % (2 * np.pi)
@@ -279,18 +277,16 @@ class Spherocylinder:
         self.cap2 = None
         self.text = None
 
-    def bounding_box(self):
+    def update_bounding_box(self):
         """Calculate the bounding box of the spherocylinder."""
-        end1, end2 = self.get_endpoints()
-        half_diameter = self.diameter / 2.0
+        # end1, end2 = self.get_endpoints()
 
-        # Calculate min/max coordinates
-        min_x = min(end1[0], end2[0]) - half_diameter
-        max_x = max(end1[0], end2[0]) + half_diameter
-        min_y = min(end1[1], end2[1]) - half_diameter
-        max_y = max(end1[1], end2[1]) + half_diameter
+        min_x = self.position[0] - self.length / 2
+        max_x = self.position[0] + self.length / 2
+        min_y = self.position[1] - self.diameter / 2
+        max_y = self.position[1] + self.diameter / 2
 
-        return min_x, max_x, min_y, max_y
+        self.bounding_box_coords = (min_x, max_x, min_y, max_y)
 
     def check_overlap(self, other):
         """Check if this spherocylinder overlaps with another one."""
