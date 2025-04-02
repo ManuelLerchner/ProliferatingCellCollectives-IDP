@@ -1,65 +1,78 @@
-import matplotlib as mpl
-from matplotlib import pyplot as plt
-from matplotlib import animation
+
+import time
+
 import numpy as np
-from tqdm import tqdm
+from matplotlib import pyplot as plt
 from Simulation import Simulation
 from Spherocylinder import Spherocylinder
-import cProfile
+from tqdm import tqdm
 
 # Example usage
 
 
-def main():
-    # Create and run simulation with drag
-    l0 = 1.0
-    lambbda = 1e-3
+with open("log.csv", "w") as f:
+    f.write("time_game,time_total,particles,ups\n")
+    t_start = time.time()
 
-    tao_growtscale = 30
-    lambda_dimensionless = (tao_growtscale) * l0**2 * lambbda
+    def main():
+        # Create and run simulation with drag
+        l0 = 1.0
+        lambbda = 1e-3
 
-    sim = Simulation(
-        box_size=60,
-        tao_growthrate=tao_growtscale,
-        lambda_sensitivity=lambda_dimensionless,
-    )
+        tao_growtscale = 30
+        lambda_dimensionless = (tao_growtscale) * l0**2 * lambbda
 
-    angle = np.pi / 18
+        sim = Simulation(
+            tao_growthrate=tao_growtscale,
+            lambda_sensitivity=lambda_dimensionless,
+        )
 
-    p1 = Spherocylinder(
-        position=[sim.box_size / 2, sim.box_size / 2],
-        orientation=angle,
-        linear_velocity=0.0 * np.array([np.cos(angle), np.sin(angle)]),
-        angular_velocity=0.00,
-        l0=1,
-    )
+        p1 = Spherocylinder(
+            position=np.array([0.0, 0.0]),
+            orientation=0,
+            linear_velocity=np.array([0.0, 0.0]),
+            angular_velocity=0.00,
+            l0=1,
+        )
 
-    sim.particles.append(p1)
+        sim.particles.append(p1)
 
-    bounding_radius = 1.5
-    sim.ax.set_xlim(-bounding_radius, sim.box_size + bounding_radius)
-    sim.ax.set_ylim(-bounding_radius, sim.box_size + bounding_radius)
+        end_time = 300
 
-    end_time = 250
+        ani = sim.run_simulation(end_time=end_time, base_dt=2**(-5), scaling_factor=0.0,
+                                 interval=10, show_ghosts=True, show_grid=True)
 
-    ani = sim.run_simulation(end_time=end_time, base_dt=0.01, scaling_factor=0.0,
-                             interval=10, show_ghosts=True, show_grid=True)
+        plt.show(block=False)
 
-    plt.show(block=False)
+        # move second speher with arrow keys. rotate with q and e keys
 
-    # move second speher with arrow keys. rotate with q and e keys
+        def update_func(i, n):
 
-    def update_func(i, n):
-        plt.pause(.01)
-        progress_bar.n = sim.total_time
-        progress_bar.refresh()
+            def expected_time_min(gt):
+                return (np.exp(-0.31 + 0.032 * gt) + 12.01) / 1.6 / 60
 
-    with tqdm(total=end_time, bar_format="{l_bar}{bar} [ time left: {remaining}, time spent: {elapsed}]") as progress_bar:
+            remaining_time = expected_time_min(
+                end_time) - expected_time_min(sim.total_time)
 
-        ani.save("simulation.mp4", writer="ffmpeg",
-                 dpi=100, progress_callback=update_func, fps=30)
+            progress_bar.set_description(
+                f'Δt: {sim.dt:.2f}, Particles: {len(sim.particles)}')
 
+            progress_bar.set_postfix({'time_left': f"{remaining_time:.2f} min",
+                                      'ups': sim.ups})
+            progress_bar.n = float(f"{sim.total_time:.2f}")
+            progress_bar.refresh()
 
-if __name__ == "__main__":
-    cProfile.run('main()', sort='time')
-    # main()
+            plt.gca().relim()
+            plt.gca().autoscale_view()
+            plt.pause(0.01)
+
+            f.write(
+                f"{sim.total_time},{time.time()-t_start},{len(sim.particles)},{sim.ups}\n")
+
+        with tqdm(total=end_time, bar_format="{l_bar}{bar}{r_bar}") as progress_bar:
+            ani.save("simulation.mp4", writer="ffmpeg",
+                     dpi=100, progress_callback=update_func, fps=30)
+
+    if __name__ == "__main__":
+        # cProfile.run('main()', sort='time')
+        main()

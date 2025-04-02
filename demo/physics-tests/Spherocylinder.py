@@ -124,10 +124,6 @@ class Spherocylinder:
         self.angular_velocity = angular_velocity
         self.linear_velocity = linear_velocity
 
-        # Collision parameters
-        self.restitution = 0.5  # Coefficient of restitution
-        self.friction = 0.3     # Friction coefficient
-
         # Force and torque tracking
         self.torque = 0.0
         self.force = np.zeros(2)
@@ -138,9 +134,7 @@ class Spherocylinder:
         self.rod = None
         self.cap1 = None
         self.cap2 = None
-        self.text = None
         self.ax = None
-        self.to_delete = False
 
         self.bounding_box_coords = None
 
@@ -203,14 +197,10 @@ class Spherocylinder:
         ax.add_patch(self.cap1)
         ax.add_patch(self.cap2)
 
-        # Add text with current length
-        self.text = ax.text(0, 0, '', fontsize=8, ha='center',
-                            va='center', color='black', zorder=3)
-
-    def update_visual_elements(self, ax, alpha=1.0, ghost=False):
+    def update_visual_elements(self, ax):
         """Update the visual representation of the spherocylinder."""
         # Initialize visual elements if they don't exist
-        if self.rod is None or self.cap1 is None or self.cap2 is None or self.text is None:
+        if self.rod is None or self.cap1 is None or self.cap2 is None:
             self.initialize_visual_elements(ax)
 
         # Get endpoints
@@ -219,9 +209,6 @@ class Spherocylinder:
         # Update end caps positions
         self.cap1.set_center(end1)
         self.cap2.set_center(end2)
-
-        # Update text position
-        self.text.set_position((self.position[0], self.position[1]))
 
         # Update rod body
         rod_width = self.length - self.diameter
@@ -238,10 +225,6 @@ class Spherocylinder:
         color_index_border = min(int(self.stress * 255), 255)
         border_color = self._stress_cmap(color_index_border)
 
-        # For ghost particles, adjust color and transparency
-        if ghost:
-            color = (0.5, 0.5, 1.0, alpha)
-
         # Apply colors to all elements
         self.rod.set_facecolor(color)
         self.cap1.set_facecolor(color)
@@ -251,11 +234,6 @@ class Spherocylinder:
         self.cap1.set_edgecolor(border_color)
         self.cap2.set_edgecolor(border_color)
 
-        # Apply alpha to all elements
-        self.rod.set_alpha(alpha)
-        self.cap1.set_alpha(alpha)
-        self.cap2.set_alpha(alpha)
-
         t = transforms.Affine2D()
 
         t.translate(
@@ -264,18 +242,6 @@ class Spherocylinder:
         t.rotate_around(
             self.position[0], self.position[1], self.orientation)
         self.rod.set_transform(t + ax.transData)
-
-    def delete_visual_elements(self):
-        """Delete the visual elements of the spherocylinder."""
-        for element in [self.rod, self.cap1, self.cap2, self.text]:
-            if element is not None:
-                element.remove()
-
-        # Reset visual elements to None
-        self.rod = None
-        self.cap1 = None
-        self.cap2 = None
-        self.text = None
 
     def update_bounding_box(self):
         """Calculate the bounding box of the spherocylinder."""
@@ -321,3 +287,32 @@ class Spherocylinder:
             return True, overlap, contact_point, normal
 
         return False, overlap, None, None
+
+    def divide(self):
+        """Divide particles"""
+        if self.length >= self.max_length:
+            # Calculate new positions for child particles
+            orientation_vector = np.array(
+                [np.cos(self.orientation), np.sin(self.orientation)])
+
+            center_left = self.position - 1/4. * self.length * orientation_vector
+            center_right = self.position + 1/4. * self.length * orientation_vector
+
+            # Random orientation noise
+            noise = np.random.uniform(-np.pi/32, np.pi/32)
+
+            # self
+            self.position = center_left
+            self.orientation = self.orientation + noise
+            self.length = self.l0
+
+            # new
+            new_particle_right = Spherocylinder(
+                position=center_right,
+                orientation=self.orientation - noise,
+                linear_velocity=self.linear_velocity,
+                angular_velocity=self.angular_velocity,
+                l0=self.l0,
+            )
+
+            return new_particle_right

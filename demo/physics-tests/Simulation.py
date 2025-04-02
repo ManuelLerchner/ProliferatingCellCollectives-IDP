@@ -1,11 +1,11 @@
+
+from time import monotonic_ns
+
 import matplotlib.pyplot as plt
+import nest_asyncio
 import numpy as np
 from matplotlib.animation import FuncAnimation
-from Spherocylinder import Spherocylinder
-from tqdm import tqdm
-import time
 
-import nest_asyncio
 nest_asyncio.apply()
 
 
@@ -17,11 +17,10 @@ class Simulation:
     Uses linked cells for efficient collision detection.
     """
 
-    def __init__(self, box_size=20, tao_growthrate=0.1, lambda_sensitivity=0.5, friction=100):
+    def __init__(self, tao_growthrate=0.1, lambda_sensitivity=0.5, friction=100):
         """
         Initialize the simulation of growing spherocylinder particles.
         """
-        self.box_size = box_size
         self.tao_growthrate = tao_growthrate
         self.lambda_sensitivity = lambda_sensitivity
         self.friction = friction  # Friction coefficient for drag
@@ -40,29 +39,14 @@ class Simulation:
         self.cell_grid = {}  # Dictionary to store particles in each cell
 
         # Initialize figure for animation
-        self.fig, self.ax = plt.subplots(figsize=(10, 10))
-        self.ax.set_xlim(0, box_size)
-        self.ax.set_ylim(0, box_size)
+        self.fig, self.ax = plt.subplots(1, 1, figsize=(8, 8))
         self.ax.set_aspect('equal')
-        self.ax.set_title(
-            'Growing Spherocylinder Simulation with Periodic Boundaries and Linked Cells')
-
-        border = plt.Rectangle(
-            (0, 0), box_size, box_size, fill=False, color='black', lw=2)
-        self.ax.add_patch(border)
 
         # Add energy indicator
-        self.energy_text = self.ax.text(
-            0.02, 0.98, f'',
-            transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
-        self.time_text = self.ax.text(
-            0.02, 0.995, f'',
-            transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
-        self.cell_text = self.ax.text(
-            0.02, 0.86, f'',
-            transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.total_time = 0.0
-        self.time_last_frame = 0.0
+        self.time_last_frame = monotonic_ns()
+        self.ups = 0.0
+        self.dt = 0.0
 
     def sweep_and_prune(self):
         """
@@ -84,6 +68,8 @@ class Simulation:
         # Sort particles by their min x-coordinate
         self.particles.sort(key=lambda p: p.bounding_box_coords[0])
 
+        self.potential_pairs = []
+
         for i in range(len(self.particles)):
             particle = self.particles[i]
 
@@ -96,7 +82,7 @@ class Simulation:
 
                 if bounding_box_overlap(particle.bounding_box_coords, other_particle.bounding_box_coords):
                     # Check if the particles are close enough to collide
-                    yield particle, other_particle
+                    self.potential_pairs.append((particle, other_particle))
 
     def handle_interactions(self):
         """Apply torque-based collision response between particles using linked cells."""
@@ -105,9 +91,7 @@ class Simulation:
         for particle in self.particles:
             particle.stress = 0.0
 
-        potential_pairs = self.sweep_and_prune()
-
-        for p1, p2 in potential_pairs:
+        for p1, p2 in self.potential_pairs:
             overlapping, overlap, contact_point, normal = p1.check_overlap(p2)
             if overlapping:
                 self.apply_collision_response(
@@ -159,134 +143,66 @@ class Simulation:
         particle1.torque += torque1
         particle2.torque -= torque2
 
-    def enforce_periodic_boundaries(self, particle):
-        """
-        Apply periodic boundary conditions to a particle.
-        """
-        # Apply periodic boundary conditions
-        if particle.position[0] < 0:
-            particle.position[0] += self.box_size
-        elif particle.position[0] > self.box_size:
-            particle.position[0] -= self.box_size
-
-        if particle.position[1] < 0:
-            particle.position[1] += self.box_size
-        elif particle.position[1] > self.box_size:
-            particle.position[1] -= self.box_size
-
-    def divide_particles(self):
-        """Divide particles if they exceed a certain length."""
-        for i in range(len(self.particles)):
-            particle = self.particles[i]
-            if particle.length >= particle.max_length:
-                # Calculate new positions for child particles
-                orientation_vector = np.array(
-                    [np.cos(particle.orientation), np.sin(particle.orientation)])
-
-                center_left = particle.position - 1/4. * particle.length * orientation_vector
-                center_right = particle.position + 1/4. * particle.length * orientation_vector
-
-                # Random orientation noise
-                noise = np.random.uniform(-np.pi/32, np.pi/32)
-
-                # Create new particles. Maintain total energy
-                new_particle_left = Spherocylinder(
-                    position=center_left,
-                    orientation=particle.orientation + noise,
-                    linear_velocity=particle.linear_velocity,
-                    angular_velocity=particle.angular_velocity,
-                    l0=particle.l0,
-                )
-                new_particle_right = Spherocylinder(
-                    position=center_right,
-                    orientation=particle.orientation - noise,
-                    linear_velocity=particle.linear_velocity,
-                    angular_velocity=particle.angular_velocity,
-                    l0=particle.l0,
-                )
-                new_particle_left.length = particle.length / 2
-                new_particle_right.length = particle.length / 2
-
-                # Apply periodic boundary conditions to new particles if needed
-                self.enforce_periodic_boundaries(new_particle_left)
-                self.enforce_periodic_boundaries(new_particle_right)
-
-                self.particles.append(new_particle_left)
-                self.particles.append(new_particle_right)
-
-                particle.to_delete = True  # Mark for deletion
-                particle.delete_visual_elements()
-        # Remove marked particles
-        self.particles = [p for p in self.particles if not p.to_delete]
-
     def update(self, dt):
         """Update the simulation for one time step."""
 
-        # remove debug lines
-        for line in self.ax.lines:
-            line.remove()
         # Handle collisions and apply torques
         self.handle_interactions()
 
         # Divide particles if necessary
-        self.divide_particles()
 
         # Update all particles
         for particle in self.particles:
+            particle.move(dt)
+
             # Grow based on stress
             particle.grow(dt, self.tao_growthrate,
                           self.lambda_sensitivity)
 
-            # Move particle with collision effects and drag
-            particle.move(dt)
-
-            # Apply periodic boundary conditions
-            self.enforce_periodic_boundaries(particle)
-
-            # Update visual representation
-            particle.update_visual_elements(self.ax)
+            new_particle = particle.divide()
+            if new_particle is not None:
+                self.particles.append(new_particle)
 
         # Calculate total energy
         self.total_time += dt
 
-    def animate(self, time, base_dt, scaling_factor):
+    def animate(self, frame, base_dt, scaling_factor):
         """Animation function for matplotlib."""
 
-        for i in range(20):
-            dt = base_dt / (1 + len(self.particles) * scaling_factor)
+        self.sweep_and_prune()
+
+        UPDATES_PER_FRAME = 20
+        for i in range(UPDATES_PER_FRAME):
+            self.dt = base_dt / (1 + len(self.particles) * scaling_factor)
             # Update the simulation
-            self.update(dt)
+            self.update(self.dt)
 
-        # Return all visual elements that need to be redrawn
-        visual_elements = [self.energy_text, self.time_text, self.cell_text]
-        self.time_text.set_text(
-            f't={time:.2f}, Δt: {dt:.2f}, Particles: {len(self.particles)}')
-
-        # Draw real particles
         for particle in self.particles:
-            visual_elements.extend(
-                [particle.rod, particle.cap1, particle.cap2, particle.text])
+            particle.update_visual_elements(self.ax)
 
-        return visual_elements
+        t_current = monotonic_ns() / 1e9
+        delta_time = max((t_current - self.time_last_frame), 1e-9)
+        self.ups = UPDATES_PER_FRAME / delta_time
+        self.time_last_frame = t_current
 
     def run_simulation(self, end_time=500, base_dt=0.1, scaling_factor=0.5, interval=50, show_ghosts=False, show_grid=False):
         """Run the simulation animation."""
         self.show_ghosts = show_ghosts
         self.show_grid = show_grid
 
-        # Initial update of visual elements
-        for particle in self.particles:
-            particle.update_visual_elements(self.ax)
-
         def frame_generator():
             """Generator for frames."""
+            frame = 0
             while self.total_time < end_time:
-                yield self.total_time
+                yield frame
+                frame += 1
 
         # Create and run animation
         anim = FuncAnimation(self.fig, self.animate,
                              repeat=False,
                              frames=frame_generator,
-                             interval=interval, blit=True, fargs=(base_dt,
-                                                                  scaling_factor))
+                             interval=interval,
+                             cache_frame_data=False,
+                             fargs=(base_dt,
+                                    scaling_factor))
         return anim
