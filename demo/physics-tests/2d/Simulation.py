@@ -153,11 +153,11 @@ class Simulation:
 
         # Update all particles
         for particle in self.particles:
-            particle.move(dt)
-
             # Grow based on stress
             particle.grow(dt, self.tao_growthrate,
                           self.lambda_sensitivity)
+
+            particle.move(dt)
 
             new_particle = particle.divide()
             if new_particle is not None:

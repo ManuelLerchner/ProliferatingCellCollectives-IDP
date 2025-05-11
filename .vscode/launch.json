@@ -9,7 +9,7 @@
             "name": "Physics Tests",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/demo/physics-tests/main.py",
+            "program": "${workspaceFolder}/demo/physics-tests/3d/main.py",
             "console": "integratedTerminal"
         }
     ]
