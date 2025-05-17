@@ -1,60 +1,51 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from forces import calc_friction_forces
-from generator import (make_particle_length,
-                       make_particle_position)
+from forces import (calc_friction_forces, calc_herzian_collision_forces)
+from generator import (make_particle_length, make_particle_position,
+                       normalize_quaternions_vectorized)
 from matplotlib.animation import FuncAnimation
 from physics import make_map, make_particle_mobility_matrix
 from visualization import render_particles
 
 
-def calcF(U, L):
-    F_fric = calc_friction_forces(U, L)
-    return F_fric
-
-
 def init_particles():
     """Initialize particle positions, lengths, and velocities"""
     p1 = make_particle_position([0, 0, 0], 1.0, [0, 0, 0])
-    # p2 = make_particle_position([1, 0.5, 0], 1.0, [0, 0, 0])
+    p2 = make_particle_position([0.4, 0.3, 0], 1.0, [0, 0, 0])
 
     l1 = make_particle_length(1.0)
-    # l2 = make_particle_length(1.0)
+    l2 = make_particle_length(1.0)
 
-    L = np.stack((l1,  ))
-    C = np.concatenate((p1,  ), axis=0)
-
-    U = np.ones((6*len(L), ))
+    L = np.stack((l1, l2))
+    C = np.concatenate((p1, p2), axis=0)
+    U = np.zeros((6*len(L), ))
 
     return C, L, U
 
 
-def calc_forces(U, L):
+def calc_forces(C, U, L):
     """Calculate forces on particles"""
     F_fric = calc_friction_forces(U, L)
-    return F_fric
+    F_coll = calc_herzian_collision_forces(C, L)
+    # F_gravity = calc_gravity_forces(L)
+    return F_fric + F_coll  # + F_gravity
 
 
-def simulation_step(C, L, U, dt=0.01):
+def simulation_step(C, L, U, dt):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
-    F = calc_forces(U, L)
-    F = np.zeros((6*len(L), ))
-
-    F[4::6] = 1
+    F = calc_forces(C, U, L)
 
     # Update positions
     M = make_particle_mobility_matrix(L)
     G = make_map(C)
-
-    print(G)
 
     U = M @ F
 
     Cdot = G @ U
 
     # Update configuration
-    C_new = C + dt * Cdot
+    C_new = normalize_quaternions_vectorized(C + dt * Cdot)
 
     return C_new, U
 

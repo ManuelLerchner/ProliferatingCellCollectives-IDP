@@ -27,6 +27,42 @@ def make_particle_position(x, s, w):
     return C
 
 
+def normalize_quaternions_vectorized(C):
+    """
+    Normalize all quaternions in the configuration array using vectorized operations.
+
+    Parameters:
+    C (np.ndarray): Array containing position and quaternion data for particles
+                   Each particle has [x, y, z, s, wx, wy, wz]
+
+    Returns:
+    np.ndarray: Array with normalized quaternions
+    """
+    # Make a copy to avoid modifying the input array
+    C_normalized = C.copy()
+
+    num_particles = len(C) // 7
+
+    # Reshape to separate particles
+    particles = C_normalized.reshape(num_particles, 7)
+
+    # Extract quaternion parts (columns 3-6)
+    quaternions = particles[:, 3:7]
+
+    # Calculate norms for each quaternion
+    norms = np.linalg.norm(quaternions, axis=1)
+
+    # Find non-zero norms to avoid division by zero
+    non_zero_mask = norms > 0
+
+    # Normalize the quaternions with non-zero norms
+    for i in np.where(non_zero_mask)[0]:
+        particles[i, 3:7] = particles[i, 3:7] / norms[i]
+
+    # Reshape back to original format
+    return particles.reshape(-1)
+
+
 def make_particle_length(l):
     """
     Create a particle representation with length.

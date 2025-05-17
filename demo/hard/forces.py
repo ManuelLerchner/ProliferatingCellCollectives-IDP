@@ -1,4 +1,5 @@
 import numpy as np
+from capsula import signed_distance_capsule
 
 
 def calc_friction_forces(U, L):
@@ -31,24 +32,60 @@ def calc_friction_forces(U, L):
     return F
 
 
-def calc_collision_forces(gamma):
+def calc_gravity_forces(L):
+    """
+    Calculate the gravitational forces on particles.
+    Parameters:
+    C (array-like): Particle positions and orientations
+    L (array-like): Particle lengths
+    Returns:
+    np.ndarray: The gravitational force vector
+    """
+    n = len(L)
 
-    F = np.array([], dtype=float)
-    T = np.array([], dtype=float)
+    direction = np.array([0, 0, -1])
+    g = 9.81
 
-    phi = []
-    for n in range(len(C)//7):
-        for m in range(n+1, len(C)//7):
-            # todo n should be surface normal
+    F = np.zeros((6*n, ))
+    for i in range(n):
+        # Extract the quaternion
 
-            s, yN, yM, norm = signed_distance_capsule(C, L, n, m)
-            phi.append(s)
+        F[6*i:6*i+3] = direction * g * L[i]
 
-            f = gamma[n] * norm
+    return F
 
-            t = np.cross(yN, norm * gamma[n])
 
-            F = np.concatenate((F, f))
-            T = np.concatenate((T, t))
+def calc_herzian_collision_forces(C, L):
 
-    return F, T
+    n = len(L)
+
+    F = np.zeros((6*n, ))
+
+    for i in range(n):
+        for j in range(i+1, n):
+            xi = C[6*i:6*i+3]
+            xj = C[6*j:6*j+3]
+
+            distMin, yi, yj, _, _ = signed_distance_capsule(C, L, i, j)
+
+            diameter = 0.5
+
+            sep = distMin - (diameter + diameter) / 2
+            if sep < 0:
+
+                norm = (yj - yi) / np.linalg.norm(yj - yi)
+
+                # Calculate the force and torque
+                F_n = norm * sep
+
+                T_n = np.cross((yi - xi), F_n)
+                T_m = np.cross((yj - xj), F_n)
+
+                # Update the forces and torques
+                F[6*i:6*i+3] += F_n
+                F[6*i+3:6*i+6] += T_n
+
+                F[6*j:6*j+3] -= F_n
+                F[6*j+3:6*j+6] += T_m
+
+    return F
