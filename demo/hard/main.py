@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from forces import (calc_friction_forces, calc_herzian_collision_forces)
+from forces import (calc_constraint_collision_forces, calc_friction_forces)
 from generator import (make_particle_length, make_particle_position,
                        normalize_quaternions_vectorized)
 from matplotlib.animation import FuncAnimation
@@ -10,34 +10,53 @@ from visualization import render_particles
 
 def init_particles():
     """Initialize particle positions, lengths, and velocities"""
-    p1 = make_particle_position([0, 0, 0], 1.0, [0, 0, 0])
-    p2 = make_particle_position([0.4, 0.3, 0], 1.0, [0, 0, 0])
 
-    l1 = make_particle_length(1.0)
-    l2 = make_particle_length(1.0)
+    # seed
+    np.random.seed(42)
 
-    L = np.stack((l1, l2))
-    C = np.concatenate((p1, p2), axis=0)
+    ps = []
+    ls = []
+
+    for i in range(5):
+        pos = np.random.rand(3)  # Random position in [-1, 1]^3
+        pos[2] = 0.0  # Set z-coordinate to 0 for a flat plane
+
+        q = np.random.rand(4)  # Random quaternion in x, y plane
+        q[1] = 0.0  # Set y-component to 0 for a flat plane
+        q[2] = 0.0  # Set z-component to 0 for a flat plane
+        q /= np.linalg.norm(q)
+        p = make_particle_position(pos, q[0], [q[1], q[2], q[3]])
+
+        l = make_particle_length(1.0)
+
+        ps.append(p)
+        ls.append(l)
+
+    L = np.stack(ls)
+    C = np.concatenate(ps, axis=0)
     U = np.zeros((6*len(L), ))
 
     return C, L, U
 
 
-def calc_forces(C, U, L):
+def calc_forces(C, U, L, M, dt):
     """Calculate forces on particles"""
     F_fric = calc_friction_forces(U, L)
-    F_coll = calc_herzian_collision_forces(C, L)
+    # F_herz = calc_herzian_collision_forces(C, L)
+    F_con = calc_constraint_collision_forces(C, L, M, dt)
     # F_gravity = calc_gravity_forces(L)
-    return F_fric + F_coll  # + F_gravity
+    return F_fric + F_con
 
 
 def simulation_step(C, L, U, dt):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
-    F = calc_forces(C, U, L)
 
     # Update positions
     M = make_particle_mobility_matrix(L)
+
+    F = calc_forces(C, U, L, M, dt)
+
     G = make_map(C)
 
     U = M @ F
@@ -45,8 +64,10 @@ def simulation_step(C, L, U, dt):
     Cdot = G @ U
 
     # Update configuration
-    C_new = normalize_quaternions_vectorized(C + dt * Cdot)
+    C_new = C + dt * Cdot
 
+    # Normalize quaternions (if applicable)
+    C_new = normalize_quaternions_vectorized(C_new)
     return C_new, U
 
 

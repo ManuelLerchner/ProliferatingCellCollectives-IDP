@@ -1,5 +1,8 @@
 import numpy as np
-from capsula import signed_distance_capsule
+from capsula import getDirectionVector, signed_distance_capsule
+from constraint import (calculate_D_matrix, getConstraints,
+                        solve_rigid_contact_problem)
+from stress import collide_stress
 
 
 def calc_friction_forces(U, L):
@@ -60,32 +63,85 @@ def calc_herzian_collision_forces(C, L):
     n = len(L)
 
     F = np.zeros((6*n, ))
+    S = np.zeros((n, ))
 
     for i in range(n):
         for j in range(i+1, n):
-            xi = C[6*i:6*i+3]
-            xj = C[6*j:6*j+3]
+            xi = C[7*i:7*i+3]
+            xj = C[7*j:7*j+3]
 
-            distMin, yi, yj, _, _ = signed_distance_capsule(C, L, i, j)
+            qi = C[7*i+3:7*i+7]
+            qj = C[7*j+3:7*j+7]
+
+            orientationI = getDirectionVector(qi)
+            orientationJ = getDirectionVector(qj)
+
+            distMin, Ploc, Qloc, _, _ = signed_distance_capsule(C, L, i, j)
 
             diameter = 0.5
 
             sep = distMin - (diameter + diameter) / 2
             if sep < 0:
 
-                norm = (yj - yi) / np.linalg.norm(yj - yi)
+                norm = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
 
                 # Calculate the force and torque
-                F_n = norm * sep
+                F_n = norm * (-sep)
 
-                T_n = np.cross((yi - xi), F_n)
-                T_m = np.cross((yj - xj), F_n)
+                posI = Ploc - xi
+                posJ = Qloc - xj
+
+                T_n = np.cross(posI, F_n)
+                T_m = np.cross(posJ, F_n)
 
                 # Update the forces and torques
                 F[6*i:6*i+3] += F_n
-                F[6*i+3:6*i+6] += T_n
-
                 F[6*j:6*j+3] -= F_n
-                F[6*j+3:6*j+6] += T_m
+
+                F[6*i+3:6*i+6] += T_n
+                F[6*j+3:6*j+6] -= T_m
+
+                stress = collide_stress(
+                    orientationI,
+                    orientationJ,
+                    xi,
+                    xj,
+                    L[i],
+                    L[j],
+                    0.5*diameter,
+                    0.5*diameter,
+                    1.0,
+                    Ploc,
+                    Qloc
+                )
+
+                compression = stress[0, 0] + stress[1, 1] + stress[2, 2]
+                S[i] += compression
+                S[j] += compression
+    return F
+
+
+def calc_constraint_collision_forces(C, L, M, dt, U_known=None):
+
+    constraints, S = getConstraints(C, L)
+
+    if not constraints:
+        return np.zeros((6 * len(L), )), np.zeros(len(L))
+
+    D = calculate_D_matrix(constraints, len(L))
+
+    A = D.T @ M @ D
+
+    phi = np.array([c.delta0 for c in constraints])
+    gamma0 = np.array([c.gamma for c in constraints])
+
+    b = 1/(dt) * phi + \
+        (D.T @ U_known if U_known is not None else np.zeros_like(phi))
+
+    # solve LCP problem 0 <= (A*gamma + b) ⊥ gamma >= 0
+    gamma = solve_rigid_contact_problem(A, b, gamma0)
+
+    # Calculate forces from gamma
+    F = D @ gamma
 
     return F

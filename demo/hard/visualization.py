@@ -5,7 +5,7 @@ import numpy as np
 from capsula import getDirectionVector
 
 
-def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, n_phi=20, n_theta=10, n_height=10):
+def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, color, n_phi=20, n_theta=10, n_height=10):
     """Update the visual representation of the 3D spherocylinder.
 
     This method needs significant changes for proper 3D visualization.
@@ -83,8 +83,6 @@ def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, n_phi=20,
 
     # Plot the surfaces
 
-    color = 'green'
-
     # Cylindrical body
     ax.plot_surface(x_cyl, y_cyl, z_cyl,
                     color=color,   shade=True)
@@ -129,6 +127,9 @@ def render_particles(ax, C, L):
         start_point = pos - direction * (length / 2 - diameter / 2)
         end_point = pos + direction * (length / 2 - diameter / 2)
 
+        # base color on stress. no stress = green, stress = red interpolated
+        c = "green"
+
         # Draw the particle (spherocylinder)
         drawSpherocyllinder(start_point, end_point, direction,
-                            length, diameter, ax, n_phi=20, n_theta=10, n_height=10)
+                            length, diameter, ax, c, n_phi=20, n_theta=10, n_height=10)
