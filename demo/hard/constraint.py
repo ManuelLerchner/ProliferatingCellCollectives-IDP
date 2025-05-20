@@ -78,10 +78,14 @@ def getConstraints(C, L):
 
                 gamma = -sep if sep < 0 else 0
 
-                normI = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
-                if normI is None:
+                norm = np.linalg.norm(Ploc - Qloc)
+                if norm == 0:
                     # pick a default normal if the distance is zero
-                    normI = np.array([1.0, 0.0, 0.0])
+                    norm = np.array([1.0, 0.0, 0.0])
+                else:
+                    norm = (Ploc - Qloc) / norm
+                normI = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
+
                 normJ = -normI
 
                 posI = Ploc - xi

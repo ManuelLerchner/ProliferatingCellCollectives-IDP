@@ -21,10 +21,10 @@ def calc_friction_forces(U, L):
 
     # Calculate the friction force
     XI = 0.1
-    Fn = -XI * L * Un
+    Fn = -XI * np.reshape(L, (n, 1)) * Un
 
     # Calculate the torque
-    Tn = -XI * L**3/12 * Omegan
+    Tn = -XI * np.reshape(L, (n, 1))**3/12 * Omegan
 
     # interleave the forces and torques
     F = np.zeros((6*n, ))

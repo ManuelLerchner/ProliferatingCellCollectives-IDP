@@ -103,9 +103,11 @@ def render_particles(ax, C, L):
     ax.set_zlabel('Z')
 
     # Set reasonable axis limits based on initial positions
-    ax.set_xlim(-2, 2)
-    ax.set_ylim(-2, 2)
-    ax.set_zlim(-2, 2)
+    # ax.set_xlim(-2, 2)
+    # ax.set_ylim(-2, 2)
+    ax.set_zlim(-1, 1)
+
+    # aspect ratio
 
     for i in range(len(L)):
         # Extract position (x, y, z)
