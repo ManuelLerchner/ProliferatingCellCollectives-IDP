@@ -1,7 +1,7 @@
 
 import numpy as np
 from capsula import getDirectionVector, signed_distance_capsule
-from stress import collide_stress
+from matplotlib import pyplot as plt
 
 
 class ConstraintBlock:
@@ -46,14 +46,22 @@ class ConstraintBlock:
                 f"labI={self.labI}, labJ={self.labJ}, oneSide={self.oneSide}, "
                 f"bilateral={self.bilateral}, kappa={self.kappa}, gammaLB={self.gammaLB})")
 
+    def __hash__(self):
+        return hash((self.gidI, self.gidJ, tuple(self.posI), tuple(self.posJ)))
 
-def SingleConstraintDeepestPoint(C, L):
+    def __eq__(self, other):
+        if not isinstance(other, ConstraintBlock):
+            return NotImplemented
+        return (self.gidI == other.gidI and self.gidJ == other.gidJ and
+                np.array_equal(self.posI, other.posI) and
+                np.array_equal(self.posJ, other.posJ))
+
+
+def create_deepest_point_constraints(C, L):
 
     n = len(L)
 
     constraints = []
-
-    S = np.zeros(n)
 
     for i in range(n):
         for j in range(i+1, n):
@@ -72,6 +80,8 @@ def SingleConstraintDeepestPoint(C, L):
 
             sep = distMin - (diameter + diameter) / 2
             buffer = 0.1
+            # continue if the distance is too small
+
             if sep < buffer:
 
                 gamma = -sep if sep < 0 else 0
@@ -108,25 +118,7 @@ def SingleConstraintDeepestPoint(C, L):
 
                 constraints.append(conBlock)
 
-                stress = collide_stress(
-                    orientationI,
-                    orientationJ,
-                    xi,
-                    xj,
-                    L[i],
-                    L[j],
-                    0.5*diameter,
-                    0.5*diameter,
-                    1.0,
-                    Ploc,
-                    Qloc
-                )
-
-                compression = stress[0, 0] + stress[1, 1] + stress[2, 2]
-                S[i] += compression
-                S[j] += compression
-
-    return constraints, S
+    return constraints
 
 
 def calculate_D_matrix(constraints, num_bodies):
@@ -166,7 +158,7 @@ def calculate_D_matrix(constraints, num_bodies):
     return D
 
 
-def BBPGD(gradient, residual, gamma, eps=0.5/5000, max_iter=100):
+def BBPGD(gradient, residual, gamma, eps=1e-5, max_iter=1000):
     grad = gradient(gamma)
     res = residual(grad, gamma)
     alpha = 1 / res
@@ -188,5 +180,4 @@ def BBPGD(gradient, residual, gamma, eps=0.5/5000, max_iter=100):
     if res > eps:
         print("Warning: BBPGD did not converge within the maximum number of iterations.")
         print(f"Final residual: {res}")
-        print(f"Final gamma: {gamma}")
     return gamma

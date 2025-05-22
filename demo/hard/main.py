@@ -1,9 +1,8 @@
-import cProfile
-import time
-from capsula import getDirectionVector
+
 import matplotlib.pyplot as plt
 import numpy as np
-from forces import (calc_constraint_collision_forces, calc_friction_forces)
+from capsula import getDirectionVector
+from forces import calc_constraint_collision_forces_recursive
 from generator import (make_particle_length, make_particle_position,
                        normalize_quaternions_vectorized)
 from matplotlib.animation import FuncAnimation
@@ -20,7 +19,7 @@ def init_particles():
     ps = []
     ls = []
 
-    for i in range(5):
+    for i in range(2):
         pos = np.random.rand(3)  # Random position in [-1, 1]^3
         pos[2] = 0.0  # Set z-coordinate to 0 for a flat plane
 
@@ -44,11 +43,13 @@ def init_particles():
 
 def calc_forces(C, U, L, M, dt):
     """Calculate forces on particles"""
-    F_fric = calc_friction_forces(U, L)
+    # F_fric = calc_friction_forces(U, L)
     # F_herz = calc_herzian_collision_forces(C, L)
-    F_con = calc_constraint_collision_forces(C, L, M, dt)
+    F_con = calc_constraint_collision_forces_recursive(
+        C, L, M, dt, eps=0.5/5000)
+    # F_con = calc_constraint_collision_forces(C, L, M, dt)
     # F_gravity = calc_gravity_forces(L)
-    return F_fric + F_con
+    return F_con
 
 
 def qMul(q1, q2):
