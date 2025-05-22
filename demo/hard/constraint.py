@@ -1,7 +1,5 @@
 
-from scipy import optimize as opt
 import numpy as np
-
 from capsula import getDirectionVector, signed_distance_capsule
 from stress import collide_stress
 
@@ -49,7 +47,7 @@ class ConstraintBlock:
                 f"bilateral={self.bilateral}, kappa={self.kappa}, gammaLB={self.gammaLB})")
 
 
-def getConstraints(C, L):
+def SingleConstraintDeepestPoint(C, L):
 
     n = len(L)
 
@@ -168,39 +166,27 @@ def calculate_D_matrix(constraints, num_bodies):
     return D
 
 
-def solve_rigid_contact_problem(M, q, gamma0=None):
-    """
-    Solve the LCP: 0 ≤ Mγ + q ⊥ γ ≥ 0
-    Using SciPy's optimization for simplicity and stability
-    """
+def BBPGD(gradient, residual, gamma, eps=0.5/5000, max_iter=100):
+    grad = gradient(gamma)
+    res = residual(grad, gamma)
+    alpha = 1 / res
 
-    n = len(q)
+    for _ in range(max_iter):
+        gamma_new = np.maximum(0, gamma - alpha * grad)
+        grad_new = gradient(gamma_new)
+        res_new = residual(grad_new, gamma_new)
 
-    # Define objective function: min 0.5*γᵀMγ + qᵀγ
-    def objective(gamma):
-        return 0.5 * np.dot(gamma, np.dot(M, gamma)) + np.dot(q, gamma)
+        if res <= eps:
+            break
 
-    # Gradient of the objective
-    def gradient(gamma):
-        return np.dot(M, gamma) + q
+        alpha = ((gamma_new - gamma).T@(gamma_new - gamma)) / \
+            ((gamma_new - gamma).T @ (grad_new - grad))
+        gamma = gamma_new
+        grad = grad_new
+        res = res_new
 
-    # Initial guess
-    if gamma0 is not None:
-        gamma_init = gamma0
-    else:
-        gamma_init = np.zeros(n)
-
-    # Bounds: γ ≥ 0
-    bounds = [(0, None) for _ in range(n)]
-
-    # Solve the optimization problem
-    result = opt.minimize(
-        objective,
-        gamma_init,
-        method='L-BFGS-B',
-        jac=gradient,
-        bounds=bounds,
-        options={'ftol': 1e-8, 'gtol': 1e-8}
-    )
-
-    return result.x
+    if res > eps:
+        print("Warning: BBPGD did not converge within the maximum number of iterations.")
+        print(f"Final residual: {res}")
+        print(f"Final gamma: {gamma}")
+    return gamma

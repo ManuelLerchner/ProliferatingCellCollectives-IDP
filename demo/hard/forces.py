@@ -1,7 +1,7 @@
 import numpy as np
 from capsula import getDirectionVector, signed_distance_capsule
-from constraint import (calculate_D_matrix, getConstraints,
-                        solve_rigid_contact_problem)
+from constraint import (BBPGD, SingleConstraintDeepestPoint,
+                        calculate_D_matrix)
 from stress import collide_stress
 
 
@@ -123,25 +123,27 @@ def calc_herzian_collision_forces(C, L):
 
 def calc_constraint_collision_forces(C, L, M, dt, U_known=None):
 
-    constraints, S = getConstraints(C, L)
+    constraints, S = SingleConstraintDeepestPoint(C, L)
 
     if not constraints:
         return np.zeros((6 * len(L), )), np.zeros(len(L))
 
     D = calculate_D_matrix(constraints, len(L))
 
-    A = D.T @ M @ D
-
     phi = np.array([c.delta0 for c in constraints])
     gamma0 = np.array([c.gamma for c in constraints])
 
-    b = 1/(dt) * phi + \
-        (D.T @ U_known if U_known is not None else np.zeros_like(phi))
+    def gradient(gamma):
+        return phi+dt * D.T @ M @ D @ gamma
 
-    # solve LCP problem 0 <= (A*gamma + b) ⊥ gamma >= 0
-    gamma = solve_rigid_contact_problem(A, b, gamma0)
+    def project(gradient, gamma):
+        return np.where(gamma > 0, gradient, np.minimum(gradient, 0))
 
-    # Calculate forces from gamma
+    def residual(gradient, gamma):
+        return np.linalg.norm(project(gradient, gamma), ord=np.inf)
+
+    gamma = BBPGD(gradient, residual, gamma0)
+
     F = D @ gamma
 
     return F
