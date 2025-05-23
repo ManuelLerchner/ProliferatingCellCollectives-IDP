@@ -2,10 +2,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 
-from capsula import getDirectionVector
+from quaternion import getDirectionVector
 
 
-def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, color, n_phi=20, n_theta=10, n_height=10):
+def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, color, n_phi=12, n_theta=4, n_height=4):
     """Update the visual representation of the 3D spherocylinder.
 
     This method needs significant changes for proper 3D visualization.
@@ -76,7 +76,7 @@ def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, color, n_
             y_cap1[i, j] = pointL[1]
             z_cap1[i, j] = pointL[2]
 
-            pointR = end2 - cap_point
+            pointR = end2 + cap_point * np.array([-1, -1, 1])
             x_cap2[i, j] = pointR[0]
             y_cap2[i, j] = pointR[1]
             z_cap2[i, j] = pointR[2]
@@ -95,17 +95,20 @@ def drawSpherocyllinder(end1, end2, orientation, length, diameter, ax, color, n_
 def render_particles(ax, C, L):
     """Render the particles in 3D space"""
     # Clear the previous frame
-    ax.clear()
+
+    xlims = ax.get_xlim()
+    ylims = ax.get_ylim()
+    zlims = ax.get_zlim()
+    ax.cla()
 
     # Set axis labels
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    # Set reasonable axis limits based on initial positions
-    # ax.set_xlim(-2, 2)
-    # ax.set_ylim(-2, 2)
-    ax.set_zlim(-1, 1)
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
+    ax.set_zlim(zlims)
 
     # aspect ratio
 
@@ -134,4 +137,4 @@ def render_particles(ax, C, L):
 
         # Draw the particle (spherocylinder)
         drawSpherocyllinder(start_point, end_point, direction,
-                            length, diameter, ax, c, n_phi=20, n_theta=10, n_height=10)
+                            length, diameter, ax, c)

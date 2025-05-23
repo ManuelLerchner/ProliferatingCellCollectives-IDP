@@ -1,17 +1,16 @@
 
 import numpy as np
-from capsula import getDirectionVector, signed_distance_capsule
+from distance import signed_distance_capsule
+from quaternion import getDirectionVector
 from matplotlib import pyplot as plt
 
 
 class ConstraintBlock:
 
-    def __init__(self, delta0_, gamma_, gidI_, gidJ_, normI_, normJ_, posI_, posJ_, labI_,
-                 labJ_, oneSide_, bilateral_, kappa_, gammaLB_):
+    def __init__(self, delta0_, gidI_, gidJ_, normI_, normJ_, posI_, posJ_, labI_,
+                 labJ_, orientationI_, orientationJ_, ):
         self.delta0 = delta0_
         """Constraint initial value"""
-        self.gamma = gamma_
-        """Force magnitude, could be an initial guess"""
         self.gidI = gidI_
         """Unique global ID of particle I"""
         self.gidJ = gidJ_
@@ -28,33 +27,14 @@ class ConstraintBlock:
         """Lab frame location of collision point on particle I"""
         self.labJ = labJ_
         """Lab frame location of collision point on particle J"""
-        self.oneSide = oneSide_
-        """Flag for one-sided constraint. Particle J does not appear in mobility matrix"""
-        self.bilateral = bilateral_
-        """If this is a bilateral constraint or not"""
-        self.kappa = kappa_
-        """Spring constant. 0 means no spring"""
-        self.gammaLB = gammaLB_
-        """Lower bound of gamma for unilateral constraints"""
-        self.stress = None
-        """Stress tensor for this constraint, if applicable"""
+        self.orientationI = orientationI_
+        """Orientation of particle I"""
+        self.orientationJ = orientationJ_
+        """Orientation of particle J"""
 
     def __repr__(self):
-        return (f"ConstraintBlock(delta0={self.delta0}, gamma={self.gamma}, "
-                f"gidI={self.gidI}, gidJ={self.gidJ}, normI={self.normI}, "
-                f"normJ={self.normJ}, posI={self.posI}, posJ={self.posJ}, "
-                f"labI={self.labI}, labJ={self.labJ}, oneSide={self.oneSide}, "
-                f"bilateral={self.bilateral}, kappa={self.kappa}, gammaLB={self.gammaLB})")
-
-    def __hash__(self):
-        return hash((self.gidI, self.gidJ, tuple(self.posI), tuple(self.posJ)))
-
-    def __eq__(self, other):
-        if not isinstance(other, ConstraintBlock):
-            return NotImplemented
-        return (self.gidI == other.gidI and self.gidJ == other.gidJ and
-                np.array_equal(self.posI, other.posI) and
-                np.array_equal(self.posJ, other.posJ))
+        return f"ConstraintBlock(gidI={self.gidI}, gidJ={self.gidJ}, delta0={self.delta0}, " \
+            f"normI={self.normI}, normJ={self.normJ}, posI={self.posI}, posJ={self.posJ})"
 
 
 def create_deepest_point_constraints(C, L):
@@ -79,12 +59,10 @@ def create_deepest_point_constraints(C, L):
             diameter = 0.5
 
             sep = distMin - (diameter + diameter) / 2
-            buffer = 0.1
+
             # continue if the distance is too small
 
-            if sep < buffer:
-
-                gamma = -sep if sep < 0 else 0
+            if sep < 0:
 
                 norm = np.linalg.norm(Ploc - Qloc)
                 if norm == 0:
@@ -101,7 +79,6 @@ def create_deepest_point_constraints(C, L):
 
                 conBlock = ConstraintBlock(
                     sep,
-                    gamma,
                     i,
                     j,
                     normI,
@@ -110,10 +87,8 @@ def create_deepest_point_constraints(C, L):
                     posJ,
                     Ploc,
                     Qloc,
-                    False,
-                    True,
-                    0.0,
-                    0.0
+                    orientationI,
+                    orientationJ,
                 )
 
                 constraints.append(conBlock)
@@ -158,26 +133,75 @@ def calculate_D_matrix(constraints, num_bodies):
     return D
 
 
-def BBPGD(gradient, residual, gamma, eps=1e-5, max_iter=1000):
-    grad = gradient(gamma)
-    res = residual(grad, gamma)
-    alpha = 1 / res
+def calculate_stress_matrix(constraints, num_bodies, gamma):
+    """
+    Calculate the stress matrix for the system
+    Args:
+        constraints: List of constraint blocks
+        num_bodies: Number of rigid bodies in the system
+        gamma: Constraint forces
+    Returns:
+        Stress matrix (num_bodies × len(constraints))
+    """
 
-    for _ in range(max_iter):
-        gamma_new = np.maximum(0, gamma - alpha * grad)
-        grad_new = gradient(gamma_new)
-        res_new = residual(grad_new, gamma_new)
+    # Matrix mapping constraint forces to stress (sigma)
+    # sigma_n = sum_alpha (1/2 |t_n · n_alpha| * gamma_alpha)
 
-        if res <= eps:
-            break
+    num_constraints = len(constraints)
+    S = np.zeros((num_bodies, num_constraints))
 
-        alpha = ((gamma_new - gamma).T@(gamma_new - gamma)) / \
-            ((gamma_new - gamma).T @ (grad_new - grad))
-        gamma = gamma_new
-        grad = grad_new
-        res = res_new
+    for c_idx, constraint in enumerate(constraints):
+        body_i = constraint.gidI
+        body_j = constraint.gidJ
 
-    if res > eps:
-        print("Warning: BBPGD did not converge within the maximum number of iterations.")
-        print(f"Final residual: {res}")
-    return gamma
+        # Get the contact normal
+        n_alpha = constraint.normI  # Contact normal for constraint alpha
+
+        # Get tangent vectors for both particles
+        # Main axis direction for particle i
+        t_i = constraint.orientationI
+        # Main axis direction for particle j
+        t_j = constraint.orientationJ
+
+        # Calculate the stress contribution for this constraint
+        S[body_i, c_idx] = 0.5 * abs(np.dot(t_i, n_alpha))
+        S[body_j, c_idx] = 0.5 * abs(np.dot(t_j, n_alpha))
+
+    sigma = S * gamma
+
+    return S, sigma
+
+
+def calculate_impedance_matrix(stress_matrix, lamb):
+    # Calculate the impedance matrix
+    I = np.exp(-lamb * np.sum(stress_matrix, axis=1))
+
+    return I
+
+
+def calculate_growth_rates(constraints, L, gamma, tau, lamb):
+    """
+    Calculate actual growth rates with impedance: l_dot_n = (l_n / tau) * I_n(gamma)
+
+    Args:
+        particles: List of particle objects with length properties
+        impedance: Impedance values for each particle
+        tau: Growth timescale
+
+    Returns:
+        Growth rates for each particle
+    """
+    num_bodies = len(L)
+
+    S, sigma = calculate_stress_matrix(constraints, num_bodies, gamma)
+
+    I = calculate_impedance_matrix(sigma, lamb)
+
+    growth_rates = L / tau * I
+
+    if np.isnan(sigma).any():
+        raise ValueError("Growth rates contain NaN values.")
+    if np.isnan(growth_rates).any():
+        raise ValueError("Growth rates contain infinite values.")
+
+    return sigma, growth_rates

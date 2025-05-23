@@ -1,11 +1,6 @@
 import numpy as np
 
-from quaternion import rotateVectorOfPositions
-
-
-def getDirectionVector(q):
-    defaultDirection = [np.array([1.0, 0.0, 0.0])]
-    return rotateVectorOfPositions(q, defaultDirection)[0]
+from quaternion import getDirectionVector
 
 
 """

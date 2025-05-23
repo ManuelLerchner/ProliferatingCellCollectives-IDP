@@ -1,40 +1,10 @@
 import numpy as np
-from capsula import getDirectionVector, signed_distance_capsule
-from constraint import (BBPGD, calculate_D_matrix,
+from distance import    signed_distance_capsule
+from constraint import (calculate_D_matrix, calculate_growth_rates,
                         create_deepest_point_constraints)
+from optimization import BBPGD
 from generator import normalize_quaternions_vectorized
 from physics import make_map
-from stress import collide_stress
-
-
-def calc_friction_forces(U, L):
-    """
-    Calculate the friction force on a particle.
-    Parameters:
-    U (array-like): Velocity vector
-    L (array-like): Length vector
-    Returns:
-    np.ndarray: The friction force vector
-    """
-    n = len(L)
-
-    Un = np.array(np.split(U, 2*n)[::2])
-    Omegan = np.array(np.split(U, 2*n)[1::2])
-
-    # Calculate the friction force
-    XI = 0.1
-    Fn = -XI * np.reshape(L, (n, 1)) * Un
-
-    # Calculate the torque
-    Tn = -XI * np.reshape(L, (n, 1))**3/12 * Omegan
-
-    # interleave the forces and torques
-    F = np.zeros((6*n, ))
-    for i in range(n):
-        F[6*i:6*i+3] = Fn[i]
-        F[6*i+3:6*i+6] = Tn[i]
-
-    return F
 
 
 def calc_gravity_forces(L):
@@ -103,23 +73,6 @@ def calc_herzian_collision_forces(C, L):
                 F[6*i+3:6*i+6] += T_n
                 F[6*j+3:6*j+6] -= T_m
 
-                stress = collide_stress(
-                    orientationI,
-                    orientationJ,
-                    xi,
-                    xj,
-                    L[i],
-                    L[j],
-                    0.5*diameter,
-                    0.5*diameter,
-                    1.0,
-                    Ploc,
-                    Qloc
-                )
-
-                compression = stress[0, 0] + stress[1, 1] + stress[2, 2]
-                S[i] += compression
-                S[j] += compression
     return F
 
 
@@ -152,39 +105,52 @@ def calc_constraint_collision_forces(C, L, M, dt, U_known=None):
     return F
 
 
-def calc_constraint_collision_forces_recursive(C, L, M, dt, U_known=None,
-                                               max_iterations=10, eps=1e-5):
+def calc_constraint_collision_forces_recursive(C, l, M, dt, eps,
+                                               max_iterations=100):
     # Initialize state variables
     C_prev = C
     gamma_prev = np.empty((0,))  # Previous gamma values
     phi_prev = np.empty((0,))  # Previous phi values
-    D_prev = np.empty((len(L)*6, 0))  # Previous D matrix
+    ldot_prev = np.empty((len(l),))  # Previous growth rates
+
+    D_prev = np.empty((len(l)*6, 0))  # Previous D matrix
+    L_prev = np.empty((len(l), 0))  # Previous L matrix
 
     for iteration in range(max_iterations):
         # Generate new constraints from deepest penetrations
-        new_constraints = set(create_deepest_point_constraints(C_prev, L))
-
-        # Check convergence - if no significant overlaps, we're done
-        max_overlap = max([-c.delta0 for c in new_constraints])
-        if max_overlap < eps:
-            if iteration == 0:
-                return np.zeros((6 * len(L), ))
-            return D_prev @ gamma_prev
+        new_constraints = create_deepest_point_constraints(C_prev, l)
 
         # Build constraint vectors and matrices
         phi_new = np.array([c.delta0 for c in new_constraints])
-        gamma_new_init = np.array([c.gamma for c in new_constraints])
-        D_new = calculate_D_matrix(new_constraints, len(L))
+        gamma_new_init = -phi_new
+
+        D_new = calculate_D_matrix(new_constraints, len(l))
+        L_new, ldot_new = calculate_growth_rates(
+            new_constraints,  l, gamma_new_init, 1, 10000)
+
+        # Check convergence - if no significant overlaps, we're done
+        max_overlap = max([-c.delta0 for c in new_constraints]
+                          ) if new_constraints else 0
+
+        if max_overlap < eps:
+            l_next = l + dt * ldot_new
+            return C_prev, l_next
 
         # Concatenate with previous iteration data
-        phi_current = np.concatenate([phi_prev, phi_new])
         gamma_current = np.concatenate([gamma_prev, gamma_new_init])
+        phi_current = np.concatenate([phi_prev, phi_new])
+
         D_current = np.concatenate([D_prev, D_new], axis=1)
+        L_current = np.concatenate([L_prev, L_new], axis=1)
 
         # Define LCP problem functions
+
         def gradient(gamma):
             """Gradient function for the LCP solver"""
-            return phi_current + dt * D_current.T @ M @ D_current @ (gamma - gamma_current)
+            phi_movement = D_current.T @ M @ D_current @ (
+                gamma - gamma_current)
+            phi_growth = - L_current.T @ (ldot_new - ldot_prev)
+            return phi_current + dt * (phi_movement + phi_growth)
 
         def project(gradient_val, gamma):
             """Projection function for complementarity constraints"""
@@ -196,6 +162,12 @@ def calc_constraint_collision_forces_recursive(C, L, M, dt, U_known=None,
 
         # Solve the Linear Complementarity Problem (LCP)
         gamma_next = BBPGD(gradient, residual, gamma_current, eps=eps)
+
+        # if nan
+        if np.isnan(gamma_next).any():
+            print("NaN detected in gamma_next. Exiting.")
+            BBPGD(gradient, residual, gamma_current, eps=eps)
+            return C_prev, l
 
         # Calculate force increment
         gamma_prev_padded = np.pad(
@@ -212,15 +184,25 @@ def calc_constraint_collision_forces_recursive(C, L, M, dt, U_known=None,
         C_prev = C_prev + dt * dC
 
         # Normalize quaternions to maintain unit length
-        C_prev = normalize_quaternions_vectorized(C_prev)
+        C_next = normalize_quaternions_vectorized(C_prev)
 
         # Update separation distances
         phi_current = phi_current + dt * D_current.T @ dU
 
         # Prepare for next iteration
+        C_prev = C_next
         gamma_prev = gamma_next
         phi_prev = phi_current
         D_prev = D_current
+        L_prev = L_current
+
+        if np.isnan(ldot_new).any():
+            print("NaN detected in ldot_new. Exiting.")
+            return C_next, l
+
+        ldot_prev = ldot_new
 
     print("Max iterations reached without convergence.")
-    return D_prev @ gamma_prev
+    print(f"Max overlap: {max_overlap}")
+    l_next = l + dt * ldot_new
+    return C_next, l_next

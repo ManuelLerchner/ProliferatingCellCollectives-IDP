@@ -1,13 +1,18 @@
 
+import cProfile
 import matplotlib.pyplot as plt
 import numpy as np
-from capsula import getDirectionVector
+from quaternion import getDirectionVector
 from forces import calc_constraint_collision_forces_recursive
 from generator import (make_particle_length, make_particle_position,
                        normalize_quaternions_vectorized)
 from matplotlib.animation import FuncAnimation
 from physics import make_map, make_particle_mobility_matrix
 from visualization import render_particles
+
+import matplotlib.pyplot as plt
+
+np.seterr(all='warn')
 
 
 def init_particles():
@@ -19,37 +24,58 @@ def init_particles():
     ps = []
     ls = []
 
-    for i in range(2):
-        pos = np.random.rand(3)  # Random position in [-1, 1]^3
-        pos[2] = 0.0  # Set z-coordinate to 0 for a flat plane
+    # for i in range(2):
+    #     pos = np.random.rand(3)  # Random position in [-1, 1]^3
+    #     pos[2] = 0.0  # Set z-coordinate to 0 for a flat plane
 
-        q = np.random.rand(4)  # Random quaternion in x, y plane
-        q[1] = 0.0  # Set y-component to 0 for a flat plane
-        q[2] = 0.0  # Set z-component to 0 for a flat plane
-        q /= np.linalg.norm(q)
-        p = make_particle_position(pos, q[0], [q[1], q[2], q[3]])
+    #     q = np.random.rand(4)  # Random quaternion in x, y plane
+    #     q[1] = 0.0  # Set y-component to 0 for a flat plane
+    #     q[2] = 0.0  # Set z-component to 0 for a flat plane
+    #     q /= np.linalg.norm(q)
+    #     p = make_particle_position(pos, q[0], [q[1], q[2], q[3]])
 
-        l = make_particle_length(1.0)
+    #     l = make_particle_length(1.0)
 
-        ps.append(p)
-        ls.append(l)
+    #     ps.append(p)
+    #     ls.append(l)
+
+    pos1 = np.array([0.0, 0.0, 0.0])
+    pos2 = np.array([1.0, 0, 0.0])
+
+    q1 = np.array([1.0, 0.0, 0.0, 0.0])
+    q2 = np.array([1.0, 0.0, 0.0, 0.0])
+
+    p1 = make_particle_position(pos1, q1[0], [q1[1], q1[2], q1[3]])
+    p2 = make_particle_position(pos2, q2[0], [q2[1], q2[2], q2[3]])
+
+    l1 = make_particle_length(1.0)
+    l2 = make_particle_length(1.0)
+
+    ps.append(p1)
+    ls.append(l1)
+    ps.append(p2)
+    ls.append(l2)
 
     L = np.concatenate(ls)
     C = np.concatenate(ps, axis=0)
-    U = np.zeros((6*len(L), ))
 
-    return C, L, U
+    return C, L
 
 
-def calc_forces(C, U, L, M, dt):
-    """Calculate forces on particles"""
-    # F_fric = calc_friction_forces(U, L)
-    # F_herz = calc_herzian_collision_forces(C, L)
-    F_con = calc_constraint_collision_forces_recursive(
-        C, L, M, dt, eps=0.5/5000)
-    # F_con = calc_constraint_collision_forces(C, L, M, dt)
-    # F_gravity = calc_gravity_forces(L)
-    return F_con
+def apply_force(C, M, F, dt):
+    G = make_map(C)
+
+    U = M @ F
+
+    Cdot = G @ U
+
+    # Update configuration
+    C_new = C + dt * Cdot
+
+    # Normalize quaternions (if applicable)
+    C_new = normalize_quaternions_vectorized(C_new)
+
+    return C_new
 
 
 def qMul(q1, q2):
@@ -72,7 +98,7 @@ def grow(L, dt, tao=0.1, lamb=0.1):
     return L
 
 
-def divideCells(C, L, U):
+def divideCells(C, L):
     for i in range(len(L)):
         if L[i] >= 2:
             xi = C[7*i:7*i+3]
@@ -103,68 +129,63 @@ def divideCells(C, L, U):
 
             C = np.concatenate((C, newParticleRight))
             L = np.concatenate((L, [1]))
-            U = np.concatenate((U, U[6*i:6*i+6]))
 
-    return C, L, U
+    return C, L
 
 
-def simulation_step(C, L, U, dt):
+def simulation_step(C, L, dt):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
 
     # grow the particles
-    L = grow(L, dt, 1, 0.05)
-    C, L, U = divideCells(C, L, U)
+    # L = grow(L, dt, 1, 0.05)
+    C, L = divideCells(C, L)
 
     # Update positions
 
     M = make_particle_mobility_matrix(L)
 
-    F = calc_forces(C, U, L, M, dt)
+    C_new, L_new = calc_constraint_collision_forces_recursive(
+        C, L, M, dt, eps=0.001)
 
-    G = make_map(C)
+    # apply_force(C, M, calc_herzian_collision_forces(C, L), dt)
 
-    U = M @ F
-
-    Cdot = G @ U
-
-    # Update configuration
-    C_new = C + dt * Cdot
-
-    # Normalize quaternions (if applicable)
-    C_new = normalize_quaternions_vectorized(C_new)
-    return C_new, L, U
+    return C_new, L_new
 
 
 def main():
     # Set up the figure and 3D axis
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(10, 10), constrained_layout=True)
+    ax = fig.add_subplot(projection='3d')
 
     ax.set_box_aspect([1, 1, 1])
     ax.view_init(elev=90, azim=-90)
     ax.set_title(f"3D Particle Visualization")
 
-    # Initialize particles
-    C0, L0, U0 = init_particles()
+    BOX = 6
 
-    # Number of simulation steps per frame
-    steps_per_frame = 1
+    ax.set_xlim((-BOX, BOX))
+    ax.set_ylim((-BOX, BOX))
+    ax.set_zlim((-BOX, BOX))
+
+    # Initialize particles
+    C0, L0 = init_particles()
 
     # Time step
     dt = 0.01
 
     # Store configurations for animation
     C = C0
-    U = U0
     L = L0
 
     def update(frame):
-        nonlocal C, L, U
+        nonlocal C, L
+        print(f"\rFrame: {frame}, Particles: {len(L)}", end="")
 
-        # Run multiple simulation steps per frame for smoother/faster animation
-        for _ in range(steps_per_frame):
-            C, L, U = simulation_step(C, L, U, dt)
+        if frame == 300:
+            pass
+
+        C, L = simulation_step(C, L, dt)
 
         # Render the updated particles
         render_particles(ax, C, L)
@@ -176,14 +197,16 @@ def main():
     anim = FuncAnimation(
         fig,
         update,
-        frames=1000,  # Number of frames to generate
+        frames=600,  # Number of frames to generate
         interval=50,  # Delay between frames in milliseconds
         blit=False,   # Redraw the full figure (needed for 3D)
         repeat=False  # Don't loop the animation
     )
 
     # Show the plot
-    plt.tight_layout()
+
+    # save the animation as a GIF
+    # anim.save('particles.mp4', fps=30, dpi=100)
     plt.show()
 
 

@@ -37,8 +37,16 @@ def rotateVectorOfPositions(q, vs):
     rotated_positions = np.zeros_like(vs)
 
     for i in range(len(vs)):
-        rotated_positions[i][0] = r00 * vs[i][0] + r01 * vs[i][1] + r02 * vs[i][2]
-        rotated_positions[i][1] = r10 * vs[i][0] + r11 * vs[i][1] + r12 * vs[i][2]
-        rotated_positions[i][2] = r20 * vs[i][0] + r21 * vs[i][1] + r22 * vs[i][2]
+        rotated_positions[i][0] = r00 * vs[i][0] + \
+            r01 * vs[i][1] + r02 * vs[i][2]
+        rotated_positions[i][1] = r10 * vs[i][0] + \
+            r11 * vs[i][1] + r12 * vs[i][2]
+        rotated_positions[i][2] = r20 * vs[i][0] + \
+            r21 * vs[i][1] + r22 * vs[i][2]
 
     return rotated_positions
+
+
+def getDirectionVector(q):
+    defaultDirection = [np.array([1.0, 0.0, 0.0])]
+    return rotateVectorOfPositions(q, defaultDirection)[0]
