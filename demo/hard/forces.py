@@ -1,10 +1,10 @@
 import numpy as np
-from distance import    signed_distance_capsule
 from constraint import (calculate_D_matrix, calculate_growth_rates,
                         create_deepest_point_constraints)
-from optimization import BBPGD
 from generator import normalize_quaternions_vectorized
+from optimization import BBPGD
 from physics import make_map
+from scipy.sparse import csr_matrix, hstack
 
 
 def calc_gravity_forces(L):
@@ -26,52 +26,6 @@ def calc_gravity_forces(L):
         # Extract the quaternion
 
         F[6*i:6*i+3] = direction * g * L[i]
-
-    return F
-
-
-def calc_herzian_collision_forces(C, L):
-
-    n = len(L)
-
-    F = np.zeros((6*n, ))
-    S = np.zeros((n, ))
-
-    for i in range(n):
-        for j in range(i+1, n):
-            xi = C[7*i:7*i+3]
-            xj = C[7*j:7*j+3]
-
-            qi = C[7*i+3:7*i+7]
-            qj = C[7*j+3:7*j+7]
-
-            orientationI = getDirectionVector(qi)
-            orientationJ = getDirectionVector(qj)
-
-            distMin, Ploc, Qloc, _, _ = signed_distance_capsule(C, L, i, j)
-
-            diameter = 0.5
-
-            sep = distMin - (diameter + diameter) / 2
-            if sep < 0:
-
-                norm = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
-
-                # Calculate the force and torque
-                F_n = norm * (-sep)
-
-                posI = Ploc - xi
-                posJ = Qloc - xj
-
-                T_n = np.cross(posI, F_n)
-                T_m = np.cross(posJ, F_n)
-
-                # Update the forces and torques
-                F[6*i:6*i+3] += F_n
-                F[6*j:6*j+3] -= F_n
-
-                F[6*i+3:6*i+6] += T_n
-                F[6*j+3:6*j+6] -= T_m
 
     return F
 
@@ -105,20 +59,21 @@ def calc_constraint_collision_forces(C, L, M, dt, U_known=None):
     return F
 
 
-def calc_constraint_collision_forces_recursive(C, l, M, dt, eps,
+def calc_constraint_collision_forces_recursive(C, l, M, dt, linked_cells, eps,
                                                max_iterations=100):
     # Initialize state variables
     C_prev = C
-    gamma_prev = np.empty((0,))  # Previous gamma values
-    phi_prev = np.empty((0,))  # Previous phi values
-    ldot_prev = np.empty((len(l),))  # Previous growth rates
+    gamma_prev = np.zeros((0,))  # Previous gamma values
+    phi_prev = np.zeros((0,))  # Previous phi values
+    ldot_prev = np.zeros((len(l),))  # Previous growth rates
 
-    D_prev = np.empty((len(l)*6, 0))  # Previous D matrix
-    L_prev = np.empty((len(l), 0))  # Previous L matrix
+    D_prev = csr_matrix((len(l)*6, 0))  # Previous D matrix
+    L_prev = csr_matrix((len(l), 0))  # Previous L matrix
 
     for iteration in range(max_iterations):
         # Generate new constraints from deepest penetrations
-        new_constraints = create_deepest_point_constraints(C_prev, l)
+        new_constraints = create_deepest_point_constraints(
+            C_prev, l, linked_cells)
 
         # Build constraint vectors and matrices
         phi_new = np.array([c.delta0 for c in new_constraints])
@@ -140,8 +95,8 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, eps,
         gamma_current = np.concatenate([gamma_prev, gamma_new_init])
         phi_current = np.concatenate([phi_prev, phi_new])
 
-        D_current = np.concatenate([D_prev, D_new], axis=1)
-        L_current = np.concatenate([L_prev, L_new], axis=1)
+        D_current = hstack([D_prev, D_new])
+        L_current = hstack([L_prev, L_new])
 
         # Define LCP problem functions
 
@@ -162,12 +117,6 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, eps,
 
         # Solve the Linear Complementarity Problem (LCP)
         gamma_next = BBPGD(gradient, residual, gamma_current, eps=eps)
-
-        # if nan
-        if np.isnan(gamma_next).any():
-            print("NaN detected in gamma_next. Exiting.")
-            BBPGD(gradient, residual, gamma_current, eps=eps)
-            return C_prev, l
 
         # Calculate force increment
         gamma_prev_padded = np.pad(
@@ -195,10 +144,6 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, eps,
         phi_prev = phi_current
         D_prev = D_current
         L_prev = L_current
-
-        if np.isnan(ldot_new).any():
-            print("NaN detected in ldot_new. Exiting.")
-            return C_next, l
 
         ldot_prev = ldot_new
 

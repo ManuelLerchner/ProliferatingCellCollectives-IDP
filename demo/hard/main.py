@@ -1,16 +1,16 @@
 
 import cProfile
+
+from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 import numpy as np
-from quaternion import getDirectionVector
 from forces import calc_constraint_collision_forces_recursive
 from generator import (make_particle_length, make_particle_position,
                        normalize_quaternions_vectorized)
-from matplotlib.animation import FuncAnimation
 from physics import make_map, make_particle_mobility_matrix
+from quaternion import getDirectionVector
+from verletlist import LinkedCellList
 from visualization import render_particles
-
-import matplotlib.pyplot as plt
 
 np.seterr(all='warn')
 
@@ -133,7 +133,7 @@ def divideCells(C, L):
     return C, L
 
 
-def simulation_step(C, L, dt):
+def simulation_step(C, L, linked_cells, dt):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
 
@@ -146,7 +146,7 @@ def simulation_step(C, L, dt):
     M = make_particle_mobility_matrix(L)
 
     C_new, L_new = calc_constraint_collision_forces_recursive(
-        C, L, M, dt, eps=0.001)
+        C, L, M, dt, linked_cells, eps=0.001)
 
     # apply_force(C, M, calc_herzian_collision_forces(C, L), dt)
 
@@ -178,14 +178,15 @@ def main():
     C = C0
     L = L0
 
+    linked_cells = LinkedCellList(cutoff_distance=2.0)
+
     def update(frame):
         nonlocal C, L
-        print(f"\rFrame: {frame}, Particles: {len(L)}", end="")
+        print(f"\rFrame: {frame}, Particles: {len(L)}", end="", flush=True)
 
-        if frame == 300:
-            pass
+        
 
-        C, L = simulation_step(C, L, dt)
+        C, L = simulation_step(C, L, linked_cells, dt)
 
         # Render the updated particles
         render_particles(ax, C, L)
@@ -194,14 +195,18 @@ def main():
         return ax,
 
     # Create the animation
-    anim = FuncAnimation(
-        fig,
-        update,
-        frames=600,  # Number of frames to generate
-        interval=50,  # Delay between frames in milliseconds
-        blit=False,   # Redraw the full figure (needed for 3D)
-        repeat=False  # Don't loop the animation
-    )
+    # anim = FuncAnimation(
+    #     fig,
+    #     update,
+    #     frames=600,  # Number of frames to generate
+    #     interval=50,  # Delay between frames in milliseconds
+    #     blit=False,   # Redraw the full figure (needed for 3D)
+    #     repeat=False  # Don't loop the animation
+    # )
+
+    for frame in range(600):
+        print(f"\rFrame: {frame}, Particles: {len(L)}", end="", flush=True)
+        C, L = simulation_step(C, L, linked_cells, dt)
 
     # Show the plot
 
@@ -211,5 +216,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # cProfile.run('main()', sort='time')
+    cProfile.run('main()', sort='tottime')
     main()

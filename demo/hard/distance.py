@@ -365,44 +365,40 @@ class DCPQuery:
 DCPQuery = DCPQuery()
 
 
-def signed_distance_capsule(C, L, n, m):
+def signed_distance_capsule(i, x1, q1, l1, j, x2, q2, l2, diameter=0.5, cache=None):
     """
-    Compute the signed distance between two capsules in 3D space.
+    Vectorized version of signed_distance_capsule for multiple capsules.
     Args:
-        C: Configuration array containing position and quaternion data for particles
-           Each particle has [x, y, z, s, wx, wy, wz]
-        L: Length array containing lengths of the capsules
-        n: Index of the first capsule
-        m: Index of the second capsule
+        x1: Array of positions for the first set of capsules
+        q1: Array of quaternions for the first set of capsules
+        l1: Lengths of the first set of capsules
+        x2: Array of positions for the second set of capsules
+        q2: Array of quaternions for the second set of capsules
+        l2: Lengths of the second set of capsules
+        diameter: Diameter of the capsules
     Returns:
-        distance: The signed distance between the two capsules
-        closest_point_capsule1: Closest point on the first capsule
-        closest_point_capsule2: Closest point on the second capsule
-        parameter_capsule1: Parameter t for the first capsule
-        parameter_capsule2: Parameter t for the second capsule
+        distances: Array of signed distances between each pair of capsules
     """
+    cutoff = 0.5 * (l1 + l2) + diameter
+    if np.linalg.norm(x1 - x2) > cutoff:
+        return (np.inf, None, None, None, None), None, None
 
-    x1 = C[7*n:7*n + 3]  # position of capsule
-    q1 = C[7*n + 3:7*n + 7]  # quaternion of capsule
+    def look_up_cache(i, x, q, l, cache):
+        if cache is None or not i in cache:
+            dir1 = getDirectionVector(q)
+            P1 = x + dir1 * (l / 2 - diameter / 2)
+            P2 = x - dir1 * (l / 2 - diameter / 2)
 
-    x2 = C[7*m:7*m + 3]  # position of capsule
-    q2 = C[7*m + 3:7*m + 7]  # quaternion of capsule
+            if not cache:
+                return P1, P2, dir1
+            else:
+                cache[i] = (P1, P2, dir1)
+        return cache[i]
 
-    # P0 and P1 are the endpoints of the capsule
-    dir1 = getDirectionVector(q1)  # Direction vector of the capsule
-    dir2 = getDirectionVector(q2)  # Direction vector of the capsule
+    # Check cache
+    P1, P2, dir1 = look_up_cache(i, x1, q1, l1, cache)
+    Q1, Q2, dir2 = look_up_cache(j, x2, q2, l2, cache)
 
-    # Length of the capsule
-    l1 = L[n]  # Length of the capsule
-    l2 = L[m]  # Length of the capsule
+    # add to cache
 
-    diameter = 0.5  # Diameter of the capsule
-
-    P1 = x1 - dir1 * (l1 / 2 - diameter / 2)
-    P2 = x1 + dir1 * (l1 / 2 - diameter / 2)
-
-    Q1 = x2 - dir2 * (l2 / 2 - diameter / 2)
-    Q2 = x2 + dir2 * (l2 / 2 - diameter / 2)
-
-    # Compute the signed distance
-    return DCPQuery(P1, P2, Q1, Q2)
+    return DCPQuery(P1, P2, Q1, Q2), dir1, dir2

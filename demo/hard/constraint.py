@@ -1,8 +1,6 @@
-
 import numpy as np
 from distance import signed_distance_capsule
-from quaternion import getDirectionVector
-from matplotlib import pyplot as plt
+from scipy.sparse import lil_matrix
 
 
 class ConstraintBlock:
@@ -37,61 +35,63 @@ class ConstraintBlock:
             f"normI={self.normI}, normJ={self.normJ}, posI={self.posI}, posJ={self.posJ})"
 
 
-def create_deepest_point_constraints(C, L):
-
+def create_deepest_point_constraints(C, L, linked_cells):
+    """
+    Optimized constraint creation using Verlet list
+    """
     n = len(L)
+
+    # Extract positions for Verlet list
+    positions = np.array([C[7*i:7*i+3] for i in range(n)])
+
+    # Update Verlet list if needed
+    if linked_cells.needs_update(positions, L):
+        print("Updating Linked cell list...")  # Remove in production
+        linked_cells.build(positions, L)
+
+    # Get close pairs (this replaces your nested loops!)
+    diameter = 0.5
+    cutoff = diameter * 2  # Adjust as needed
+    close_pairs = linked_cells.get_close_pairs(positions, L, cutoff)
 
     constraints = []
 
-    for i in range(n):
-        for j in range(i+1, n):
-            xi = C[7*i:7*i+3]
-            xj = C[7*j:7*j+3]
+    cache = {}
 
-            qi = C[7*i+3:7*i+7]
-            qj = C[7*j+3:7*j+7]
+    for i, j in close_pairs:
+        x1 = C[7*i:7*i + 3]
+        q1 = C[7*i + 3:7*i + 7]
 
-            orientationI = getDirectionVector(qi)
-            orientationJ = getDirectionVector(qj)
+        x2 = C[7*j:7*j + 3]
+        q2 = C[7*j + 3:7*j + 7]
 
-            distMin, Ploc, Qloc, s, t = signed_distance_capsule(C, L, i, j)
+        l1 = L[i]
+        l2 = L[j]
 
-            diameter = 0.5
+        diameter = 0.5
 
-            sep = distMin - (diameter + diameter) / 2
+        (distMin, Ploc, Qloc, s, t), orientationI, orientationJ = signed_distance_capsule(i,
+                                                                                          x1, q1, l1, j, x2, q2, l2, diameter, cache=cache)
 
-            # continue if the distance is too small
+        sep = distMin - (diameter + diameter) / 2
 
-            if sep < 0:
+        if sep < 0:
+            norm = np.linalg.norm(Ploc - Qloc)
+            if norm == 0:
+                norm = np.array([1.0, 0.0, 0.0])
+            else:
+                norm = (Ploc - Qloc) / norm
+            normI = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
+            normJ = -normI
 
-                norm = np.linalg.norm(Ploc - Qloc)
-                if norm == 0:
-                    # pick a default normal if the distance is zero
-                    norm = np.array([1.0, 0.0, 0.0])
-                else:
-                    norm = (Ploc - Qloc) / norm
-                normI = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
+            posI = Ploc - x1
+            posJ = Qloc - x2
 
-                normJ = -normI
+            conBlock = ConstraintBlock(
+                sep, i, j, normI, normJ, posI, posJ, Ploc, Qloc,
+                orientationI, orientationJ)
 
-                posI = Ploc - xi
-                posJ = Qloc - xj
-
-                conBlock = ConstraintBlock(
-                    sep,
-                    i,
-                    j,
-                    normI,
-                    normJ,
-                    posI,
-                    posJ,
-                    Ploc,
-                    Qloc,
-                    orientationI,
-                    orientationJ,
-                )
-
-                constraints.append(conBlock)
+            constraints.append(conBlock)
 
     return constraints
 
@@ -108,7 +108,7 @@ def calculate_D_matrix(constraints, num_bodies):
         D matrix (6*num_bodies × len(constraints))
     """
     num_constraints = len(constraints)
-    D = np.zeros((6*num_bodies, num_constraints))
+    D = lil_matrix((6*num_bodies, num_constraints))
 
     for c_idx, constraint in enumerate(constraints):
         # Get the bodies involved in this constraint
@@ -130,7 +130,7 @@ def calculate_D_matrix(constraints, num_bodies):
         D[6*body_i+3:6*body_i+6, c_idx] = np.cross(r_i, n)
         D[6*body_j+3:6*body_j+6, c_idx] = -np.cross(r_j, n)
 
-    return D
+    return D.tocsr()
 
 
 def calculate_stress_matrix(constraints, num_bodies, gamma):
@@ -148,7 +148,7 @@ def calculate_stress_matrix(constraints, num_bodies, gamma):
     # sigma_n = sum_alpha (1/2 |t_n · n_alpha| * gamma_alpha)
 
     num_constraints = len(constraints)
-    S = np.zeros((num_bodies, num_constraints))
+    S = lil_matrix((num_bodies, num_constraints))
 
     for c_idx, constraint in enumerate(constraints):
         body_i = constraint.gidI
@@ -167,14 +167,17 @@ def calculate_stress_matrix(constraints, num_bodies, gamma):
         S[body_i, c_idx] = 0.5 * abs(np.dot(t_i, n_alpha))
         S[body_j, c_idx] = 0.5 * abs(np.dot(t_j, n_alpha))
 
-    sigma = S * gamma
+    # Convert to sparse matrix format
+    S = S.tocsr()
+
+    sigma = S.multiply(gamma)
 
     return S, sigma
 
 
 def calculate_impedance_matrix(stress_matrix, lamb):
     # Calculate the impedance matrix
-    I = np.exp(-lamb * np.sum(stress_matrix, axis=1))
+    I = np.exp(-lamb * np.sum(stress_matrix, axis=1).A1)
 
     return I
 
@@ -198,10 +201,5 @@ def calculate_growth_rates(constraints, L, gamma, tau, lamb):
     I = calculate_impedance_matrix(sigma, lamb)
 
     growth_rates = L / tau * I
-
-    if np.isnan(sigma).any():
-        raise ValueError("Growth rates contain NaN values.")
-    if np.isnan(growth_rates).any():
-        raise ValueError("Growth rates contain infinite values.")
 
     return sigma, growth_rates

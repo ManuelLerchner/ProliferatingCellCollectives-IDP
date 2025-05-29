@@ -1,0 +1,1333 @@
+Frame: 0, Particles: 2Updating Linked cell list...
+Frame: 1, Particles: 2Frame: 2, Particles: 2Frame: 3, Particles: 2Frame: 4, Particles: 2Frame: 5, Particles: 2Frame: 6, Particles: 2Frame: 7, Particles: 2Frame: 8, Particles: 2Frame: 9, Particles: 2Frame: 10, Particles: 2Frame: 11, Particles: 2Frame: 12, Particles: 2Frame: 13, Particles: 2Frame: 14, Particles: 2Frame: 15, Particles: 2Frame: 16, Particles: 2Updating Linked cell list...
+Frame: 17, Particles: 2Frame: 18, Particles: 2Frame: 19, Particles: 2Frame: 20, Particles: 2Frame: 21, Particles: 2Frame: 22, Particles: 2Frame: 23, Particles: 2Frame: 24, Particles: 2Frame: 25, Particles: 2Frame: 26, Particles: 2Frame: 27, Particles: 2Frame: 28, Particles: 2Frame: 29, Particles: 2Frame: 30, Particles: 2Updating Linked cell list...
+Frame: 31, Particles: 2Frame: 32, Particles: 2Frame: 33, Particles: 2Frame: 34, Particles: 2Frame: 35, Particles: 2Frame: 36, Particles: 2Frame: 37, Particles: 2Frame: 38, Particles: 2Frame: 39, Particles: 2Frame: 40, Particles: 2Frame: 41, Particles: 2Frame: 42, Particles: 2Updating Linked cell list...
+Frame: 43, Particles: 2Frame: 44, Particles: 2Frame: 45, Particles: 2Frame: 46, Particles: 2Frame: 47, Particles: 2Frame: 48, Particles: 2Frame: 49, Particles: 2Frame: 50, Particles: 2Frame: 51, Particles: 2Frame: 52, Particles: 2Frame: 53, Particles: 2Updating Linked cell list...
+Frame: 54, Particles: 2Frame: 55, Particles: 2Frame: 56, Particles: 2Frame: 57, Particles: 2Frame: 58, Particles: 2Frame: 59, Particles: 2Frame: 60, Particles: 2Frame: 61, Particles: 2Frame: 62, Particles: 2Frame: 63, Particles: 2Updating Linked cell list...
+Frame: 64, Particles: 2Frame: 65, Particles: 2Frame: 66, Particles: 2Frame: 67, Particles: 2Frame: 68, Particles: 2Frame: 69, Particles: 2Frame: 70, Particles: 2Updating Linked cell list...
+Frame: 71, Particles: 4Frame: 72, Particles: 4Frame: 73, Particles: 4Frame: 74, Particles: 4Frame: 75, Particles: 4Frame: 76, Particles: 4Frame: 77, Particles: 4Frame: 78, Particles: 4Frame: 79, Particles: 4Frame: 80, Particles: 4Frame: 81, Particles: 4Frame: 82, Particles: 4Frame: 83, Particles: 4Frame: 84, Particles: 4Frame: 85, Particles: 4Frame: 86, Particles: 4Frame: 87, Particles: 4Frame: 88, Particles: 4Frame: 89, Particles: 4Frame: 90, Particles: 4Frame: 91, Particles: 4Updating Linked cell list...
+Frame: 92, Particles: 4Frame: 93, Particles: 4Frame: 94, Particles: 4Frame: 95, Particles: 4Frame: 96, Particles: 4Frame: 97, Particles: 4Frame: 98, Particles: 4Frame: 99, Particles: 4Frame: 100, Particles: 4Frame: 101, Particles: 4Frame: 102, Particles: 4Frame: 103, Particles: 4Frame: 104, Particles: 4Frame: 105, Particles: 4Updating Linked cell list...
+Frame: 106, Particles: 4Frame: 107, Particles: 4Frame: 108, Particles: 4Frame: 109, Particles: 4Frame: 110, Particles: 4Frame: 111, Particles: 4Frame: 112, Particles: 4Frame: 113, Particles: 4Frame: 114, Particles: 4Frame: 115, Particles: 4Frame: 116, Particles: 4Frame: 117, Particles: 4Updating Linked cell list...
+Frame: 118, Particles: 4Frame: 119, Particles: 4Frame: 120, Particles: 4Frame: 121, Particles: 4Frame: 122, Particles: 4Frame: 123, Particles: 4Frame: 124, Particles: 4Frame: 125, Particles: 4Frame: 126, Particles: 4Frame: 127, Particles: 4Frame: 128, Particles: 4Updating Linked cell list...
+Frame: 129, Particles: 4Frame: 130, Particles: 4Frame: 131, Particles: 4Frame: 132, Particles: 4Frame: 133, Particles: 4Frame: 134, Particles: 4Frame: 135, Particles: 4Frame: 136, Particles: 4Frame: 137, Particles: 4Frame: 138, Particles: 4Updating Linked cell list...
+Frame: 139, Particles: 4Frame: 140, Particles: 4Frame: 141, Particles: 4Frame: 142, Particles: 4Frame: 143, Particles: 4Frame: 144, Particles: 4Frame: 145, Particles: 4Frame: 146, Particles: 4Frame: 147, Particles: 4Updating Linked cell list...
+Frame: 148, Particles: 6Frame: 149, Particles: 6Updating Linked cell list...
+Frame: 150, Particles: 8Frame: 151, Particles: 8Frame: 152, Particles: 8Frame: 153, Particles: 8Frame: 154, Particles: 8Frame: 155, Particles: 8Frame: 156, Particles: 8Frame: 157, Particles: 8Frame: 158, Particles: 8Frame: 159, Particles: 8Frame: 160, Particles: 8Frame: 161, Particles: 8Frame: 162, Particles: 8Frame: 163, Particles: 8Frame: 164, Particles: 8Frame: 165, Particles: 8Updating Linked cell list...
+Frame: 166, Particles: 8Frame: 167, Particles: 8Frame: 168, Particles: 8Frame: 169, Particles: 8Frame: 170, Particles: 8Frame: 171, Particles: 8Frame: 172, Particles: 8Frame: 173, Particles: 8Frame: 174, Particles: 8Frame: 175, Particles: 8Frame: 176, Particles: 8Frame: 177, Particles: 8Frame: 178, Particles: 8Frame: 179, Particles: 8Updating Linked cell list...
+Frame: 180, Particles: 8Frame: 181, Particles: 8Frame: 182, Particles: 8Frame: 183, Particles: 8Frame: 184, Particles: 8Frame: 185, Particles: 8Frame: 186, Particles: 8Frame: 187, Particles: 8Frame: 188, Particles: 8Frame: 189, Particles: 8Frame: 190, Particles: 8Frame: 191, Particles: 8Updating Linked cell list...
+Frame: 192, Particles: 8Frame: 193, Particles: 8Frame: 194, Particles: 8Frame: 195, Particles: 8Frame: 196, Particles: 8Frame: 197, Particles: 8Frame: 198, Particles: 8Frame: 199, Particles: 8Frame: 200, Particles: 8Frame: 201, Particles: 8Frame: 202, Particles: 8Updating Linked cell list...
+Frame: 203, Particles: 8Frame: 204, Particles: 8Frame: 205, Particles: 8Frame: 206, Particles: 8Frame: 207, Particles: 8Frame: 208, Particles: 8Frame: 209, Particles: 8Frame: 210, Particles: 8Frame: 211, Particles: 8Frame: 212, Particles: 8Updating Linked cell list...
+Frame: 213, Particles: 8Frame: 214, Particles: 8Frame: 215, Particles: 8Frame: 216, Particles: 8Frame: 217, Particles: 8Updating Linked cell list...
+Frame: 218, Particles: 10Frame: 219, Particles: 10Updating Linked cell list...
+Frame: 220, Particles: 11Frame: 221, Particles: 11Updating Linked cell list...
+Frame: 222, Particles: 14Frame: 223, Particles: 14Updating Linked cell list...
+Frame: 224, Particles: 15Updating Linked cell list...
+Frame: 225, Particles: 16Frame: 226, Particles: 16Frame: 227, Particles: 16Frame: 228, Particles: 16Frame: 229, Particles: 16Frame: 230, Particles: 16Frame: 231, Particles: 16Frame: 232, Particles: 16Frame: 233, Particles: 16Frame: 234, Particles: 16Frame: 235, Particles: 16Frame: 236, Particles: 16Frame: 237, Particles: 16Frame: 238, Particles: 16Frame: 239, Particles: 16Updating Linked cell list...
+Frame: 240, Particles: 16Frame: 241, Particles: 16Frame: 242, Particles: 16Frame: 243, Particles: 16Frame: 244, Particles: 16Frame: 245, Particles: 16Frame: 246, Particles: 16Frame: 247, Particles: 16Frame: 248, Particles: 16Frame: 249, Particles: 16Frame: 250, Particles: 16Frame: 251, Particles: 16Frame: 252, Particles: 16Updating Linked cell list...
+Frame: 253, Particles: 16Frame: 254, Particles: 16Frame: 255, Particles: 16Frame: 256, Particles: 16Frame: 257, Particles: 16Frame: 258, Particles: 16Frame: 259, Particles: 16Frame: 260, Particles: 16Frame: 261, Particles: 16Frame: 262, Particles: 16Frame: 263, Particles: 16Frame: 264, Particles: 16Updating Linked cell list...
+Frame: 265, Particles: 16Frame: 266, Particles: 16Frame: 267, Particles: 16Frame: 268, Particles: 16Frame: 269, Particles: 16Frame: 270, Particles: 16Frame: 271, Particles: 16Frame: 272, Particles: 16Frame: 273, Particles: 16Frame: 274, Particles: 16Updating Linked cell list...
+Frame: 275, Particles: 16Frame: 276, Particles: 16Frame: 277, Particles: 16Frame: 278, Particles: 16Frame: 279, Particles: 16Frame: 280, Particles: 16Frame: 281, Particles: 16Frame: 282, Particles: 16Frame: 283, Particles: 16Frame: 284, Particles: 16Updating Linked cell list...
+Frame: 285, Particles: 16Frame: 286, Particles: 16Frame: 287, Particles: 16Updating Linked cell list...
+Frame: 288, Particles: 18Updating Linked cell list...
+Frame: 289, Particles: 19Frame: 290, Particles: 19Updating Linked cell list...
+Frame: 291, Particles: 21Frame: 292, Particles: 21Frame: 293, Particles: 21Updating Linked cell list...
+Frame: 294, Particles: 22Updating Linked cell list...
+Frame: 295, Particles: 23Frame: 296, Particles: 23Frame: 297, Particles: 23Frame: 298, Particles: 23Frame: 299, Particles: 23Updating Linked cell list...
+Frame: 300, Particles: 24Frame: 301, Particles: 24Frame: 302, Particles: 24Frame: 303, Particles: 24Updating Linked cell list...
+Frame: 304, Particles: 25Frame: 305, Particles: 25Frame: 306, Particles: 25Frame: 307, Particles: 25Updating Linked cell list...
+Frame: 308, Particles: 26Frame: 309, Particles: 26Updating Linked cell list...
+Frame: 310, Particles: 27Frame: 311, Particles: 27Frame: 312, Particles: 27Frame: 313, Particles: 27Frame: 314, Particles: 27Updating Linked cell list...
+Frame: 315, Particles: 28Frame: 316, Particles: 28Frame: 317, Particles: 28Updating Linked cell list...
+Frame: 318, Particles: 29Frame: 319, Particles: 29Frame: 320, Particles: 29Frame: 321, Particles: 29Updating Linked cell list...
+Frame: 322, Particles: 30Frame: 323, Particles: 30Frame: 324, Particles: 30Frame: 325, Particles: 30Frame: 326, Particles: 30Frame: 327, Particles: 30Frame: 328, Particles: 30Frame: 329, Particles: 30Frame: 330, Particles: 30Frame: 331, Particles: 30Frame: 332, Particles: 30Updating Linked cell list...
+Frame: 333, Particles: 30Frame: 334, Particles: 30Frame: 335, Particles: 30Frame: 336, Particles: 30Updating Linked cell list...
+Frame: 337, Particles: 31Frame: 338, Particles: 31Frame: 339, Particles: 31Frame: 340, Particles: 31Frame: 341, Particles: 31Frame: 342, Particles: 31Frame: 343, Particles: 31Frame: 344, Particles: 31Updating Linked cell list...
+Frame: 345, Particles: 32Frame: 346, Particles: 32Frame: 347, Particles: 32Frame: 348, Particles: 32Frame: 349, Particles: 32Frame: 350, Particles: 32Frame: 351, Particles: 32Frame: 352, Particles: 32Frame: 353, Particles: 32Frame: 354, Particles: 32Updating Linked cell list...
+Frame: 355, Particles: 32Frame: 356, Particles: 32Frame: 357, Particles: 32Frame: 358, Particles: 32Frame: 359, Particles: 32Updating Linked cell list...
+Frame: 360, Particles: 33Frame: 361, Particles: 33Updating Linked cell list...
+Frame: 362, Particles: 34Frame: 363, Particles: 34Updating Linked cell list...
+Frame: 364, Particles: 35Updating Linked cell list...
+Frame: 365, Particles: 37Frame: 366, Particles: 37Updating Linked cell list...
+Frame: 367, Particles: 38Updating Linked cell list...
+Frame: 368, Particles: 39Updating Linked cell list...
+Frame: 369, Particles: 40Frame: 370, Particles: 40Frame: 371, Particles: 40Updating Linked cell list...
+Frame: 372, Particles: 41Updating Linked cell list...
+Frame: 373, Particles: 42Frame: 374, Particles: 42Frame: 375, Particles: 42Updating Linked cell list...
+Frame: 376, Particles: 43Frame: 377, Particles: 43Updating Linked cell list...
+Frame: 378, Particles: 44Frame: 379, Particles: 44Updating Linked cell list...
+Frame: 380, Particles: 45Frame: 381, Particles: 45Frame: 382, Particles: 45Frame: 383, Particles: 45Updating Linked cell list...
+Frame: 384, Particles: 46Updating Linked cell list...
+Frame: 385, Particles: 48Frame: 386, Particles: 48Updating Linked cell list...
+Frame: 387, Particles: 50Frame: 388, Particles: 50Frame: 389, Particles: 50Updating Linked cell list...
+Frame: 390, Particles: 51Frame: 391, Particles: 51Updating Linked cell list...
+Frame: 392, Particles: 52Updating Linked cell list...
+Frame: 393, Particles: 53Frame: 394, Particles: 53Frame: 395, Particles: 53Frame: 396, Particles: 53Frame: 397, Particles: 53Frame: 398, Particles: 53Updating Linked cell list...
+Frame: 399, Particles: 54Updating Linked cell list...
+Frame: 400, Particles: 55Frame: 401, Particles: 55Updating Linked cell list...
+Frame: 402, Particles: 56Updating Linked cell list...
+Frame: 403, Particles: 57Updating Linked cell list...
+Frame: 404, Particles: 58Updating Linked cell list...
+Frame: 405, Particles: 59Frame: 406, Particles: 59Frame: 407, Particles: 59Frame: 408, Particles: 59Frame: 409, Particles: 59Frame: 410, Particles: 59Frame: 411, Particles: 59Frame: 412, Particles: 59Frame: 413, Particles: 59Updating Linked cell list...
+Frame: 414, Particles: 59Frame: 415, Particles: 59Updating Linked cell list...
+Frame: 416, Particles: 60Frame: 417, Particles: 60Frame: 418, Particles: 60Frame: 419, Particles: 60Frame: 420, Particles: 60Frame: 421, Particles: 60Frame: 422, Particles: 60Frame: 423, Particles: 60Updating Linked cell list...
+Frame: 424, Particles: 60Frame: 425, Particles: 60Frame: 426, Particles: 60Frame: 427, Particles: 60Frame: 428, Particles: 60Frame: 429, Particles: 60Frame: 430, Particles: 60Frame: 431, Particles: 60Updating Linked cell list...
+Frame: 432, Particles: 61Updating Linked cell list...
+Frame: 433, Particles: 63Frame: 434, Particles: 63Updating Linked cell list...
+Frame: 435, Particles: 65Updating Linked cell list...
+Frame: 436, Particles: 66Updating Linked cell list...
+Frame: 437, Particles: 67Updating Linked cell list...
+Frame: 438, Particles: 68Updating Linked cell list...
+Frame: 439, Particles: 69Frame: 440, Particles: 69Updating Linked cell list...
+Frame: 441, Particles: 70Updating Linked cell list...
+Frame: 442, Particles: 71Frame: 443, Particles: 71Updating Linked cell list...
+Frame: 444, Particles: 73Updating Linked cell list...
+Frame: 445, Particles: 74Frame: 446, Particles: 74Updating Linked cell list...
+Frame: 447, Particles: 76Frame: 448, Particles: 76Updating Linked cell list...
+Frame: 449, Particles: 77Frame: 450, Particles: 77Updating Linked cell list...
+Frame: 451, Particles: 78Updating Linked cell list...
+Frame: 452, Particles: 79Updating Linked cell list...
+Frame: 453, Particles: 80Updating Linked cell list...
+Frame: 454, Particles: 81Updating Linked cell list...
+Frame: 455, Particles: 84Frame: 456, Particles: 84Updating Linked cell list...
+Frame: 457, Particles: 86Frame: 458, Particles: 86Frame: 459, Particles: 86Updating Linked cell list...
+Frame: 460, Particles: 87Frame: 461, Particles: 87Frame: 462, Particles: 87Frame: 463, Particles: 87Updating Linked cell list...
+Frame: 464, Particles: 89Frame: 465, Particles: 89Updating Linked cell list...
+Frame: 466, Particles: 91Frame: 467, Particles: 91Updating Linked cell list...
+Frame: 468, Particles: 92Frame: 469, Particles: 92Updating Linked cell list...
+Frame: 470, Particles: 93Updating Linked cell list...
+Frame: 471, Particles: 94Updating Linked cell list...
+Frame: 472, Particles: 98Updating Linked cell list...
+Frame: 473, Particles: 99Updating Linked cell list...
+Frame: 474, Particles: 100Updating Linked cell list...
+Frame: 475, Particles: 101Updating Linked cell list...
+Frame: 476, Particles: 102Frame: 477, Particles: 102Updating Linked cell list...
+         102161498 function calls (102134124 primitive calls) in 38.254 seconds
+
+   Ordered by: internal time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   825416    2.547    0.000    3.691    0.000 _sputils.py:264(get_index_dtype)
+   207799    1.706    0.000    3.183    0.000 distance.py:112(__call__)
+     1404    1.524    0.001    3.407    0.002 verletlist.py:61(get_close_pairs)
+  1104665    1.252    0.000    2.185    0.000 _linalg.py:2624(norm)
+   415700    1.231    0.000    1.950    0.000 quaternion.py:4(rotateVectorOfPositions)
+   249656    0.872    0.000    4.365    0.000 _coo.py:202(_check)
+249656/249237    0.864    0.000    8.692    0.000 _coo.py:30(__init__)
+11509607/11509599    0.795    0.000    0.795    0.000 {built-in method builtins.len}
+  1060113    0.772    0.000    0.773    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    85508    0.759    0.000    2.001    0.000 numeric.py:1528(cross)
+   171017    0.690    0.000    1.490    0.000 _index.py:212(_validate_indices)
+   171017    0.661    0.000    5.342    0.000 _index.py:124(__setitem__)
+   415598    0.660    0.000    2.944    0.000 distance.py:386(look_up_cache)
+   171016    0.615    0.000    1.163    0.000 _lil.py:255(_set_arrayXarray)
+   566104    0.593    0.000    1.134    0.000 distance.py:235(_get_clamped_root)
+     1404    0.576    0.000   11.548    0.008 constraint.py:38(create_deepest_point_constraints)
+  1403101    0.573    0.000    1.088    0.000 {built-in method builtins.any}
+   171016    0.564    0.000    0.822    0.000 _stride_tricks_impl.py:350(_broadcast_to)
+206820/181868    0.562    0.000    7.834    0.000 _compressed.py:29(__init__)
+   788446    0.543    0.000    4.416    0.000 _base.py:1369(_get_index_dtype)
+    34122    0.543    0.000    7.684    0.000 _construct.py:1013(block_diag)
+  5612855    0.531    0.000    0.611    0.000 {built-in method builtins.isinstance}
+   369017    0.524    0.000    1.110    0.000 _sputils.py:429(check_shape)
+  1653324    0.523    0.000    0.523    0.000 getlimits.py:692(__init__)
+   415700    0.519    0.000    0.653    0.000 numeric.py:65(zeros_like)
+   313011    0.484    0.000    7.316    0.000 distance.py:368(signed_distance_capsule)
+  1988241    0.442    0.000    0.442    0.000 {built-in method numpy.array}
+  4185314    0.436    0.000    0.437    0.000 {built-in method numpy.asarray}
+   513050    0.385    0.000    0.542    0.000 numeric.py:1388(normalize_axis_tuple)
+   111200    0.381    0.000    1.568    0.000 _coo.py:381(_coo_to_compressed)
+   206820    0.377    0.000    0.837    0.000 _compressed.py:1284(prune)
+  1091263    0.368    0.000    0.368    0.000 {method 'dot' of 'numpy.ndarray' objects}
+   206820    0.364    0.000    1.328    0.000 _compressed.py:165(check_format)
+   256524    0.357    0.000    1.056    0.000 numeric.py:1452(moveaxis)
+  4790880    0.343    0.000    0.343    0.000 verletlist.py:82(<genexpr>)
+   413591    0.316    0.000    1.008    0.000 _coo.py:165(_getnnz)
+   544338    0.301    0.000    0.648    0.000 _sputils.py:350(isintlike)
+   579765    0.295    0.000    0.441    0.000 shape_base.py:81(atleast_2d)
+  1315727    0.284    0.000    1.436    0.000 _base.py:341(nnz)
+  2613397    0.282    0.000    0.282    0.000 {method 'get' of 'dict' objects}
+   111496    0.260    0.000    4.193    0.000 _compressed.py:1151(tocoo)
+   666303    0.244    0.000    0.364    0.000 getlimits.py:490(__new__)
+   256447    0.243    0.000    5.731    0.000 _lil.py:267(__setitem__)
+   171022    0.243    0.000    1.252    0.000 _stride_tricks_impl.py:495(broadcast_arrays)
+  1087722    0.238    0.000    0.389    0.000 <frozen importlib._bootstrap>:645(parent)
+  2174328    0.219    0.000    0.219    0.000 {method 'append' of 'list' objects}
+   415700    0.214    0.000    2.286    0.000 quaternion.py:50(getDirectionVector)
+  1198463    0.207    0.000    0.285    0.000 _base.py:70(ndim)
+   544338    0.204    0.000    0.273    0.000 fromnumeric.py:3571(ndim)
+      926    0.199    0.000   11.523    0.012 physics.py:21(make_map)
+  1106685    0.179    0.000    0.238    0.000 _sputils.py:457(<genexpr>)
+  1506825    0.179    0.000    0.179    0.000 {built-in method builtins.max}
+   171016    0.177    0.000    1.441    0.000 _index.py:10(_broadcast_arrays)
+     1404    0.175    0.000    7.937    0.006 constraint.py:99(calculate_D_matrix)
+   255375    0.172    0.000    0.172    0.000 _sputils.py:112(getdtype)
+  2200965    0.172    0.000    0.172    0.000 _matrix.py:65(get_shape)
+  1240773    0.170    0.000    0.222    0.000 _coo.py:168(<genexpr>)
+   582959    0.165    0.000    0.165    0.000 {method 'astype' of 'numpy.ndarray' objects}
+  2272516    0.161    0.000    0.161    0.000 {built-in method builtins.issubclass}
+    24952    0.159    0.000    2.486    0.000 _compressed.py:546(_matmul_sparse)
+   459283    0.159    0.000    0.208    0.000 _base.py:114(__init__)
+  1091265    0.158    0.000    0.227    0.000 _linalg.py:128(isComplexType)
+  2550744    0.156    0.000    0.156    0.000 {built-in method builtins.abs}
+  1087800    0.152    0.000    0.152    0.000 {method 'rpartition' of 'str' objects}
+    24952    0.149    0.000    0.149    0.000 {built-in method scipy.sparse._sparsetools.csc_matmat}
+  1101921    0.146    0.000    0.146    0.000 {method 'ravel' of 'numpy.ndarray' objects}
+   746587    0.145    0.000    0.195    0.000 _base.py:74(_shape_as_2d)
+   902136    0.144    0.000    0.144    0.000 _compressed.py:117(_getnnz)
+   533136    0.142    0.000    0.682    0.000 {method 'max' of 'numpy.ndarray' objects}
+   171022    0.139    0.000    0.151    0.000 _stride_tricks_impl.py:427(_broadcast_shape)
+   478769    0.136    0.000    0.136    0.000 {built-in method numpy.empty}
+   100175    0.131    0.000    0.280    0.000 distance.py:320(_compute_minimum_parameters)
+  1666708    0.130    0.000    0.130    0.000 {built-in method _operator.index}
+   520660    0.123    0.000    0.528    0.000 {method 'min' of 'numpy.ndarray' objects}
+   171016    0.122    0.000    0.122    0.000 _lil.py:437(_prepare_index_for_memoryview)
+   748968    0.120    0.000    0.173    0.000 _coo.py:215(<genexpr>)
+   171016    0.120    0.000    0.120    0.000 {built-in method numpy.arange}
+   247944    0.117    0.000    0.325    0.000 _sputils.py:142(getdata)
+   486292    0.113    0.000    0.113    0.000 {built-in method numpy.zeros}
+  1240773    0.113    0.000    0.113    0.000 _coo.py:172(<genexpr>)
+   301747    0.110    0.000    0.288    0.000 _sputils.py:372(isshape)
+  1549417    0.109    0.000    0.109    0.000 multiarray.py:560(can_cast)
+   825416    0.109    0.000    0.109    0.000 getlimits.py:703(min)
+    24952    0.109    0.000    0.109    0.000 {built-in method scipy.sparse._sparsetools.csc_matmat_maxnnz}
+   602811    0.107    0.000    0.160    0.000 _base.py:1401(issparse)
+   456476    0.107    0.000    0.312    0.000 _data.py:21(__init__)
+   111200    0.105    0.000    0.105    0.000 {built-in method scipy.sparse._sparsetools.coo_tocsr}
+   345190    0.104    0.000    0.105    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+    24952    0.103    0.000    0.930    0.000 _csr.py:63(tocsc)
+   533136    0.101    0.000    0.540    0.000 _methods.py:43(_amax)
+  1106685    0.099    0.000    0.099    0.000 _sputils.py:462(<genexpr>)
+   547524    0.095    0.000    0.198    0.000 _coo.py:60(<genexpr>)
+   188574    0.094    0.000    0.165    0.000 _matrix.py:13(_coo_container)
+   827908    0.093    0.000    0.093    0.000 getlimits.py:716(max)
+   171025    0.092    0.000    0.186    0.000 shape_base.py:22(atleast_1d)
+   520660    0.087    0.000    0.405    0.000 _methods.py:47(_amin)
+   769702    0.085    0.000    0.085    0.000 {built-in method numpy.lib.array_utils.normalize_axis_index}
+    34122    0.082    0.000    1.481    0.000 _coo.py:347(tocsr)
+  1332224    0.080    0.000    0.080    0.000 multiarray.py:757(dot)
+   757168    0.080    0.000    0.080    0.000 {built-in method numpy.asanyarray}
+      926    0.078    0.000    4.538    0.005 optimization.py:5(BBPGD)
+   413640    0.077    0.000    0.077    0.000 _util.py:229(_prune_array)
+  1104665    0.075    0.000    0.075    0.000 _linalg.py:2620(_norm_dispatcher)
+     1403    0.074    0.000    0.400    0.000 constraint.py:136(calculate_stress_matrix)
+    12476    0.071    0.000    4.331    0.000 forces.py:103(gradient)
+      478    0.071    0.000   36.630    0.077 forces.py:62(calc_constraint_collision_forces_recursive)
+   692514    0.070    0.000    0.070    0.000 {method 'add' of 'set' objects}
+    54889    0.066    0.000    2.844    0.000 _base.py:597(_matmul_dispatch)
+    32718    0.060    0.000    0.081    0.000 _twodim_base_impl.py:163(eye)
+   342034    0.053    0.000    0.053    0.000 {method 'indices' of 'slice' objects}
+   256574    0.052    0.000    0.052    0.000 {built-in method builtins.sorted}
+    98640    0.051    0.000    0.124    0.000 numeric.py:1937(isscalar)
+    12476    0.051    0.000    0.052    0.000 forces.py:110(project)
+    59930    0.051    0.000    2.484    0.000 _base.py:428(asformat)
+    24952    0.050    0.000    0.050    0.000 {built-in method scipy.sparse._sparsetools.csr_tocsc}
+    45764    0.050    0.000    0.111    0.000 _compressed.py:1199(has_canonical_format)
+   513048    0.049    0.000    0.049    0.000 _stride_tricks_impl.py:355(<genexpr>)
+   342032    0.049    0.000    0.049    0.000 {method 'squeeze' of 'numpy.ndarray' objects}
+   256646    0.048    0.000    0.049    0.000 {method 'transpose' of 'numpy.ndarray' objects}
+   111496    0.048    0.000    0.048    0.000 {built-in method scipy.sparse._sparsetools.expandptr}
+    66414    0.048    0.000    0.048    0.000 {method 'nonzero' of 'numpy.ndarray' objects}
+    85430    0.047    0.000    0.055    0.000 _lil.py:251(_set_intXint)
+   544338    0.047    0.000    0.047    0.000 fromnumeric.py:3567(_ndim_dispatcher)
+   680936    0.045    0.000    0.045    0.000 _csr.py:127(_swap)
+   640094    0.044    0.000    0.044    0.000 multiarray.py:82(empty_like)
+    96928    0.043    0.000    0.190    0.000 _sputils.py:345(isscalarlike)
+   344792    0.043    0.000    0.043    0.000 _data.py:24(dtype)
+   249656    0.042    0.000    0.042    0.000 _sputils.py:96(to_native)
+   208220    0.042    0.000    0.080    0.000 <frozen abc>:117(__instancecheck__)
+   180298    0.040    0.000    0.040    0.000 {built-in method builtins.getattr}
+   171016    0.039    0.000    0.039    0.000 _stride_tricks_impl.py:30(_maybe_view_as_subclass)
+   208220    0.039    0.000    0.039    0.000 {built-in method _abc._abc_instancecheck}
+   196308    0.038    0.000    0.090    0.000 _coo.py:93(<genexpr>)
+     2806    0.038    0.000    0.153    0.000 _lil.py:402(tocsr)
+   100175    0.038    0.000    0.038    0.000 distance.py:260(_compute_intersection)
+   171205    0.035    0.000    0.053    0.000 _function_base_impl.py:346(iterable)
+   579765    0.035    0.000    0.035    0.000 shape_base.py:77(_atleast_2d_dispatcher)
+     2807    0.035    0.000    0.081    0.000 _lil.py:23(__init__)
+   207799    0.035    0.000    0.035    0.000 distance.py:86(__init__)
+    12196    0.034    0.000    0.499    0.000 _coo.py:227(transpose)
+    13477    0.032    0.000    0.120    0.000 _coo.py:620(_matmul_vector)
+     1852    0.032    0.000    0.295    0.000 _construct.py:917(_block)
+   124985    0.030    0.000    0.060    0.000 _coo.py:103(row)
+    16460    0.030    0.000    0.097    0.000 _compressed.py:518(_matmul_vector)
+      926    0.030    0.000    0.043    0.000 generator.py:30(normalize_quaternions_vectorized)
+   256525    0.030    0.000    0.030    0.000 {method 'insert' of 'list' objects}
+   416981    0.030    0.000    0.030    0.000 multiarray.py:1101(copyto)
+    54889    0.029    0.000    3.038    0.000 _base.py:728(__matmul__)
+   415700    0.028    0.000    0.028    0.000 numeric.py:59(_zeros_like_dispatcher)
+    13682    0.028    0.000    0.028    0.000 {built-in method scipy.sparse._sparsetools.csc_matvec}
+   171016    0.025    0.000    0.025    0.000 {method '__exit__' of 'numpy.nditer' objects}
+      478    0.024    0.000    1.523    0.003 physics.py:6(make_particle_mobility_matrix)
+    38634    0.023    0.000    0.040    0.000 _matrix.py:18(_csc_container)
+   143918    0.022    0.000    0.031    0.000 _construct.py:1058(<genexpr>)
+    37924    0.022    0.000    0.037    0.000 _matrix.py:23(_csr_container)
+    45764    0.022    0.000    0.022    0.000 {built-in method scipy.sparse._sparsetools.csr_has_canonical_format}
+    50761    0.021    0.000    0.040    0.000 _sputils.py:25(upcast)
+   109479    0.021    0.000    0.028    0.000 _sputils.py:402(isdense)
+   163793    0.020    0.000    0.020    0.000 {built-in method builtins.min}
+    12196    0.020    0.000    0.447    0.000 _coo.py:517(_with_data)
+   256524    0.020    0.000    0.020    0.000 numeric.py:1448(_moveaxis_dispatcher)
+   207829    0.020    0.000    0.020    0.000 _base.py:361(format)
+    13682    0.019    0.000    0.351    0.000 _csr.py:22(transpose)
+   204440    0.019    0.000    0.019    0.000 _csc.py:145(_swap)
+    45764    0.017    0.000    0.024    0.000 _compressed.py:1222(has_canonical_format)
+   171328    0.017    0.000    0.017    0.000 {built-in method builtins.iter}
+    12476    0.017    0.000    0.472    0.000 _data.py:49(__neg__)
+      5/4    0.017    0.003    0.020    0.005 {built-in method _imp.create_dynamic}
+    12476    0.016    0.000    0.128    0.000 forces.py:114(residual)
+     4206    0.016    0.000    0.016    0.000 {method 'cumsum' of 'numpy.ndarray' objects}
+    24565    0.016    0.000    0.036    0.000 numerictypes.py:471(issubdtype)
+      996    0.016    0.000    0.061    0.000 _construct.py:656(_stack_along_minor_axis)
+        1    0.015    0.015    0.015    0.015 {built-in method addToolBar}
+     1403    0.015    0.000    0.102    0.000 _compressed.py:391(multiply)
+    13477    0.015    0.000    0.199    0.000 _coo.py:680(_matmul_dispatch)
+   126266    0.014    0.000    0.014    0.000 _coo.py:119(col)
+    13477    0.014    0.000    0.014    0.000 {built-in method scipy.sparse._sparsetools.coo_matvec}
+    85508    0.013    0.000    0.013    0.000 {built-in method numpy.promote_types}
+      581    0.013    0.000    0.013    0.000 {built-in method builtins.print}
+    70716    0.013    0.000    0.013    0.000 _compressed.py:1259(has_sorted_indices)
+   171025    0.013    0.000    0.013    0.000 shape_base.py:18(_atleast_1d_dispatcher)
+     1404    0.013    0.000    0.029    0.000 verletlist.py:27(needs_update)
+   171022    0.013    0.000    0.013    0.000 _stride_tricks_impl.py:491(_broadcast_arrays_dispatcher)
+      996    0.012    0.000    0.042    0.000 _construct.py:613(_compressed_sparse_stack)
+    25878    0.012    0.000    0.862    0.000 _base.py:366(T)
+    49130    0.011    0.000    0.019    0.000 numerictypes.py:289(issubclass_)
+    45764    0.011    0.000    0.121    0.000 _compressed.py:1228(sum_duplicates)
+    28270    0.010    0.000    0.010    0.000 {method 'copy' of 'numpy.ndarray' objects}
+   110340    0.009    0.000    0.009    0.000 multiarray.py:161(concatenate)
+    29937    0.009    0.000    0.015    0.000 _sputils.py:59(upcast_char)
+     1403    0.009    0.000    0.100    0.000 constraint.py:178(calculate_impedance_matrix)
+50816/50806    0.008    0.000    0.009    0.000 {built-in method builtins.hash}
+      926    0.008    0.000    0.029    0.000 _arraypad_impl.py:545(pad)
+     5380    0.008    0.000    0.099    0.000 fromnumeric.py:69(_wrapreduction)
+      478    0.008    0.000   38.167    0.080 main.py:136(simulation_step)
+    85508    0.007    0.000    0.007    0.000 numeric.py:1524(_cross_dispatcher)
+    36588    0.007    0.000    0.015    0.000 _coo.py:522(<genexpr>)
+    42911    0.007    0.000    0.007    0.000 constraint.py:8(__init__)
+        1    0.007    0.007    0.007    0.007 backend_qt.py:92(_create_qApp)
+     1281    0.006    0.000    0.078    0.000 _base.py:1098(sum)
+     4480    0.006    0.000    0.007    0.000 verletlist.py:24(position_to_cell_index)
+      996    0.006    0.000    0.006    0.000 {built-in method scipy.sparse._sparsetools.csr_hstack}
+    46338    0.005    0.000    0.005    0.000 {built-in method builtins.hasattr}
+6893/5490    0.005    0.000    0.006    0.000 defmatrix.py:170(__array_finalize__)
+    36588    0.005    0.000    0.005    0.000 _coo.py:240(<genexpr>)
+     1852    0.005    0.000    0.311    0.000 _construct.py:712(hstack)
+     2778    0.005    0.000    0.005    0.000 {built-in method scipy.sparse._sparsetools.csr_matvec}
+     1712    0.004    0.000    0.007    0.000 _function_base_impl.py:5625(append)
+     1852    0.004    0.000    0.008    0.000 _arraypad_impl.py:470(_as_pairs)
+      478    0.004    0.000    0.006    0.000 main.py:101(divideCells)
+     1403    0.004    0.000    0.505    0.000 constraint.py:185(calculate_growth_rates)
+     2728    0.004    0.000    0.098    0.000 fromnumeric.py:2349(sum)
+      926    0.004    0.000    0.006    0.000 _arraypad_impl.py:86(_pad_simple)
+     6122    0.004    0.000    0.023    0.000 fromnumeric.py:51(_wrapfunc)
+    36588    0.004    0.000    0.004    0.000 _coo.py:241(<genexpr>)
+      926    0.003    0.000    0.004    0.000 _arraypad_impl.py:129(_set_pad_area)
+     4206    0.003    0.000    0.023    0.000 fromnumeric.py:2904(cumsum)
+     1281    0.003    0.000    0.004    0.000 numeric.py:144(ones)
+     3965    0.003    0.000    0.008    0.000 {method 'view' of 'numpy.ndarray' objects}
+      103    0.003    0.000    0.011    0.000 verletlist.py:43(build)
+     3846    0.002    0.000    0.012    0.000 {built-in method builtins.sum}
+     2684    0.002    0.000    0.010    0.000 _sputils.py:584(asmatrix)
+     3115    0.002    0.000    0.004    0.000 fromnumeric.py:1913(ravel)
+     1281    0.002    0.000    0.006    0.000 _sputils.py:406(validateaxis)
+     1403    0.002    0.000    0.002    0.000 _sputils.py:336(get_sum_dtype)
+     1328    0.002    0.000    0.034    0.000 _compressed.py:1341(_with_data)
+     1048    0.002    0.000    0.030    0.000 _data.py:134(_mul_scalar)
+     4251    0.002    0.000    0.003    0.000 _construct.py:927(<genexpr>)
+     2684    0.002    0.000    0.013    0.000 _base.py:230(_ascontainer)
+        9    0.002    0.000    0.002    0.000 {built-in method marshal.loads}
+        1    0.002    0.002   38.254   38.254 main.py:156(main)
+     1403    0.002    0.000    0.010    0.000 defmatrix.py:290(sum)
+    13402    0.002    0.000    0.002    0.000 multiarray.py:363(where)
+        1    0.002    0.002    0.003    0.003 backend_qt.py:678(__init__)
+     2652    0.001    0.000    0.007    0.000 fromnumeric.py:3080(max)
+        3    0.001    0.000    0.001    0.000 {built-in method matplotlib._c_internal_utils.display_is_valid}
+     2568    0.001    0.000    0.006    0.000 _construct.py:982(<genexpr>)
+     5556    0.001    0.000    0.002    0.000 _construct.py:753(<genexpr>)
+     3407    0.001    0.000    0.001    0.000 _base.py:424(__len__)
+     2711    0.001    0.000    0.005    0.000 {built-in method builtins.all}
+        1    0.001    0.001    0.019    0.019 backend_qt.py:569(__init__)
+     6931    0.001    0.000    0.001    0.000 {method 'items' of 'dict' objects}
+     1403    0.001    0.000    0.008    0.000 {function matrix.sum at 0x7fa84f7a5620}
+     2988    0.001    0.000    0.001    0.000 _construct.py:686(<genexpr>)
+      926    0.001    0.000    0.001    0.000 {method 'round' of 'numpy.ndarray' objects}
+        1    0.001    0.001    0.003    0.003 backend_qt.py:1(<module>)
+     1403    0.001    0.000    0.002    0.000 defmatrix.py:870(A1)
+      926    0.001    0.000    0.001    0.000 _arraypad_impl.py:58(_view_roi)
+     1852    0.001    0.000    0.001    0.000 _arraypad_impl.py:33(_slice_at_axis)
+     1852    0.001    0.000    0.001    0.000 _arraypad_impl.py:109(<genexpr>)
+     2988    0.001    0.000    0.001    0.000 _construct.py:687(<genexpr>)
+      926    0.001    0.000    0.003    0.000 fromnumeric.py:3666(round)
+     1992    0.001    0.000    0.001    0.000 _construct.py:624(<genexpr>)
+      926    0.001    0.000    0.028    0.000 _base.py:710(_rmatmul_dispatch)
+     1403    0.001    0.000    0.001    0.000 {method '__array__' of 'numpy.ndarray' objects}
+       17    0.001    0.000    0.001    0.000 <frozen importlib._bootstrap>:426(_get_module_lock)
+      128    0.001    0.000    0.001    0.000 _function_base_impl.py:1386(diff)
+       11    0.001    0.000    0.002    0.000 enum.py:498(__new__)
+        1    0.001    0.001    0.003    0.003 font_manager.py:1453(_findfont_cached)
+      122    0.001    0.000    0.005    0.000 _compressed.py:662(sum)
+     1852    0.001    0.000    0.001    0.000 _arraypad_impl.py:120(<genexpr>)
+      122    0.001    0.000    0.002    0.000 _compressed.py:690(_minor_reduce)
+        8    0.000    0.000    0.001    0.000 backend_qt.py:723(_icon)
+     4206    0.000    0.000    0.000    0.000 fromnumeric.py:2900(_cumsum_dispatcher)
+      856    0.000    0.000    0.001    0.000 _construct.py:940(<genexpr>)
+      926    0.000    0.000    0.028    0.000 _matrix.py:47(__rmul__)
+     4324    0.000    0.000    0.000    0.000 _base.py:125(shape)
+       29    0.000    0.000    0.001    0.000 {built-in method builtins.__build_class__}
+      128    0.000    0.000    0.002    0.000 artist.py:1188(_update_props)
+      926    0.000    0.000    0.000    0.000 {method 'conj' of 'numpy.ndarray' objects}
+      204    0.000    0.000    0.000    0.000 main.py:81(qMul)
+     1403    0.000    0.000    0.007    0.000 _methods.py:51(_sum)
+      250    0.000    0.000    0.000    0.000 font_manager.py:1233(score_stretch)
+       11    0.000    0.000    0.003    0.000 enum.py:838(_create_)
+      978    0.000    0.000    0.002    0.000 fromnumeric.py:2027(nonzero)
+     1554    0.000    0.000    0.001    0.000 __init__.py:778(__getitem__)
+      250    0.000    0.000    0.001    0.000 font_manager.py:1175(score_family)
+     2728    0.000    0.000    0.000    0.000 fromnumeric.py:2344(_sum_dispatcher)
+       94    0.000    0.000    0.001    0.000 enum.py:353(__setitem__)
+     3115    0.000    0.000    0.000    0.000 fromnumeric.py:1909(_ravel_dispatcher)
+     1558    0.000    0.000    0.001    0.000 __init__.py:698(_get)
+      122    0.000    0.000    0.000    0.000 _sputils.py:493(broadcast_shapes)
+      101    0.000    0.000    0.000    0.000 cbook.py:1752(normalize_kwargs)
+      295    0.000    0.000    0.000    0.000 cbook.py:348(process)
+       63    0.000    0.000    0.001    0.000 enum.py:251(__set_name__)
+1698/1431    0.000    0.000    0.000    0.000 artist.py:315(stale)
+     2652    0.000    0.000    0.000    0.000 fromnumeric.py:3075(_max_dispatcher)
+       65    0.000    0.000    0.000    0.000 artist.py:179(__init__)
+       21    0.000    0.000    0.002    0.000 lines.py:287(__init__)
+      122    0.000    0.000    0.000    0.000 {method 'reduceat' of 'numpy.ufunc' objects}
+       11    0.000    0.000    0.000    0.000 __init__.py:416(by_key)
+     42/4    0.000    0.000    0.026    0.006 <frozen importlib._bootstrap>:480(_call_with_frames_removed)
+     1236    0.000    0.000    0.000    0.000 {built-in method builtins.callable}
+     1558    0.000    0.000    0.000    0.000 {function RcParams.__getitem__ at 0x7fa84ec132e0}
+  235/172    0.000    0.000    0.001    0.000 {built-in method __new__ of type object at 0x9d2760}
+       81    0.000    0.000    0.000    0.000 {built-in method posix.stat}
+      649    0.000    0.000    0.000    0.000 __init__.py:100(check_in_list)
+        8    0.000    0.000    0.000    0.000 {built-in method addAction}
+     1712    0.000    0.000    0.000    0.000 _function_base_impl.py:5621(_append_dispatcher)
+        1    0.000    0.000    0.000    0.000 _linalg.py:499(inv)
+      256    0.000    0.000    0.000    0.000 cbook.py:2020(_setattr_cm)
+      103    0.000    0.000    0.000    0.000 {method 'clear' of 'dict' objects}
+     1403    0.000    0.000    0.000    0.000 defmatrix.py:256(_collapse)
+        4    0.000    0.000    0.000    0.000 spines.py:35(__init__)
+      122    0.000    0.000    0.001    0.000 _base.py:129(reshape)
+      122    0.000    0.000    0.001    0.000 numeric.py:666(flatnonzero)
+     1293    0.000    0.000    0.000    0.000 _coo.py:408(tocoo)
+      250    0.000    0.000    0.001    0.000 font_manager.py:1251(score_weight)
+      3/1    0.000    0.000    0.028    0.028 pyplot.py:373(switch_backend)
+      127    0.000    0.000    0.001    0.000 colors.py:278(to_rgba)
+       33    0.000    0.000    0.001    0.000 text.py:157(_reset_visual_defaults)
+       30    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1624(find_spec)
+        6    0.000    0.000    0.003    0.000 axis.py:59(__init__)
+      132    0.000    0.000    0.000    0.000 copy.py:62(copy)
+        1    0.000    0.000    0.007    0.007 backend_qt.py:226(__init__)
+       68    0.000    0.000    0.000    0.000 font_manager.py:876(set_size)
+       86    0.000    0.000    0.000    0.000 cbook.py:259(__init__)
+      246    0.000    0.000    0.000    0.000 artist.py:102(_stale_axes_callback)
+       16    0.000    0.000    0.000    0.000 font_manager.py:700(__hash__)
+      104    0.000    0.000    0.000    0.000 transforms.py:179(set_children)
+      978    0.000    0.000    0.000    0.000 fromnumeric.py:2023(_nonzero_dispatcher)
+     17/2    0.000    0.000    0.026    0.013 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+      926    0.000    0.000    0.000    0.000 fromnumeric.py:3662(_round_dispatcher)
+      321    0.000    0.000    0.000    0.000 {built-in method builtins.next}
+      114    0.000    0.000    0.000    0.000 __init__.py:65(check_isinstance)
+      926    0.000    0.000    0.000    0.000 _arraypad_impl.py:537(_pad_dispatcher)
+       12    0.000    0.000    0.001    0.000 axis.py:1195(_set_lim)
+   115/84    0.000    0.000    0.000    0.000 {built-in method _abc._abc_subclasscheck}
+       37    0.000    0.000    0.000    0.000 font_manager.py:656(__init__)
+        1    0.000    0.000    0.001    0.001 figure.py:2464(__init__)
+      384    0.000    0.000    0.000    0.000 {built-in method builtins.setattr}
+       63    0.000    0.000    0.000    0.000 enum.py:1055(_add_member_)
+      128    0.000    0.000    0.000    0.000 contextlib.py:108(__init__)
+      144    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:131(_path_join)
+        9    0.000    0.000    0.000    0.000 {built-in method _io.open_code}
+       28    0.000    0.000    0.000    0.000 cbook.py:293(connect)
+      237    0.000    0.000    0.000    0.000 transforms.py:110(__init__)
+      282    0.000    0.000    0.001    0.000 artist.py:414(pchanged)
+      122    0.000    0.000    0.000    0.000 _sputils.py:526(check_reshape_kwargs)
+       54    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1222(__enter__)
+        6    0.000    0.000    0.000    0.000 ticker.py:2095(_validate_steps)
+      129    0.000    0.000    0.000    0.000 transforms.py:1769(__init__)
+      122    0.000    0.000    0.000    0.000 _sputils.py:76(downcast_intp_index)
+      182    0.000    0.000    0.000    0.000 {method 'match' of 're.Pattern' objects}
+       24    0.000    0.000    0.000    0.000 transforms.py:2837(nonsingular)
+      196    0.000    0.000    0.000    0.000 colors.py:219(_is_nth_color)
+      244    0.000    0.000    0.000    0.000 {built-in method math.prod}
+       17    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:1240(_find_spec)
+      129    0.000    0.000    0.000    0.000 enum.py:760(__delattr__)
+      257    0.000    0.000    0.000    0.000 {built-in method builtins.delattr}
+       85    0.000    0.000    0.000    0.000 enum.py:825(__setattr__)
+      502    0.000    0.000    0.000    0.000 {method 'pop' of 'dict' objects}
+        9    0.000    0.000    0.001    0.000 patches.py:48(__init__)
+      250    0.000    0.000    0.000    0.000 font_manager.py:1167(_expand_aliases)
+      124    0.000    0.000    0.003    0.000 enum.py:695(__call__)
+     10/1    0.000    0.000   38.254   38.254 {built-in method builtins.exec}
+      325    0.000    0.000    0.000    0.000 cbook.py:1860(_str_equal)
+        9    0.000    0.000    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+     17/2    0.000    0.000    0.026    0.013 <frozen importlib._bootstrap>:1349(_find_and_load)
+        7    0.000    0.000    0.022    0.003 {built-in method builtins.__import__}
+        9    0.000    0.000    0.002    0.000 <frozen importlib._bootstrap_external>:1093(get_code)
+        3    0.000    0.000    0.007    0.002 axis3d.py:61(__init__)
+       84    0.000    0.000    0.000    0.000 {method 'update' of 'dict' objects}
+        6    0.000    0.000    0.000    0.000 lines.py:672(recache)
+      847    0.000    0.000    0.000    0.000 artist.py:292(axes)
+        1    0.000    0.000    0.005    0.005 _base.py:1307(__clear)
+        3    0.000    0.000    0.000    0.000 patches.py:1137(__init__)
+        9    0.000    0.000    0.001    0.000 axis.py:2378(_init)
+        1    0.000    0.000    0.000    0.000 backend_agg.py:1(<module>)
+       48    0.000    0.000    0.000    0.000 text.py:995(set_color)
+        6    0.000    0.000    0.003    0.001 ticker.py:575(set_useMathText)
+      122    0.000    0.000    0.000    0.000 defmatrix.py:938(T)
+      366    0.000    0.000    0.000    0.000 _sputils.py:455(<genexpr>)
+        6    0.000    0.000    0.005    0.001 axis.py:845(clear)
+      128    0.000    0.000    0.000    0.000 contextlib.py:303(helper)
+       64    0.000    0.000    0.000    0.000 text.py:1259(set_verticalalignment)
+        1    0.000    0.000    0.000    0.000 gridspec.py:144(get_grid_positions)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:304(acquire)
+        3    0.000    0.000    0.002    0.001 axis3d.py:148(_init3d)
+        3    0.000    0.000    0.005    0.002 axis.py:612(__init__)
+        2    0.000    0.000    0.000    0.000 {built-in method posix.listdir}
+       15    0.000    0.000    0.000    0.000 _local.py:257(_parse_path)
+       33    0.000    0.000    0.000    0.000 enum.py:983(_find_data_type_)
+      526    0.000    0.000    0.000    0.000 {method 'lower' of 'str' objects}
+      253    0.000    0.000    0.000    0.000 __init__.py:1497(debug)
+       36    0.000    0.000    0.000    0.000 {method '__reduce_ex__' of 'object' objects}
+       32    0.000    0.000    0.000    0.000 transforms.py:749(__init__)
+        9    0.000    0.000    0.000    0.000 {method '__exit__' of '_io._IOBase' objects}
+      128    0.000    0.000    0.000    0.000 contextlib.py:145(__exit__)
+        6    0.000    0.000    0.004    0.001 scale.py:120(set_default_locators_and_formatters)
+        1    0.000    0.000    0.016    0.016 axes3d.py:60(__init__)
+     14/2    0.000    0.000    0.026    0.013 <frozen importlib._bootstrap>:911(_load_unlocked)
+        1    0.000    0.000    0.015    0.015 _base.py:609(__init__)
+       79    0.000    0.000    0.002    0.000 artist.py:1237(set)
+       33    0.000    0.000    0.000    0.000 markers.py:299(_set_marker)
+       18    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:513(cache_from_source)
+       71    0.000    0.000    0.000    0.000 artist.py:435(set_transform)
+       23    0.000    0.000    0.000    0.000 _local.py:117(__init__)
+        6    0.000    0.000    0.000    0.000 ticker.py:2110(_staircase)
+        2    0.000    0.000    0.000    0.000 backend_bases.py:1709(__init__)
+      171    0.000    0.000    0.000    0.000 {built-in method sys.intern}
+        3    0.000    0.000    0.000    0.000 {built-in method matplotlib._path.affine_transform}
+       63    0.000    0.000    0.000    0.000 lines.py:1203(_set_markercolor)
+       28    0.000    0.000    0.000    0.000 weakref.py:46(__new__)
+       79    0.000    0.000    0.002    0.000 artist.py:146(<lambda>)
+       10    0.000    0.000    0.000    0.000 patches.py:800(get_patch_transform)
+       21    0.000    0.000    0.000    0.000 lines.py:1144(set_linestyle)
+    24/12    0.000    0.000    0.000    0.000 units.py:164(get_converter)
+       37    0.000    0.000    0.000    0.000 font_manager.py:556(wrapper)
+      128    0.000    0.000    0.000    0.000 contextlib.py:136(__enter__)
+        3    0.000    0.000    0.001    0.000 collections.py:78(__init__)
+      402    0.000    0.000    0.000    0.000 {method 'get' of 'mappingproxy' objects}
+       57    0.000    0.000    0.000    0.000 lines.py:1276(set_xdata)
+        8    0.000    0.000    0.000    0.000 _shape_base_impl.py:633(column_stack)
+       22    0.000    0.000    0.001    0.000 text.py:194(update)
+        6    0.000    0.000    0.004    0.001 axis.py:367(__init__)
+       33    0.000    0.000    0.000    0.000 transforms.py:2040(scale)
+        1    0.000    0.000    0.000    0.000 {built-in method sizeHint}
+        1    0.000    0.000    0.000    0.000 _formlayout.py:1(<module>)
+       70    0.000    0.000    0.000    0.000 artist.py:738(set_figure)
+       36    0.000    0.000    0.000    0.000 copy.py:248(_reconstruct)
+      4/2    0.000    0.000    0.000    0.000 numeric.py:1185(roll)
+       33    0.000    0.000    0.001    0.000 text.py:1316(set_fontproperties)
+       39    0.000    0.000    0.000    0.000 lines.py:648(set_data)
+      106    0.000    0.000    0.002    0.000 artist.py:1226(_internal_update)
+   108/83    0.000    0.000    0.000    0.000 transforms.py:164(_invalidate_internal)
+      359    0.000    0.000    0.000    0.000 {method 'values' of 'dict' objects}
+    26/24    0.000    0.000    0.000    0.000 spines.py:340(get_spine_transform)
+        6    0.000    0.000    0.003    0.000 font_manager.py:1293(findfont)
+       15    0.000    0.000    0.000    0.000 cbook.py:597(_get_data_path)
+       24    0.000    0.000    0.000    0.000 getlimits.py:595(smallest_normal)
+       94    0.000    0.000    0.000    0.000 enum.py:78(_is_private)
+       12    0.000    0.000    0.000    0.000 _base.py:2608(_process_unit_info)
+       19    0.000    0.000    0.000    0.000 transforms.py:2275(__init__)
+       12    0.000    0.000    0.000    0.000 axis.py:1946(_set_formatter)
+       28    0.000    0.000    0.000    0.000 cbook.py:133(_weak_or_strong_ref)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:372(release)
+       21    0.000    0.000    0.002    0.000 text.py:104(__init__)
+       52    0.000    0.000    0.000    0.000 _base.py:599(_axis_map)
+       69    0.000    0.000    0.000    0.000 colors.py:224(is_color_like)
+       24    0.000    0.000    0.000    0.000 _base.py:3717(_validate_converted_limits)
+        1    0.000    0.000    0.021    0.021 qt_compat.py:1(<module>)
+       40    0.000    0.000    0.000    0.000 transforms.py:2341(__init__)
+       69    0.000    0.000    0.000    0.000 colors.py:243(_check_color_like)
+       20    0.000    0.000    0.000    0.000 <frozen posixpath>:72(join)
+       14    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:733(_init_module_attrs)
+       36    0.000    0.000    0.000    0.000 axis.py:711(_get_axis_name)
+       18    0.000    0.000    0.000    0.000 _base.py:1224(_set_artist_props)
+        1    0.000    0.000    0.003    0.003 backend_bases.py:2609(__init__)
+       33    0.000    0.000    0.000    0.000 markers.py:250(_recache)
+      177    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+      143    0.000    0.000    0.000    0.000 __init__.py:259(__iter__)
+        6    0.000    0.000    0.000    0.000 axis.py:302(_apply_params)
+       17    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1522(_get_spec)
+        9    0.000    0.000    0.000    0.000 patches.py:444(set_linestyle)
+       83    0.000    0.000    0.000    0.000 transforms.py:155(invalidate)
+       20    0.000    0.000    0.000    0.000 transforms.py:1836(is_separable)
+        1    0.000    0.000    0.000    0.000 _formlayout.py:106(ColorLayout)
+        6    0.000    0.000    0.000    0.000 ticker.py:2116(set_params)
+       64    0.000    0.000    0.000    0.000 text.py:1010(set_horizontalalignment)
+       23    0.000    0.000    0.000    0.000 _local.py:227(__str__)
+        2    0.000    0.000    0.001    0.000 axes3d.py:611(autoscale_view)
+       10    0.000    0.000    0.001    0.000 artist.py:784(set_clip_path)
+        6    0.000    0.000    0.003    0.001 ticker.py:452(__init__)
+        3    0.000    0.000    0.000    0.000 collections.py:811(_set_edgecolor)
+       94    0.000    0.000    0.000    0.000 enum.py:58(_is_sunder)
+       14    0.000    0.000    0.000    0.000 fromnumeric.py:41(_wrapit)
+      306    0.000    0.000    0.000    0.000 {method 'rstrip' of 'str' objects}
+       72    0.000    0.000    0.000    0.000 lines.py:75(_scale_dashes)
+       15    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:833(spec_from_file_location)
+       36    0.000    0.000    0.000    0.000 font_manager.py:1349(<genexpr>)
+        1    0.000    0.000    0.000    0.000 main.py:18(init_particles)
+        6    0.000    0.000    0.002    0.000 axis.py:946(set_tick_params)
+       63    0.000    0.000    0.000    0.000 enum.py:37(_is_descriptor)
+       40    0.000    0.000    0.000    0.000 transforms.py:2498(composite_transform_factory)
+       33    0.000    0.000    0.000    0.000 text.py:1227(set_rotation)
+       24    0.000    0.000    0.000    0.000 cbook.py:2352(_unpack_to_numpy)
+    19/18    0.000    0.000    0.021    0.001 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+       14    0.000    0.000    0.000    0.000 __init__.py:133(check_shape)
+      253    0.000    0.000    0.000    0.000 __init__.py:1764(isEnabledFor)
+       23    0.000    0.000    0.000    0.000 _local.py:498(__init__)
+        9    0.000    0.000    0.001    0.000 axes3d.py:768(_set_lim3d)
+        3    0.000    0.000    0.000    0.000 inspect.py:2373(_signature_from_function)
+       37    0.000    0.000    0.000    0.000 font_manager.py:798(set_style)
+       33    0.000    0.000    0.000    0.000 enum.py:942(_get_mixins_)
+       83    0.000    0.000    0.000    0.000 enum.py:47(_is_dunder)
+        3    0.000    0.000    0.005    0.002 axis.py:2374(__init__)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:124(setdefault)
+       13    0.000    0.000    0.000    0.000 transforms.py:1087(__init__)
+    56/30    0.000    0.000    0.000    0.000 _base.py:958(get_xaxis_transform)
+        6    0.000    0.000    0.004    0.001 axis.py:761(_set_scale)
+      6/3    0.000    0.000    0.000    0.000 inspect.py:2477(_signature_from_callable)
+       11    0.000    0.000    0.000    0.000 enum.py:483(__prepare__)
+       11    0.000    0.000    0.000    0.000 enum.py:1010(_find_new_)
+        2    0.000    0.000    0.000    0.000 axes3d.py:354(set_box_aspect)
+       33    0.000    0.000    0.000    0.000 lines.py:33(_get_dash_pattern)
+       24    0.000    0.000    0.000    0.000 axis.py:701(_get_shared_axes)
+        6    0.000    0.000    0.000    0.000 axis.py:1972(set_major_locator)
+       33    0.000    0.000    0.000    0.000 text.py:1040(set_linespacing)
+      250    0.000    0.000    0.000    0.000 font_manager.py:1205(score_style)
+       39    0.000    0.000    0.000    0.000 lines.py:1295(set_ydata)
+       21    0.000    0.000    0.000    0.000 transforms.py:2317(blended_transform_factory)
+        3    0.000    0.000    0.000    0.000 transforms.py:1108(get_points)
+       69    0.000    0.000    0.000    0.000 artist.py:1055(set_visible)
+        1    0.000    0.000    0.000    0.000 gridspec.py:648(get_position)
+   115/84    0.000    0.000    0.000    0.000 <frozen abc>:121(__subclasscheck__)
+       12    0.000    0.000    0.000    0.000 transforms.py:804(from_extents)
+       31    0.000    0.000    0.000    0.000 cbook.py:871(get_siblings)
+       20    0.000    0.000    0.000    0.000 {built-in method builtins.locals}
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1214(get_data)
+       33    0.000    0.000    0.000    0.000 markers.py:220(__init__)
+       37    0.000    0.000    0.000    0.000 font_manager.py:811(set_variant)
+       24    0.000    0.000    0.000    0.000 cbook.py:1705(_safe_first_finite)
+       49    0.000    0.000    0.000    0.000 font_manager.py:784(set_family)
+        6    0.000    0.000    0.000    0.000 ticker.py:2056(__init__)
+       28    0.000    0.000    0.000    0.000 cbook.py:169(__getitem__)
+       62    0.000    0.000    0.000    0.000 weakref.py:451(get)
+        1    0.000    0.000    0.055    0.055 pyplot.py:872(figure)
+        9    0.000    0.000    0.000    0.000 functools.py:36(update_wrapper)
+       65    0.000    0.000    0.000    0.000 <string>:1(<lambda>)
+       23    0.000    0.000    0.000    0.000 _local.py:307(_tail)
+        3    0.000    0.000    0.000    0.000 colorizer.py:91(norm)
+       24    0.000    0.000    0.000    0.000 transforms.py:1886(__init__)
+        6    0.000    0.000    0.000    0.000 ticker.py:2916(__init__)
+       27    0.000    0.000    0.000    0.000 {built-in method from_bytes}
+       21    0.000    0.000    0.000    0.000 lines.py:1409(set_dash_capstyle)
+      104    0.000    0.000    0.000    0.000 {method 'setdefault' of 'dict' objects}
+       13    0.000    0.000    0.000    0.000 path.py:99(__init__)
+        6    0.000    0.000    0.000    0.000 axis.py:888(reset_ticks)
+      250    0.000    0.000    0.000    0.000 font_manager.py:1269(score_size)
+        2    0.000    0.000    0.000    0.000 backend_bases.py:1944(get_width_height)
+       20    0.000    0.000    0.000    0.000 patches.py:362(_set_edgecolor)
+    14/13    0.000    0.000    0.021    0.002 <frozen importlib._bootstrap>:806(module_from_spec)
+      266    0.000    0.000    0.000    0.000 font_manager.py:762(get_size)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:162(__enter__)
+       18    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:137(_path_split)
+       34    0.000    0.000    0.000    0.000 font_manager.py:677(_from_any)
+        6    0.000    0.000    0.000    0.000 backend_bases.py:1965(<genexpr>)
+       12    0.000    0.000    0.000    0.000 hatch.py:182(_validate_hatch_pattern)
+        4    0.000    0.000    0.000    0.000 colors.py:325(_to_rgba_no_colorcycle)
+        3    0.000    0.000    0.000    0.000 __init__.py:279(select_matching_signature)
+       96    0.000    0.000    0.000    0.000 artist.py:297(axes)
+      9/2    0.000    0.000    0.026    0.013 <frozen importlib._bootstrap_external>:1020(exec_module)
+       15    0.000    0.000    0.000    0.000 _local.py:277(_raw_path)
+       31    0.000    0.000    0.000    0.000 text.py:1108(set_fontsize)
+        1    0.000    0.000    0.000    0.000 pkgutil.py:319(extend_path)
+       10    0.000    0.000    0.000    0.000 transforms.py:1972(rotate)
+       11    0.000    0.000    0.000    0.000 {built-in method _deco}
+      128    0.000    0.000    0.000    0.000 _function_base_impl.py:1382(_diff_dispatcher)
+        1    0.000    0.000    0.000    0.000 backend_macosx.py:1(<module>)
+       21    0.000    0.000    0.000    0.000 cbook.py:1334(is_math_text)
+       86    0.000    0.000    0.000    0.000 cbook.py:152(__init__)
+       22    0.000    0.000    0.000    0.000 artist.py:1124(set_zorder)
+       33    0.000    0.000    0.000    0.000 markers.py:275(_set_fillstyle)
+       90    0.000    0.000    0.000    0.000 __init__.py:1351(_val_or_rc)
+      133    0.000    0.000    0.000    0.000 {built-in method posix.fspath}
+       67    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:145(_path_stat)
+      250    0.000    0.000    0.000    0.000 font_manager.py:1222(score_variant)
+       15    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1619(_get_spec)
+        2    0.000    0.000    0.000    0.000 transforms.py:324(max)
+      266    0.000    0.000    0.000    0.000 font_manager.py:733(get_style)
+        1    0.000    0.000    0.000    0.000 {built-in method addWidget}
+      266    0.000    0.000    0.000    0.000 font_manager.py:717(get_family)
+      266    0.000    0.000    0.000    0.000 font_manager.py:754(get_stretch)
+       15    0.000    0.000    0.000    0.000 patches.py:429(set_linewidth)
+       20    0.000    0.000    0.000    0.000 patches.py:388(_set_facecolor)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:74(__new__)
+       11    0.000    0.000    0.000    0.000 enum.py:346(__init__)
+      266    0.000    0.000    0.000    0.000 font_manager.py:739(get_variant)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:211(FigureCanvasQT)
+       40    0.000    0.000    0.000    0.000 transforms.py:1340(__add__)
+        9    0.000    0.000    0.002    0.000 <frozen importlib._bootstrap_external>:782(_compile_bytecode)
+        2    0.000    0.000    0.000    0.000 _base.py:1573(_set_title_offset_trans)
+      113    0.000    0.000    0.000    0.000 enum.py:1152(__new__)
+        6    0.000    0.000    0.000    0.000 scale.py:718(scale_factory)
+        1    0.000    0.000    0.026    0.026 backend_qtagg.py:1(<module>)
+        1    0.000    0.000    0.000    0.000 _formlayout.py:59(ColorButton)
+        6    0.000    0.000    0.000    0.000 axis.py:1988(set_minor_locator)
+       33    0.000    0.000    0.000    0.000 text.py:1330(set_usetex)
+       15    0.000    0.000    0.000    0.000 _local.py:289(drive)
+       17    0.000    0.000    0.000    0.000 patches.py:377(set_edgecolor)
+       14    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:642(_get_cached)
+        8    0.000    0.000    0.000    0.000 _local.py:354(with_name)
+       35    0.000    0.000    0.000    0.000 font_manager.py:961(copy)
+        6    0.000    0.000    0.000    0.000 colors.py:419(to_rgba_array)
+      152    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:491(_verbose_message)
+        6    0.000    0.000    0.000    0.000 axis.py:1045(_translate_tick_params)
+       47    0.000    0.000    0.000    0.000 font_manager.py:824(set_weight)
+      266    0.000    0.000    0.000    0.000 font_manager.py:745(get_weight)
+       24    0.000    0.000    0.000    0.000 units.py:56(_is_natively_supported)
+       21    0.000    0.000    0.000    0.000 lines.py:1129(set_linewidth)
+       21    0.000    0.000    0.000    0.000 lines.py:1071(set_drawstyle)
+       11    0.000    0.000    0.000    0.000 {built-in method PyQt5.QtCore.pyqtSlot}
+       14    0.000    0.000    0.000    0.000 {method 'format' of 'str' objects}
+      105    0.000    0.000    0.000    0.000 artist.py:723(get_figure)
+       12    0.000    0.000    0.000    0.000 transforms.py:2575(__init__)
+       14    0.000    0.000    0.000    0.000 transforms.py:2666(__init__)
+        3    0.000    0.000    0.000    0.000 colorizer.py:517(__init__)
+        6    0.000    0.000    0.004    0.001 axis.py:1585(_get_tick)
+       23    0.000    0.000    0.000    0.000 _local.py:505(__new__)
+       36    0.000    0.000    0.000    0.000 copyreg.py:98(__newobj__)
+        1    0.000    0.000    0.000    0.000 <frozen posixpath>:391(realpath)
+        6    0.000    0.000    0.000    0.000 _base.py:986(get_xaxis_text1_transform)
+        3    0.000    0.000    0.000    0.000 collections.py:583(set_linewidth)
+        1    0.000    0.000    0.000    0.000 backend_bases.py:2822(__init__)
+        3    0.000    0.000    0.001    0.000 collections.py:1607(__init__)
+       27    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:89(_unpack_uint32)
+        1    0.000    0.000    0.000    0.000 {version}
+        6    0.000    0.000    0.000    0.000 axes3d.py:677(_set_bound3d)
+       20    0.000    0.000    0.000    0.000 transforms.py:2027(translate)
+        4    0.000    0.000    0.001    0.000 spines.py:433(linear_spine)
+       30    0.000    0.000    0.000    0.000 axis.py:293(_set_artist_props)
+        8    0.000    0.000    0.000    0.000 fromnumeric.py:89(_wrapreduction_any_all)
+      122    0.000    0.000    0.000    0.000 numeric.py:662(_flatnonzero_dispatcher)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:445(cb)
+       17    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:416(__enter__)
+        2    0.000    0.000    0.000    0.000 patches.py:748(__init__)
+       74    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+       26    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:155(_path_is_mode_type)
+       15    0.000    0.000    0.000    0.000 {built-in method posix._path_splitroot_ex}
+        3    0.000    0.000    0.000    0.000 backend_bases.py:3551(export)
+        2    0.000    0.000    0.001    0.001 cbook.py:58(_get_running_interactive_framework)
+       10    0.000    0.000    0.000    0.000 patches.py:307(get_transform)
+      108    0.000    0.000    0.000    0.000 {built-in method builtins.id}
+        1    0.000    0.000    0.016    0.016 figure.py:644(add_subplot)
+       13    0.000    0.000    0.000    0.000 patches.py:501(set_capstyle)
+       37    0.000    0.000    0.000    0.000 font_manager.py:934(set_math_fontfamily)
+        3    0.000    0.000    0.000    0.000 transforms.py:1719(set)
+       12    0.000    0.000    0.000    0.000 patches.py:792(_convert_units)
+        1    0.000    0.000    0.000    0.000 figure.py:123(__init__)
+       12    0.000    0.000    0.000    0.000 lines.py:1189(set_marker)
+       11    0.000    0.000    0.000    0.000 enum.py:932(_check_for_existing_members_)
+       34    0.000    0.000    0.000    0.000 text.py:1275(set_text)
+        6    0.000    0.000    0.000    0.000 axis.py:395(_apply_tickdir)
+       17    0.000    0.000    0.000    0.000 {method 'split' of 'str' objects}
+        6    0.000    0.000    0.000    0.000 collections.py:689(_bcast_lwls)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:232(__init__)
+       21    0.000    0.000    0.000    0.000 figure.py:65(_stale_figure_callback)
+        3    0.000    0.000    0.000    0.000 colorizer.py:226(_set_cmap)
+       16    0.000    0.000    0.000    0.000 transforms.py:785(unit)
+        1    0.000    0.000    0.000    0.000 _base.py:922(_set_lim_and_transforms)
+        1    0.000    0.000    0.000    0.000 {built-in method setCentralWidget}
+       25    0.000    0.000    0.000    0.000 cbook.py:1347(_to_unmasked_float_array)
+       13    0.000    0.000    0.000    0.000 path.py:202(_update_values)
+       21    0.000    0.000    0.000    0.000 lines.py:738(set_transform)
+        2    0.000    0.000    0.000    0.000 _base.py:3464(tick_params)
+        1    0.000    0.000    0.000    0.000 _base.py:867(set_figure)
+        9    0.000    0.000    0.000    0.000 patches.py:541(set_hatch)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+       21    0.000    0.000    0.000    0.000 lines.py:1059(set_color)
+        2    0.000    0.000    0.000    0.000 transforms.py:1057(set)
+        6    0.000    0.000    0.000    0.000 inspect.py:3014(__init__)
+        1    0.000    0.000    0.007    0.007 axes3d.py:221(_init_axis)
+       12    0.000    0.000    0.000    0.000 _base.py:73(wrapper)
+        7    0.000    0.000    0.000    0.000 inspect.py:2726(__init__)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:79(__init__)
+       21    0.000    0.000    0.000    0.000 lines.py:1361(set_dash_joinstyle)
+        9    0.000    0.000    0.000    0.000 transforms.py:976(intervalx)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:395(sizeHint)
+        2    0.000    0.000    0.000    0.000 {setAttribute}
+        8    0.000    0.000    0.000    0.000 fromnumeric.py:2496(any)
+       29    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1500(_path_importer_cache)
+        3    0.000    0.000    0.000    0.000 cm.py:284(_ensure_cmap)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:697(_classify_pyc)
+        1    0.000    0.000    0.000    0.000 {setHighDpiScaleFactorRoundingPolicy}
+       12    0.000    0.000    0.000    0.000 {built-in method posix.lstat}
+        6    0.000    0.000    0.000    0.000 _base.py:1013(get_xaxis_text2_transform)
+        8    0.000    0.000    0.000    0.000 {built-in method setToolTip}
+        8    0.000    0.000    0.000    0.000 {built-in method color}
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1675(_fill_cache)
+       12    0.000    0.000    0.000    0.000 axis.py:2349(setter)
+        9    0.000    0.000    0.000    0.000 artist.py:1013(set_alpha)
+        1    0.000    0.000    0.005    0.005 axes3d.py:1346(clear)
+       22    0.000    0.000    0.000    0.000 artist.py:1215(update)
+       32    0.000    0.000    0.000    0.000 font_manager.py:1154(get_default_size)
+       42    0.000    0.000    0.000    0.000 text.py:1205(set_x)
+        2    0.000    0.000    0.000    0.000 {built-in method addSeparator}
+        2    0.000    0.000    0.003    0.002 axis.py:1115(set_clip_path)
+        1    0.000    0.000    0.000    0.000 _version.py:55(__init__)
+       17    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1551(find_spec)
+       37    0.000    0.000    0.000    0.000 font_manager.py:850(set_stretch)
+        3    0.000    0.000    0.021    0.007 qt_compat.py:66(_setup_pyqt5plus)
+       80    0.000    0.000    0.000    0.000 {method 'copy' of 'list' objects}
+       33    0.000    0.000    0.000    0.000 text.py:298(set_rotation_mode)
+        1    0.000    0.000    0.000    0.000 {method 'connect' of 'PyQt5.QtCore.pyqtBoundSignal' objects}
+        8    0.000    0.000    0.000    0.000 {built-in method devicePixelRatioF}
+       88    0.000    0.000    0.000    0.000 {built-in method _imp.release_lock}
+        3    0.000    0.000    0.000    0.000 collections.py:510(set_hatch)
+       63    0.000    0.000    0.000    0.000 enum.py:69(_is_internal_class)
+       12    0.000    0.000    0.000    0.000 axis.py:805(limit_range_for_scale)
+        6    0.000    0.000    0.000    0.000 colorizer.py:592(_get_colorizer)
+       88    0.000    0.000    0.000    0.000 {built-in method _imp.acquire_lock}
+        2    0.000    0.000    0.002    0.001 axes3d.py:1857(tick_params)
+       36    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:139(<genexpr>)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:730(_validate_timestamp_pyc)
+       24    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:164(_path_isfile)
+       54    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1226(__exit__)
+        3    0.000    0.000    0.000    0.000 patches.py:1189(set_xy)
+       24    0.000    0.000    0.000    0.000 cbook.py:2313(_is_torch_array)
+        3    0.000    0.000    0.000    0.000 transforms.py:1848(transform_affine)
+       21    0.000    0.000    0.000    0.000 lines.py:1227(set_markerfacecolor)
+       11    0.000    0.000    0.000    0.000 __init__.py:185(keys)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:674(_check_name_wrapper)
+        4    0.000    0.000    0.000    0.000 {built-in method setEnabled}
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:82(remove)
+       18    0.000    0.000    0.000    0.000 ticker.py:1714(nonsingular)
+       10    0.000    0.000    0.000    0.000 transforms.py:1995(rotate_deg)
+        6    0.000    0.000    0.000    0.000 markers.py:776(_set_tickdown)
+        1    0.000    0.000    0.027    0.027 backend_bases.py:3494(new_figure_manager)
+        3    0.000    0.000    0.000    0.000 colors.py:2141(__init__)
+        1    0.000    0.000    0.000    0.000 _base.py:3263(set_axisbelow)
+       10    0.000    0.000    0.000    0.000 patches.py:934(get_bbox)
+       33    0.000    0.000    0.000    0.000 text.py:1349(set_parse_math)
+        1    0.000    0.000    0.027    0.027 backend_bases.py:2646(create_with_canvas)
+        9    0.000    0.000    0.000    0.000 __init__.py:168(check_getitem)
+       17    0.000    0.000    0.000    0.000 patches.py:395(set_facecolor)
+        2    0.000    0.000    0.000    0.000 axes3d.py:1095(view_init)
+       41    0.000    0.000    0.000    0.000 __init__.py:153(<genexpr>)
+        3    0.000    0.000    0.000    0.000 colorizer.py:53(__init__)
+       24    0.000    0.000    0.000    0.000 axis.py:1800(convert_units)
+       21    0.000    0.000    0.000    0.000 lines.py:1425(set_solid_capstyle)
+       21    0.000    0.000    0.000    0.000 lines.py:1262(set_markersize)
+       17    0.000    0.000    0.000    0.000 {built-in method _imp.find_frozen}
+        1    0.000    0.000    0.000    0.000 backend_qt.py:670(NavigationToolbar2QT)
+       12    0.000    0.000    0.000    0.000 axis.py:1738(update_units)
+        2    0.000    0.000    0.000    0.000 generator.py:4(make_particle_position)
+       21    0.000    0.000    0.000    0.000 lines.py:506(set_pickradius)
+        6    0.000    0.000    0.000    0.000 axis.py:406(update_position)
+        3    0.000    0.000    0.028    0.009 pyplot.py:359(_get_backend_mod)
+       15    0.000    0.000    0.000    0.000 cbook.py:305(_connect_picklable)
+       28    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+       20    0.000    0.000    0.000    0.000 pyplot.py:1074(_auto_draw_if_interactive)
+       17    0.000    0.000    0.000    0.000 {built-in method _imp.is_builtin}
+        1    0.000    0.000    0.001    0.001 figureoptions.py:1(<module>)
+       22    0.000    0.000    0.000    0.000 __init__.py:1339(is_interactive)
+      5/4    0.000    0.000    0.020    0.005 <frozen importlib._bootstrap_external>:1318(create_module)
+        3    0.000    0.000    0.000    0.000 axis3d.py:237(set_pane_color)
+       36    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.RLock' objects}
+        6    0.000    0.000    0.000    0.000 <frozen genericpath>:36(isfile)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:420(__exit__)
+       33    0.000    0.000    0.000    0.000 text.py:321(set_antialiased)
+        2    0.000    0.000    0.000    0.000 backend_qt.py:850(set_history_buttons)
+        1    0.000    0.000    0.000    0.000 _pylab_helpers.py:104(_set_new_active_manager)
+       23    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:632(cached)
+       15    0.000    0.000    0.000    0.000 _local.py:237(_format_parsed_parts)
+        3    0.000    0.000    0.000    0.000 collections.py:774(_set_facecolor)
+       27    0.000    0.000    0.000    0.000 cbook.py:158(__setitem__)
+       21    0.000    0.000    0.000    0.000 lines.py:1247(set_markeredgewidth)
+       47    0.000    0.000    0.000    0.000 {method 'endswith' of 'str' objects}
+        3    0.000    0.000    0.001    0.000 art3d.py:433(__init__)
+       43    0.000    0.000    0.000    0.000 {method 'pop' of 'list' objects}
+       36    0.000    0.000    0.000    0.000 axis.py:713(<genexpr>)
+     18/2    0.000    0.000    0.000    0.000 transforms.py:2370(_invalidate_internal)
+       12    0.000    0.000    0.000    0.000 fromnumeric.py:215(reshape)
+        1    0.000    0.000    0.000    0.000 _axes.py:118(set_title)
+       21    0.000    0.000    0.000    0.000 lines.py:1377(set_solid_joinstyle)
+        6    0.000    0.000    0.004    0.001 axis.py:534(__get__)
+        6    0.000    0.000    0.000    0.000 colors.py:815(__copy__)
+        3    0.000    0.000    0.000    0.000 inspect.py:2095(_signature_bound_method)
+       32    0.000    0.000    0.000    0.000 text.py:1216(set_y)
+       42    0.000    0.000    0.000    0.000 {method 'count' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method setWindowTitle}
+        5    0.000    0.000    0.000    0.000 spines.py:566(__getitem__)
+        1    0.000    0.000    0.028    0.028 pyplot.py:526(_warn_if_gui_out_of_main_thread)
+       21    0.000    0.000    0.000    0.000 lines.py:1047(set_antialiased)
+       24    0.000    0.000    0.000    0.000 getlimits.py:618(tiny)
+       18    0.000    0.000    0.000    0.000 axis.py:1628(get_major_locator)
+        2    0.000    0.000    0.000    0.000 {method 'all' of 'numpy.ndarray' objects}
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1128(find_spec)
+        2    0.000    0.000    0.000    0.000 registry.py:95(_backend_module_name)
+        6    0.000    0.000    0.000    0.000 backend_bases.py:2227(mpl_connect)
+        8    0.000    0.000    0.000    0.000 _local.py:245(_from_parsed_parts)
+        6    0.000    0.000    0.000    0.000 axis.py:1906(set_major_formatter)
+        6    0.000    0.000    0.000    0.000 axis.py:189(_set_labelrotation)
+        8    0.000    0.000    0.000    0.000 _abc.py:130(with_segments)
+       32    0.000    0.000    0.000    0.000 transforms.py:195(<lambda>)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1487(_path_hooks)
+        6    0.000    0.000    0.000    0.000 text.py:587(set_clip_box)
+        6    0.000    0.000    0.000    0.000 weakref.py:367(__init__)
+        1    0.000    0.000    0.000    0.000 transforms.py:1777(__eq__)
+       30    0.000    0.000    0.000    0.000 artist.py:268(convert_xunits)
+        3    0.000    0.000    0.000    0.000 colorizer.py:639(__init__)
+        6    0.000    0.000    0.000    0.000 axis.py:1158(get_inverted)
+        3    0.000    0.000    0.000    0.000 inspect.py:3066(from_callable)
+        6    0.000    0.000    0.000    0.000 ticker.py:2249(view_limits)
+       11    0.000    0.000    0.000    0.000 enum.py:961(_find_data_repr_)
+        3    0.000    0.000    0.000    0.000 __init__.py:748(__setitem__)
+        6    0.000    0.000    0.000    0.000 lines.py:1035(get_path)
+       12    0.000    0.000    0.000    0.000 axis.py:2564(get_minpos)
+       10    0.000    0.000    0.000    0.000 patches.py:349(set_antialiased)
+        1    0.000    0.000    0.000    0.000 _pylab_helpers.py:117(set_active)
+        2    0.000    0.000    0.026    0.013 registry.py:302(load_backend_module)
+       34    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+       14    0.000    0.000    0.000    0.000 {method 'wrap' of 'numpy._core._multiarray_umath._array_converter' objects}
+       27    0.000    0.000    0.000    0.000 cbook.py:129(__hash__)
+        3    0.000    0.000    0.000    0.000 {method 'copy' of 'dict' objects}
+        3    0.000    0.000    0.000    0.000 patches.py:422(set_alpha)
+        2    0.000    0.000    0.000    0.000 _base.py:221(set_prop_cycle)
+        1    0.000    0.000    0.000    0.000 gridspec.py:397(get_subplot_params)
+        1    0.000    0.000    0.000    0.000 transforms.py:1869(inverted)
+        1    0.000    0.000    0.055    0.055 pyplot.py:549(new_figure_manager)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1598(__init__)
+        6    0.000    0.000    0.000    0.000 axis.py:389(_get_text1_transform)
+       12    0.000    0.000    0.000    0.000 text.py:1054(set_fontfamily)
+       21    0.000    0.000    0.000    0.000 lines.py:1217(set_markeredgecolor)
+       10    0.000    0.000    0.000    0.000 {built-in method math.cos}
+        1    0.000    0.000    0.000    0.000 __init__.py:1361(getLogger)
+        2    0.000    0.000    0.000    0.000 {built-in method height}
+        1    0.000    0.000    0.000    0.000 _ufunc_config.py:441(__enter__)
+       21    0.000    0.000    0.000    0.000 lines.py:1237(set_markerfacecoloralt)
+       30    0.000    0.000    0.000    0.000 artist.py:280(convert_yunits)
+        6    0.000    0.000    0.000    0.000 ticker.py:471(set_usetex)
+        3    0.000    0.000    0.000    0.000 collections.py:737(set_antialiased)
+       10    0.000    0.000    0.000    0.000 transforms.py:239(x0)
+        1    0.000    0.000    0.000    0.000 {built-in method setMouseTracking}
+       12    0.000    0.000    0.000    0.000 cbook.py:1715(safe_isfinite)
+       14    0.000    0.000    0.000    0.000 {method 'as_arrays' of 'numpy._core._multiarray_umath._array_converter' objects}
+        2    0.000    0.000    0.000    0.000 _base.py:881(_unstale_viewLim)
+        2    0.000    0.000    0.000    0.000 axes3d.py:1200(_roll_to_vertical)
+        1    0.000    0.000    0.000    0.000 backend_agg.py:362(FigureCanvasAgg)
+        3    0.000    0.000    0.000    0.000 cbook.py:800(__init__)
+        8    0.000    0.000    0.000    0.000 {built-in method palette}
+        1    0.000    0.000    0.000    0.000 gridspec.py:551(_from_subplot_args)
+       12    0.000    0.000    0.000    0.000 transforms.py:329(intervalx)
+        1    0.000    0.000    0.000    0.000 axes3d.py:3201(set_title)
+       12    0.000    0.000    0.000    0.000 axis.py:201(_pad)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:48(_new_module)
+        1    0.000    0.000    0.000    0.000 axes3d.py:1277(mouse_init)
+       21    0.000    0.000    0.000    0.000 lines.py:1106(set_gapcolor)
+       24    0.000    0.000    0.000    0.000 ticker.py:191(set_axis)
+        1    0.000    0.000    0.000    0.000 _base.py:1179(_set_position)
+        9    0.000    0.000    0.000    0.000 patches.py:521(set_joinstyle)
+        1    0.000    0.000    0.000    0.000 figure.py:772(_add_axes_internal)
+        8    0.000    0.000    0.000    0.000 _abc.py:442(exists)
+        1    0.000    0.000    0.000    0.000 spines.py:501(__getattr__)
+        6    0.000    0.000    0.000    0.000 axis.py:1271(_set_artist_props)
+        3    0.000    0.000    0.000    0.000 collections.py:781(set_facecolor)
+       13    0.000    0.000    0.000    0.000 {method 'tolist' of 'numpy.ndarray' objects}
+        1    0.000    0.000    0.000    0.000 functools.py:541(decorating_function)
+       12    0.000    0.000    0.000    0.000 axis.py:504(locator)
+        2    0.000    0.000    0.000    0.000 layout_engine.py:279(set)
+        1    0.000    0.000    0.000    0.000 pyplot.py:449(backend_mod)
+        6    0.000    0.000    0.000    0.000 axis.py:392(_get_text2_transform)
+       20    0.000    0.000    0.000    0.000 <frozen posixpath>:42(_get_sep)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:982(find_spec)
+        1    0.000    0.000    0.000    0.000 {built-in method segments}
+        1    0.000    0.000    0.001    0.001 _base.py:1251(_gen_axes_spines)
+        6    0.000    0.000    0.000    0.000 cm.py:94(__getitem__)
+        8    0.000    0.000    0.000    0.000 _shape_base_impl.py:629(_column_stack_dispatcher)
+        2    0.000    0.000    0.000    0.000 <frozen zipimport>:68(__init__)
+    26/24    0.000    0.000    0.000    0.000 spines.py:203(_ensure_position_is_set)
+       21    0.000    0.000    0.000    0.000 lines.py:551(set_markevery)
+        1    0.000    0.000    0.000    0.000 figure.py:3332(<lambda>)
+        1    0.000    0.000    0.005    0.005 _base.py:1439(clear)
+        1    0.000    0.000    0.000    0.000 __init__.py:174(search)
+       47    0.000    0.000    0.000    0.000 transforms.py:1039(get_points)
+        2    0.000    0.000    0.000    0.000 {built-in method resize}
+        3    0.000    0.000    0.000    0.000 inspect.py:764(unwrap)
+       10    0.000    0.000    0.000    0.000 backend_tools.py:52(_register_tool_class)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:190(_path_abspath)
+        5    0.000    0.000    0.000    0.000 transforms.py:981(intervaly)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:173(__exit__)
+        8    0.000    0.000    0.000    0.000 functools.py:66(wraps)
+        4    0.000    0.000    0.000    0.000 axis.py:234(set_clip_path)
+        3    0.000    0.000    0.000    0.000 inspect.py:1803(_shadowed_dict)
+        1    0.000    0.000    0.000    0.000 figure.py:2677(set_layout_engine)
+        3    0.000    0.000    0.000    0.000 registry.py:202(is_valid_backend)
+        5    0.000    0.000    0.000    0.000 pkgutil.py:212(get_importer)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1233(path_stats)
+        6    0.000    0.000    0.000    0.000 axis.py:205(_apply_tickdir)
+        2    0.000    0.000    0.000    0.000 __init__.py:1(<module>)
+        1    0.000    0.000    0.000    0.000 gridspec.py:736(__init__)
+        1    0.000    0.000    0.000    0.000 backend_bases.py:2640(notify_axes_change)
+       12    0.000    0.000    0.000    0.000 axis.py:220(get_tick_padding)
+        1    0.000    0.000    0.000    0.000 _base.py:833(set_subplotspec)
+        6    0.000    0.000    0.000    0.000 markers.py:770(_set_tickup)
+        1    0.000    0.000    0.000    0.000 font_manager.py:1579(_cached_realpath)
+        1    0.000    0.000    0.000    0.000 {built-in method setWindowIcon}
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:185(_path_isabs)
+       63    0.000    0.000    0.000    0.000 enum.py:248(__init__)
+        1    0.000    0.000    0.000    0.000 layout_engine.py:220(__init__)
+       33    0.000    0.000    0.000    0.000 {method 'pop' of 'set' objects}
+       33    0.000    0.000    0.000    0.000 text.py:606(set_wrap)
+       24    0.000    0.000    0.000    0.000 cbook.py:2325(_is_jax_array)
+        3    0.000    0.000    0.000    0.000 art3d.py:442(set_segments)
+       37    0.000    0.000    0.000    0.000 font_manager.py:906(set_file)
+       10    0.000    0.000    0.000    0.000 text.py:1160(set_fontweight)
+        1    0.000    0.000    0.000    0.000 __init__.py:1409(_fixupParents)
+        8    0.000    0.000    0.000    0.000 {built-in method backgroundRole}
+        6    0.000    0.000    0.000    0.000 artist.py:766(set_clip_box)
+       22    0.000    0.000    0.000    0.000 {method 'rfind' of 'str' objects}
+       18    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:599(__init__)
+       30    0.000    0.000    0.000    0.000 axis.py:310(<genexpr>)
+        1    0.000    0.000    0.000    0.000 {built-in method setAllowedAreas}
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1326(exec_module)
+       10    0.000    0.000    0.000    0.000 cbook.py:1871(_str_lower_equal)
+       63    0.000    0.000    0.000    0.000 enum.py:1213(__init__)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1716(path_hook_for_FileFinder)
+        3    0.000    0.000    0.000    0.000 colorizer.py:581(_check_exclusionary_keywords)
+        1    0.000    0.000    0.000    0.000 <frozen _collections_abc>:808(get)
+       24    0.000    0.000    0.000    0.000 cbook.py:2337(_is_tensorflow_array)
+       24    0.000    0.000    0.000    0.000 spines.py:559(__getattr__)
+        2    0.000    0.000    0.000    0.000 inspect.py:1777(_check_class)
+       12    0.000    0.000    0.000    0.000 axis.py:515(formatter)
+        6    0.000    0.000    0.000    0.000 colors.py:998(copy)
+        5    0.000    0.000    0.000    0.000 font_manager.py:711(__eq__)
+        6    0.000    0.000    0.000    0.000 ticker.py:490(set_useOffset)
+        1    0.000    0.000    0.000    0.000 {built-in method setPalette}
+        3    0.000    0.000    0.000    0.000 collections.py:830(set_edgecolor)
+       17    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
+        5    0.000    0.000    0.000    0.000 <frozen _collections_abc>:916(__iter__)
+       30    0.000    0.000    0.000    0.000 __init__.py:79(<genexpr>)
+        3    0.000    0.000    0.000    0.000 <frozen _collections_abc>:815(__contains__)
+        2    0.000    0.000    0.000    0.000 copyreg.py:107(_slotnames)
+        2    0.000    0.000    0.026    0.013 __init__.py:71(import_module)
+        3    0.000    0.000    0.000    0.000 inspect.py:176(get_annotations)
+        1    0.000    0.000    0.000    0.000 backend_bases.py:3508(draw_if_interactive)
+        2    0.000    0.000    0.000    0.000 _methods.py:68(_all)
+        8    0.000    0.000    0.000    0.000 _local.py:252(_from_parsed_string)
+        1    0.000    0.000    0.000    0.000 backend_agg.py:57(RendererAgg)
+        8    0.000    0.000    0.000    0.000 {built-in method setDevicePixelRatio}
+        3    0.000    0.000    0.000    0.000 inspect.py:3342(signature)
+        8    0.000    0.000    0.000    0.000 _local.py:346(name)
+       12    0.000    0.000    0.000    0.000 transforms.py:1009(minposx)
+        2    0.000    0.000    0.000    0.000 _base.py:216(__init__)
+        6    0.000    0.000    0.000    0.000 <frozen _collections_abc>:108(_check_methods)
+        6    0.000    0.000    0.000    0.000 axis.py:1932(set_minor_formatter)
+        1    0.000    0.000    0.000    0.000 figure.py:1754(_process_projection_requirements)
+        1    0.000    0.000    0.000    0.000 gridspec.py:32(__init__)
+        1    0.000    0.000    0.000    0.000 figure.py:965(clear)
+       17    0.000    0.000    0.000    0.000 {built-in method _weakref._remove_dead_weakref}
+        6    0.000    0.000    0.000    0.000 axis.py:2345(getter)
+        2    0.000    0.000    0.000    0.000 spines.py:300(set_position)
+        1    0.000    0.000    0.000    0.000 gridspec.py:212(__getitem__)
+        2    0.000    0.000    0.000    0.000 transforms.py:1701(__init__)
+       12    0.000    0.000    0.000    0.000 axis.py:757(get_scale)
+        1    0.000    0.000    0.000    0.000 gridspec.py:191(_check_gridspec_exists)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:555(FigureManagerQT)
+        3    0.000    0.000    0.000    0.000 collections.py:603(set_linestyle)
+        1    0.000    0.000    0.000    0.000 _linalg.py:148(_commonType)
+        1    0.000    0.000    0.000    0.000 cbook.py:2184(_setup_new_guiapp)
+        3    0.000    0.000    0.000    0.000 _base.py:2544(_unit_change_handler)
+        1    0.000    0.000    0.000    0.000 gridspec.py:313(__init__)
+        2    0.000    0.000    0.026    0.013 <frozen importlib._bootstrap>:1375(_gcd_import)
+        1    0.000    0.000    0.000    0.000 <frozen os>:793(encode)
+        2    0.000    0.000    0.000    0.000 inspect.py:1816(getattr_static)
+        8    0.000    0.000    0.000    0.000 _local.py:166(__fspath__)
+        3    0.000    0.000    0.000    0.000 rcsetup.py:272(validate_backend)
+        1    0.000    0.000    0.000    0.000 __init__.py:2128(getLogger)
+        3    0.000    0.000    0.000    0.000 axes3d.py:800(set_xlim)
+        2    0.000    0.000    0.000    0.000 figure.py:2802(axes)
+       17    0.000    0.000    0.000    0.000 {built-in method _thread.allocate_lock}
+        1    0.000    0.000    0.000    0.000 __init__.py:1477(__init__)
+        8    0.000    0.000    0.000    0.000 shape_base.py:209(_arrays_for_stack_dispatcher)
+        1    0.000    0.000    0.000    0.000 verletlist.py:7(__init__)
+        2    0.000    0.000    0.000    0.000 axes3d.py:1020(get_xlim)
+        1    0.000    0.000    0.000    0.000 {built-in method setAlignment}
+        1    0.000    0.000    0.000    0.000 rcsetup.py:151(validate_bool)
+       10    0.000    0.000    0.000    0.000 artist.py:448(get_transform)
+        1    0.000    0.000    0.000    0.000 pyplot.py:556(draw_if_interactive)
+        1    0.000    0.000    0.000    0.000 transforms.py:2644(get_matrix)
+        2    0.000    0.000    0.000    0.000 transforms.py:2184(__init__)
+        1    0.000    0.000    0.000    0.000 backend_bases.py:3258(update)
+        1    0.000    0.000    0.000    0.000 pyplot.py:1132(get_fignums)
+        8    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+       15    0.000    0.000    0.000    0.000 colors.py:404(<genexpr>)
+        6    0.000    0.000    0.000    0.000 transforms.py:338(intervaly)
+       12    0.000    0.000    0.000    0.000 axis.py:673(isDefault_majloc)
+        3    0.000    0.000    0.000    0.000 collections.py:442(set_pickradius)
+       15    0.000    0.000    0.000    0.000 __init__.py:336(wrapper)
+        1    0.000    0.000    0.000    0.000 <frozen os>:711(__getitem__)
+        3    0.000    0.000    0.000    0.000 __init__.py:54(__get__)
+       10    0.000    0.000    0.000    0.000 {built-in method math.sin}
+        3    0.000    0.000    0.000    0.000 <frozen _collections_abc>:313(__subclasshook__)
+        1    0.000    0.000    0.027    0.027 backend_bases.py:1772(new_manager)
+       12    0.000    0.000    0.000    0.000 axis.py:1797(have_units)
+        3    0.000    0.000    0.000    0.000 backend_bases.py:3566(Show)
+        3    0.000    0.000    0.000    0.000 transforms.py:1782(transform)
+        3    0.000    0.000    0.000    0.000 weakref.py:510(update)
+       30    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:71(_relax_case)
+        2    0.000    0.000    0.000    0.000 __init__.py:330(_compile)
+        1    0.000    0.000    0.000    0.000 transforms.py:347(width)
+        1    0.000    0.000    0.000    0.000 {built-in method setAttribute}
+        1    0.000    0.000    0.000    0.000 __init__.py:164(match)
+        1    0.000    0.000    0.000    0.000 ast.py:1826(__getattr__)
+        2    0.000    0.000    0.000    0.000 __init__.py:334(__len__)
+        2    0.000    0.000    0.000    0.000 axes3d.py:694(set_xbound)
+        2    0.000    0.000    0.000    0.000 {built-in method setCheckable}
+        1    0.000    0.000   38.254   38.254 <string>:1(<module>)
+       17    0.000    0.000    0.000    0.000 font_manager.py:768(get_file)
+        2    0.000    0.000    0.000    0.000 {instance}
+        2    0.000    0.000    0.000    0.000 axes3d.py:719(set_ybound)
+       23    0.000    0.000    0.000    0.000 transforms.py:2116(get_matrix)
+        1    0.000    0.000    0.000    0.000 {built-in method setQuitOnLastWindowClosed}
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:412(__init__)
+        8    0.000    0.000    0.000    0.000 {built-in method value}
+        9    0.000    0.000    0.000    0.000 backend_bases.py:1730(<lambda>)
+        1    0.000    0.000    0.000    0.000 _pylab_helpers.py:33(get_fig_manager)
+        1    0.000    0.000    0.000    0.000 _base.py:1122(_update_transScale)
+        1    0.000    0.000    0.000    0.000 {method 'any' of 'numpy.ndarray' objects}
+       10    0.000    0.000    0.000    0.000 inspect.py:3061(<genexpr>)
+        2    0.000    0.000    0.000    0.000 axes3d.py:1024(get_ylim)
+        2    0.000    0.000    0.000    0.000 backend_bases.py:1734(_fix_ipython_backend2gui)
+        6    0.000    0.000    0.000    0.000 ticker.py:536(set_useLocale)
+       10    0.000    0.000    0.000    0.000 transforms.py:249(y0)
+        3    0.000    0.000    0.000    0.000 axis3d.py:255(set_rotate_label)
+        2    0.000    0.000    0.000    0.000 _base.py:3645(get_xbound)
+        1    0.000    0.000    0.000    0.000 axes3d.py:209(set_top_view)
+        1    0.000    0.000    0.000    0.000 spines.py:508(x)
+        3    0.000    0.000    0.000    0.000 axes3d.py:1841(grid)
+       21    0.000    0.000    0.000    0.000 markers.py:449(_set_nothing)
+        1    0.000    0.000    0.000    0.000 axes3d.py:1172(set_proj_type)
+        3    0.000    0.000    0.000    0.000 axis.py:2004(set_pickradius)
+        8    0.000    0.000    0.000    0.000 _local.py:510(stat)
+        9    0.000    0.000    0.000    0.000 {built-in method _imp._fix_co_filename}
+        1    0.000    0.000    0.000    0.000 backend_qt.py:666(set_window_title)
+        1    0.000    0.000    0.000    0.000 _ufunc_config.py:457(__exit__)
+        1    0.000    0.000    0.000    0.000 transforms.py:365(bounds)
+        3    0.000    0.000    0.000    0.000 __init__.py:678(_set)
+        1    0.000    0.000    0.000    0.000 transforms.py:779(frozen)
+        1    0.000    0.000    0.000    0.000 rcsetup.py:163(validate_axisbelow)
+       15    0.000    0.000    0.000    0.000 colors.py:414(<genexpr>)
+        2    0.000    0.000    0.000    0.000 _base.py:895(viewLim)
+       12    0.000    0.000    0.000    0.000 axis.py:681(isDefault_majfmt)
+       18    0.000    0.000    0.000    0.000 artist.py:1362(get_mouseover)
+        3    0.000    0.000    0.000    0.000 inspect.py:3082(replace)
+        1    0.000    0.000    0.000    0.000 transforms.py:232(frozen)
+        1    0.000    0.000    0.000    0.000 cbook.py:2065(__init__)
+       16    0.000    0.000    0.000    0.000 font_manager.py:926(get_math_fontfamily)
+        2    0.000    0.000    0.000    0.000 _base.py:3898(get_ybound)
+        1    0.000    0.000    0.000    0.000 transforms.py:795(from_bounds)
+        1    0.000    0.000    0.000    0.000 pyplot.py:282(install_repl_displayhook)
+        1    0.000    0.000    0.000    0.000 _base.py:1234(_gen_axes_patch)
+        1    0.000    0.000    0.000    0.000 figure.py:2207(_set_artist_props)
+        1    0.000    0.000    0.000    0.000 transforms.py:2301(get_matrix)
+        7    0.000    0.000    0.000    0.000 {method 'index' of 'list' objects}
+        3    0.000    0.000    0.000    0.000 axes3d.py:944(set_zlim)
+       20    0.000    0.000    0.000    0.000 patches.py:821(rotation_point)
+        2    0.000    0.000    0.000    0.000 axes3d.py:1028(get_zlim)
+       18    0.000    0.000    0.000    0.000 artist.py:427(is_transform_set)
+        6    0.000    0.000    0.000    0.000 colors.py:237(_has_alpha_channel)
+        1    0.000    0.000    0.000    0.000 __init__.py:110(get_projection_class)
+        3    0.000    0.000    0.000    0.000 collections.py:1687(_get_default_linewidth)
+        1    0.000    0.000    0.027    0.027 backend_bases.py:3503(new_figure_manager_given_figure)
+        3    0.000    0.000    0.000    0.000 collections.py:487(set_urls)
+       18    0.000    0.000    0.000    0.000 axis.py:500(locator)
+       12    0.000    0.000    0.000    0.000 axis.py:816(_set_autoscale_on)
+       21    0.000    0.000    0.000    0.000 axis.py:511(formatter)
+       16    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1604(<genexpr>)
+        2    0.000    0.000    0.000    0.000 axes3d.py:744(set_zbound)
+        6    0.000    0.000    0.000    0.000 axis.py:494(__init__)
+        1    0.000    0.000    0.000    0.000 {built-in method matplotlib._c_internal_utils.Win32_GetCurrentProcessExplicitAppUserModelID}
+        1    0.000    0.000    0.000    0.000 <frozen _collections_abc>:831(values)
+       12    0.000    0.000    0.000    0.000 {built-in method math.isfinite}
+        5    0.000    0.000    0.000    0.000 {built-in method _imp.exec_dynamic}
+        5    0.000    0.000    0.000    0.000 <frozen os>:855(fsdecode)
+        2    0.000    0.000    0.000    0.000 core.py:614(filled)
+        1    0.000    0.000    0.000    0.000 gridspec.py:216(_normalize)
+       24    0.000    0.000    0.000    0.000 copy.py:103(_copy_immutable)
+       17    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:158(__init__)
+        1    0.000    0.000    0.000    0.000 figure.py:1702(sca)
+        3    0.000    0.000    0.000    0.000 axes3d.py:872(set_ylim)
+        1    0.000    0.000    0.000    0.000 _formlayout.py:211(FormWidget)
+        1    0.000    0.000    0.000    0.000 spines.py:549(from_dict)
+        7    0.000    0.000    0.000    0.000 {method 'isidentifier' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 figure.py:3228(clear)
+        1    0.000    0.000    0.000    0.000 transforms.py:2633(__init__)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:547(MainWindow)
+        2    0.000    0.000    0.000    0.000 axes3d.py:198(set_axis_on)
+       14    0.000    0.000    0.000    0.000 cbook.py:120(__init__)
+        6    0.000    0.000    0.000    0.000 inspect.py:386(isfunction)
+        3    0.000    0.000    0.000    0.000 axis3d.py:58(_new_init)
+       12    0.000    0.000    0.000    0.000 _base.py:885(<genexpr>)
+        3    0.000    0.000    0.000    0.000 collections.py:1651(set_segments)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:859(SubplotToolQt)
+        1    0.000    0.000    0.000    0.000 transforms.py:790(null)
+       12    0.000    0.000    0.000    0.000 axis.py:697(isDefault_minfmt)
+        1    0.000    0.000    0.000    0.000 gridspec.py:541(__init__)
+       12    0.000    0.000    0.000    0.000 markers.py:272(get_fillstyle)
+       12    0.000    0.000    0.000    0.000 scale.py:95(limit_range_for_scale)
+        1    0.000    0.000    0.000    0.000 layout_engine.py:62(__init__)
+        2    0.000    0.000    0.000    0.000 scale.py:132(get_transform)
+        2    0.000    0.000    0.000    0.000 figure.py:3000(set_canvas)
+       10    0.000    0.000    0.000    0.000 {built-in method math.radians}
+        1    0.000    0.000    0.000    0.000 _formlayout.py:390(FormTabWidget)
+       12    0.000    0.000    0.000    0.000 axis.py:689(isDefault_minloc)
+       10    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1184(__init__)
+        4    0.000    0.000    0.000    0.000 backend_bases.py:1893(device_pixel_ratio)
+        1    0.000    0.000    0.000    0.000 {built-in method _thread.get_native_id}
+        1    0.000    0.000    0.000    0.000 figure.py:3328(add_axobserver)
+       15    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:653(has_location)
+        3    0.000    0.000    0.000    0.000 six.py:194(find_spec)
+        1    0.000    0.000    0.000    0.000 _linalg.py:123(_makearray)
+        3    0.000    0.000    0.000    0.000 <frozen _collections_abc>:392(__subclasshook__)
+        1    0.000    0.000    0.000    0.000 gridspec.py:122(set_height_ratios)
+        7    0.000    0.000    0.000    0.000 {method '__contains__' of 'frozenset' objects}
+        2    0.000    0.000    0.000    0.000 gridspec.py:766(update)
+        4    0.000    0.000    0.000    0.000 spines.py:226(_clear)
+       15    0.000    0.000    0.000    0.000 _local.py:298(root)
+        3    0.000    0.000    0.000    0.000 collections.py:1693(_get_default_edgecolor)
+        9    0.000    0.000    0.000    0.000 ticker.py:258(_set_locator)
+        1    0.000    0.000    0.000    0.000 functools.py:501(lru_cache)
+        2    0.000    0.000    0.000    0.000 transforms.py:2400(<lambda>)
+        1    0.000    0.000    0.000    0.000 figure.py:97(add)
+        1    0.000    0.000    0.000    0.000 {method 'set' of '_contextvars.ContextVar' objects}
+        2    0.000    0.000    0.000    0.000 axes3d.py:1902(get_zbound)
+        1    0.000    0.000    0.000    0.000 __init__.py:1750(getEffectiveLevel)
+        2    0.000    0.000    0.000    0.000 patches.py:826(rotation_point)
+        1    0.000    0.000    0.000    0.000 {built-in method numpy._core._multiarray_umath._make_extobj}
+        2    0.000    0.000    0.000    0.000 generator.py:66(make_particle_length)
+        6    0.000    0.000    0.000    0.000 text.py:580(_update_clip_properties)
+        1    0.000    0.000    0.000    0.000 _formlayout.py:419(FormDialog)
+        8    0.000    0.000    0.000    0.000 fromnumeric.py:2491(_any_dispatcher)
+        1    0.000    0.000    0.000    0.000 {built-in method raise_}
+       12    0.000    0.000    0.000    0.000 fromnumeric.py:210(_reshape_dispatcher)
+        1    0.000    0.000    0.000    0.000 threading.py:1123(native_id)
+        1    0.000    0.000    0.000    0.000 artist.py:1105(set_label)
+        1    0.000    0.000    0.000    0.000 {method 'reset' of '_contextvars.ContextVar' objects}
+        1    0.000    0.000    0.000    0.000 _formlayout.py:163(FontLayout)
+        2    0.000    0.000    0.000    0.000 axis.py:753(get_transform)
+        1    0.000    0.000    0.000    0.000 {method 'search' of 're.Pattern' objects}
+        1    0.000    0.000    0.000    0.000 backend_qtagg.py:16(FigureCanvasQTAgg)
+        1    0.000    0.000    0.000    0.000 cbook.py:639(clear)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1285(_sanity_check)
+        1    0.000    0.000    0.000    0.000 text.py:909(get_position)
+        1    0.000    0.000    0.000    0.000 {built-in method setFocus}
+        2    0.000    0.000    0.000    0.000 cbook.py:648(__len__)
+        1    0.000    0.000    0.000    0.000 {built-in method setSizePolicy}
+        1    0.000    0.000    0.000    0.000 backend_qt.py:182(TimerQT)
+       12    0.000    0.000    0.000    0.000 {built-in method _stat.S_ISLNK}
+        1    0.000    0.000    0.000    0.000 {built-in method setFocusPolicy}
+        2    0.000    0.000    0.000    0.000 widgets.py:38(__init__)
+        4    0.000    0.000    0.000    0.000 transforms.py:1758(<lambda>)
+        1    0.000    0.000    0.000    0.000 _base.py:3546(set_axis_off)
+        1    0.000    0.000    0.000    0.000 _formlayout.py:360(FormComboWidget)
+        1    0.000    0.000    0.000    0.000 __init__.py:81(get_projection_class)
+        3    0.000    0.000    0.000    0.000 weakref.py:417(__len__)
+        2    0.000    0.000    0.000    0.000 transforms.py:1926(get_matrix)
+        9    0.000    0.000    0.000    0.000 colorizer.py:87(norm)
+        2    0.000    0.000    0.000    0.000 figure.py:83(as_list)
+        1    0.000    0.000    0.000    0.000 cbook.py:635(__init__)
+        1    0.000    0.000    0.000    0.000 enum.py:199(__get__)
+        3    0.000    0.000    0.000    0.000 {method 'values' of 'mappingproxy' objects}
+        6    0.000    0.000    0.000    0.000 cbook.py:1643(<lambda>)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:1069(_BackendQT)
+        1    0.000    0.000    0.000    0.000 threading.py:1543(main_thread)
+        6    0.000    0.000    0.000    0.000 axis.py:812(_get_autoscale_on)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1017(create_module)
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1209(get_filename)
+        1    0.000    0.000    0.000    0.000 spines.py:546(__init__)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:169(_path_isdir)
+        1    0.000    0.000    0.000    0.000 {built-in method setVisible}
+        1    0.000    0.000    0.000    0.000 figure.py:79(__init__)
+       11    0.000    0.000    0.000    0.000 inspect.py:2779(name)
+        1    0.000    0.000    0.000    0.000 transforms.py:353(height)
+        1    0.000    0.000    0.000    0.000 __init__.py:801(_get_backend_or_none)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1307(__init__)
+        2    0.000    0.000    0.000    0.000 figure.py:2854(_get_dpi)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:957(ToolbarQt)
+        3    0.000    0.000    0.000    0.000 collections.py:1690(_get_default_antialiased)
+        3    0.000    0.000    0.000    0.000 colorizer.py:455(colorbar)
+        3    0.000    0.000    0.000    0.000 backend_qt.py:214(<lambda>)
+       10    0.000    0.000    0.000    0.000 inspect.py:2791(kind)
+        3    0.000    0.000    0.000    0.000 gridspec.py:74(get_geometry)
+        1    0.000    0.000    0.000    0.000 spines.py:592(__iter__)
+        1    0.000    0.000    0.000    0.000 figure.py:91(bubble)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.vars}
+        6    0.000    0.000    0.000    0.000 scale.py:113(__init__)
+        2    0.000    0.000    0.000    0.000 artist.py:853(get_visible)
+        1    0.000    0.000    0.000    0.000 <frozen _collections_abc>:850(__init__)
+        1    0.000    0.000    0.000    0.000 {method 'group' of 're.Match' objects}
+        1    0.000    0.000    0.000    0.000 gridspec.py:603(num2)
+        1    0.000    0.000    0.000    0.000 _base.py:4135(set_navigate)
+        1    0.000    0.000    0.000    0.000 {method 'clear' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 __init__.py:205(_checkLevel)
+        1    0.000    0.000    0.000    0.000 _methods.py:59(_any)
+        1    0.000    0.000    0.000    0.000 __init__.py:45(__init__)
+        1    0.000    0.000    0.000    0.000 backend_agg.py:524(_BackendAgg)
+        1    0.000    0.000    0.000    0.000 cbook.py:126(__eq__)
+        1    0.000    0.000    0.000    0.000 {method '__array_wrap__' of 'numpy.ndarray' objects}
+        2    0.000    0.000    0.000    0.000 __init__.py:1301(__init__)
+        1    0.000    0.000    0.000    0.000 {built-in method fromkeys}
+        1    0.000    0.000    0.000    0.000 _linalg.py:198(_assert_stacked_square)
+        1    0.000    0.000    0.000    0.000 backend_qtagg.py:84(_BackendQTAgg)
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.globals}
+        1    0.000    0.000    0.000    0.000 figure.py:232(get_figure)
+        4    0.000    0.000    0.000    0.000 numeric.py:1181(_roll_dispatcher)
+        1    0.000    0.000    0.000    0.000 enum.py:1333(value)
+        1    0.000    0.000    0.000    0.000 {built-in method _stat.S_ISREG}
+        6    0.000    0.000    0.000    0.000 colors.py:207(_sanitize_extrema)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:1041(RubberbandQt)
+        1    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 backend_qt.py:1024(ConfigureSubplotsQt)
+        1    0.000    0.000    0.000    0.000 spines.py:498(__init__)
+        1    0.000    0.000    0.000    0.000 _linalg.py:192(_assert_stacked_2d)
+        1    0.000    0.000    0.000    0.000 {method 'move_to_end' of 'collections.OrderedDict' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method sys.getrecursionlimit}
+        2    0.000    0.000    0.000    0.000 transforms.py:1756(<lambda>)
+        1    0.000    0.000    0.000    0.000 cbook.py:123(__call__)
+        1    0.000    0.000    0.000    0.000 gridspec.py:100(set_width_ratios)
+        1    0.000    0.000    0.000    0.000 _base.py:4156(set_navigate_mode)
+        1    0.000    0.000    0.000    0.000 _linalg.py:142(_realType)
+        1    0.000    0.000    0.000    0.000 _ufunc_config.py:431(__init__)
+        1    0.000    0.000    0.000    0.000 __init__.py:819(__init__)
+        1    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+        1    0.000    0.000    0.000    0.000 backend_qt.py:1034(SaveFigureQt)
+        1    0.000    0.000    0.000    0.000 {built-in method width}
+        4    0.000    0.000    0.000    0.000 typing.py:2367(cast)
+        2    0.000    0.000    0.000    0.000 transforms.py:1757(<lambda>)
+        1    0.000    0.000    0.000    0.000 artist.py:1101(get_label)
+        1    0.000    0.000    0.000    0.000 gridspec.py:599(num2)
+        1    0.000    0.000    0.000    0.000 transforms.py:994(minpos)
+        1    0.000    0.000    0.000    0.000 gridspec.py:607(get_gridspec)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:1058(ToolCopyToClipboardQT)
+        1    0.000    0.000    0.000    0.000 artist.py:1088(set_in_layout)
+        3    0.000    0.000    0.000    0.000 inspect.py:3074(parameters)
+        1    0.000    0.000    0.000    0.000 backend_qt.py:1052(HelpQt)
+        1    0.000    0.000    0.000    0.000 figure.py:2658(_check_layout_engines_compat)
+        2    0.000    0.000    0.000    0.000 multiarray.py:684(result_type)
+        1    0.000    0.000    0.000    0.000 __init__.py:1353(disable)
+        1    0.000    0.000    0.000    0.000 multiarray.py:1050(unravel_index)
+        1    0.000    0.000    0.000    0.000 _linalg.py:495(_unary_dispatcher)
+        1    0.000    0.000    0.000    0.000 inspect.py:2783(default)
+
+
