@@ -4,7 +4,7 @@ from itertools import product
 
 
 class LinkedCellList:
-    def __init__(self, cutoff_distance, skin_distance=0.5):
+    def __init__(self, cutoff_distance, skin_distance=2):
         """
         Linked-cell list for neighbor finding with capsules (3D particles).
 
@@ -27,7 +27,7 @@ class LinkedCellList:
     def needs_update(self, positions, lengths):
         if self.last_positions is None or self.last_lengths is None:
             return True
-        
+
         if len(positions) != len(self.last_positions) or len(lengths) != len(self.last_lengths):
             return True
 
@@ -35,8 +35,8 @@ class LinkedCellList:
             np.sum((positions - self.last_positions) ** 2, axis=1))
         max_growth = np.max(np.abs(lengths - self.last_lengths))
 
-        disp_thresh = (self.skin / 3.0) ** 2
-        growth_thresh = self.skin / 3.0
+        disp_thresh = (self.skin / 2.0) ** 2
+        growth_thresh = self.skin / 2.0
 
         return max_disp_sq > disp_thresh or max_growth > growth_thresh
 

@@ -1,7 +1,5 @@
-
 import cProfile
 
-from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 import numpy as np
 from forces import calc_constraint_collision_forces_recursive
@@ -10,7 +8,7 @@ from generator import (make_particle_length, make_particle_position,
 from physics import make_map, make_particle_mobility_matrix
 from quaternion import getDirectionVector
 from verletlist import LinkedCellList
-from visualization import render_particles
+from vtk import VTKLogger, VTKSimulationLogger
 
 np.seterr(all='warn')
 
@@ -133,7 +131,7 @@ def divideCells(C, L):
     return C, L
 
 
-def simulation_step(C, L, linked_cells, dt):
+def simulation_step(C, L, linked_cells, dt, timestep=0, logger=None):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
 
@@ -145,12 +143,13 @@ def simulation_step(C, L, linked_cells, dt):
 
     M = make_particle_mobility_matrix(L)
 
-    C_new, L_new = calc_constraint_collision_forces_recursive(
+    final_state = calc_constraint_collision_forces_recursive(
         C, L, M, dt, linked_cells, eps=0.001)
 
-    # apply_force(C, M, calc_herzian_collision_forces(C, L), dt)
+    if logger:
+        logger.log_timestep_complete(timestep, final_state)
 
-    return C_new, L_new
+    return final_state.C, final_state.l
 
 
 def main():
@@ -178,43 +177,21 @@ def main():
     C = C0
     L = L0
 
-    linked_cells = LinkedCellList(cutoff_distance=2.0)
+    linked_cells = LinkedCellList(cutoff_distance=2.5)
 
-    def update(frame):
-        nonlocal C, L
+    # Set up VTK logging
+    vtk_logger = VTKLogger("vtk_output", prefix="Bacteria_Simulation_")
+    simulation_logger = VTKSimulationLogger(vtk_logger)
+
+    timestep = 0
+
+    for frame in range(800):
         print(f"\rFrame: {frame}, Particles: {len(L)}", end="", flush=True)
-
-        
-
-        C, L = simulation_step(C, L, linked_cells, dt)
-
-        # Render the updated particles
-        render_particles(ax, C, L)
-
-        # Return the artists that were modified
-        return ax,
-
-    # Create the animation
-    # anim = FuncAnimation(
-    #     fig,
-    #     update,
-    #     frames=600,  # Number of frames to generate
-    #     interval=50,  # Delay between frames in milliseconds
-    #     blit=False,   # Redraw the full figure (needed for 3D)
-    #     repeat=False  # Don't loop the animation
-    # )
-
-    for frame in range(600):
-        print(f"\rFrame: {frame}, Particles: {len(L)}", end="", flush=True)
-        C, L = simulation_step(C, L, linked_cells, dt)
-
-    # Show the plot
-
-    # save the animation as a GIF
-    # anim.save('particles.mp4', fps=30, dpi=100)
-    plt.show()
+        C, L = simulation_step(C, L, linked_cells, dt,
+                               timestep=timestep, logger=simulation_logger)
+        timestep += 1
 
 
 if __name__ == "__main__":
-    cProfile.run('main()', sort='tottime')
+    # cProfile.run('main()', sort='tottime')
     main()

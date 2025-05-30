@@ -46,7 +46,6 @@ def create_deepest_point_constraints(C, L, linked_cells):
 
     # Update Verlet list if needed
     if linked_cells.needs_update(positions, L):
-        print("Updating Linked cell list...")  # Remove in production
         linked_cells.build(positions, L)
 
     # Get close pairs (this replaces your nested loops!)
@@ -202,4 +201,6 @@ def calculate_growth_rates(constraints, L, gamma, tau, lamb):
 
     growth_rates = L / tau * I
 
-    return sigma, growth_rates
+    S_total = np.sum(S, axis=1).A1
+
+    return S_total, sigma, growth_rates
