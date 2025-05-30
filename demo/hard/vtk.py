@@ -1,6 +1,7 @@
 import os
 import shutil
 from dataclasses import dataclass
+import time
 
 import numpy as np
 from quaternion import getDirectionVector
@@ -16,6 +17,7 @@ class VTKLogger:
         self.output_dir = output_dir
         self.prefix = prefix
         self.data_dir = os.path.join(output_dir, 'data')
+        self.t_start = time.monotonic_ns()
 
         # completely delete the output directory
         if os.path.exists(self.output_dir):
@@ -42,11 +44,15 @@ class VTKLogger:
             # Field data for global timestep information
             f.write('    <PFieldData>\n')
             f.write(
-                '      <PDataArray Name="timestep" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
+                '      <PDataArray Name="elapsed_time" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
+            f.write(
+                '      <PDataArray Name="simulation_time" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
             f.write(
                 '      <PDataArray Name="avg_bbpgd_iterations" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
             f.write(
                 '      <PDataArray Name="constraint_iterations" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
+            f.write(
+                '      <PDataArray Name="max_overlap" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
             f.write('    </PFieldData>\n')
 
             # Point data - per particle data
@@ -84,8 +90,8 @@ class VTKLogger:
             f.write('  </PUnstructuredGrid>\n')
             f.write('</VTKFile>\n')
 
-    def add_vtu_file(self, timestep: int, positions, forces, torques,
-                     directions, stresses, lengths, type_ids, ids, constraint_iterations, avg_bbpgd_iterations):
+    def add_vtu_file(self, timestep: int, dt: float, positions, forces, torques,
+                     directions, stresses, lengths, type_ids, ids, constraint_iterations, avg_bbpgd_iterations, max_overlap):
         """
         Create a VTU file with complete particle data for the given timestep.
         """
@@ -94,6 +100,8 @@ class VTKLogger:
 
         positions = np.array(positions)
         n_particles = len(positions)
+
+        t_elapsed_s = (time.monotonic_ns() - self.t_start) / 1e9
 
         with open(vtu_path, 'w') as f:
             f.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
@@ -104,11 +112,15 @@ class VTKLogger:
             # Field Data at UnstructuredGrid level - global information for this timestep
             f.write('    <FieldData>\n')
             f.write(
-                f'      <DataArray type="Int32" Name="timestep" NumberOfTuples="1">{timestep}</DataArray>\n')
+                f'      <DataArray type="Float32" Name="elapsed_time" NumberOfTuples="1">{t_elapsed_s}</DataArray>\n')
             f.write(
-                f'      <DataArray type="Float32" Name="avg_bbpgd_iterations" NumberOfTuples="1">{avg_bbpgd_iterations:.6f}</DataArray>\n')
+                f'      <DataArray type="Float32" Name="simulation_time" NumberOfTuples="1">{dt * timestep}</DataArray>\n')
+            f.write(
+                f'      <DataArray type="Float32" Name="avg_bbpgd_iterations" NumberOfTuples="1">{avg_bbpgd_iterations}</DataArray>\n')
             f.write(
                 f'      <DataArray type="Int32" Name="constraint_iterations" NumberOfTuples="1">{constraint_iterations}</DataArray>\n')
+            f.write(
+                f'      <DataArray type="Float32" Name="max_overlap" NumberOfTuples="1">{max_overlap}</DataArray>\n')
             f.write('    </FieldData>\n')
 
             f.write(
@@ -122,7 +134,7 @@ class VTKLogger:
                 '        <DataArray type="Float32" NumberOfComponents="3" Name="forces" format="ascii">\n')
             for force in forces:
                 f.write(
-                    f'          {force[0]:.6f} {force[1]:.6f} {force[2]:.6f}\n')
+                    f'          {force[0]} {force[1]} {force[2]}\n')
             f.write('        </DataArray>\n')
 
             # Torques
@@ -130,7 +142,7 @@ class VTKLogger:
                 '        <DataArray type="Float32" NumberOfComponents="3" Name="torques" format="ascii">\n')
             for torque in torques:
                 f.write(
-                    f'          {torque[0]:.6f} {torque[1]:.6f} {torque[2]:.6f}\n')
+                    f'          {torque[0]} {torque[1]} {torque[2]}\n')
             f.write('        </DataArray>\n')
 
             # Directions
@@ -138,14 +150,14 @@ class VTKLogger:
                 '        <DataArray type="Float32" NumberOfComponents="3" Name="directions" format="ascii">\n')
             for direction in directions:
                 f.write(
-                    f'          {direction[0]:.6f} {direction[1]:.6f} {direction[2]:.6f}\n')
+                    f'          {direction[0]} {direction[1]} {direction[2]}\n')
             f.write('        </DataArray>\n')
 
             # Stresses
             f.write(
                 '        <DataArray type="Float32" NumberOfComponents="1" Name="stresses" format="ascii">\n')
             for stress in stresses.flatten():
-                f.write(f'          {stress:.6f}\n')
+                f.write(f'          {stress}\n')
             f.write('        </DataArray>\n')
 
             # Lengths
@@ -153,7 +165,7 @@ class VTKLogger:
                 '        <DataArray type="Float32" NumberOfComponents="3" Name="lengths" format="ascii">\n')
             for length in lengths:
                 f.write(
-                    f'          {length[0]:.6f} {length[1]:.6f} {length[2]:.6f}\n')
+                    f'          {length[0]} {length[1]} {length[2]}\n')
             f.write('        </DataArray>\n')
 
             # Type IDs
@@ -181,7 +193,7 @@ class VTKLogger:
             f.write(
                 '        <DataArray type="Float32" NumberOfComponents="3" Name="positions" format="ascii">\n')
             for pos in positions:
-                f.write(f'          {pos[0]:.6f} {pos[1]:.6f} {pos[2]:.6f}\n')
+                f.write(f'          {pos[0]} {pos[1]} {pos[2]}\n')
             f.write('        </DataArray>\n')
             f.write('      </Points>\n')
 
@@ -226,12 +238,14 @@ class SimulationState:
 
     C: np.ndarray
     l: np.ndarray
+    L: np.ndarray
     max_overlap: float
     forces: np.ndarray
     torques: np.ndarray
     stresses: np.ndarray
     constraint_iterations: int
     avg_bbpgd_iterations: int
+    l0: float
 
 
 class VTKSimulationLogger:
@@ -242,7 +256,7 @@ class VTKSimulationLogger:
         self.log_every_n_iterations = log_every_n_iterations
         self.log_iterations = log_iterations
 
-    def log_timestep_complete(self, iteration: int, final_state: SimulationState):
+    def log_timestep_complete(self, iteration: int, dt: float, final_state: SimulationState):
         """Log final timestep data"""
         n_particles = len(final_state.l)
         positions = self._extract_positions(final_state.C, n_particles)
@@ -253,17 +267,19 @@ class VTKSimulationLogger:
         # Log complete timestep data
         self.vtk_logger.add_vtu_file(
             iteration,
+            dt,
             positions,
             final_state.forces,
             final_state.torques,
             np.array([getDirectionVector(q) for q in quaternions]),
             final_state.stresses,
             np.column_stack(
-                [final_state.l, 0.5 * np.ones(n_particles), 0.5 * np.ones(n_particles)]),
+                [final_state.l, 0.5*final_state.l0 * np.ones(n_particles), 0.5*final_state.l0 * np.ones(n_particles)]),
             np.zeros(n_particles, dtype=int),
             np.arange(n_particles, dtype=int),
             final_state.constraint_iterations,
-            final_state.avg_bbpgd_iterations
+            final_state.avg_bbpgd_iterations,
+            final_state.max_overlap
         )
         self.vtk_logger.write_timestep_pvtu(iteration)
 

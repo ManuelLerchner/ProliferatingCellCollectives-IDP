@@ -2,10 +2,10 @@
 import numpy as np
 
 
-def BBPGD(gradient, residual, gamma, eps=1e-5, max_iter=100):
+def BBPGD(gradient, residual, gamma, eps, max_iter=100000):
     grad = gradient(gamma)
     res = residual(grad, gamma)
-    alpha = 1 / res
+    alpha = 1 / res if res != 0 else np.inf
 
     for iters in range(max_iter):
         gamma_new = np.maximum(0, gamma - alpha * grad)

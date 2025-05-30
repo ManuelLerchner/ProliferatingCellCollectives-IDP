@@ -35,7 +35,7 @@ class ConstraintBlock:
             f"normI={self.normI}, normJ={self.normJ}, posI={self.posI}, posJ={self.posJ})"
 
 
-def create_deepest_point_constraints(C, L, linked_cells):
+def create_deepest_point_constraints(C, L, diameter, linked_cells):
     """
     Optimized constraint creation using Verlet list
     """
@@ -49,7 +49,6 @@ def create_deepest_point_constraints(C, L, linked_cells):
         linked_cells.build(positions, L)
 
     # Get close pairs (this replaces your nested loops!)
-    diameter = 0.5
     cutoff = diameter * 2  # Adjust as needed
     close_pairs = linked_cells.get_close_pairs(positions, L, cutoff)
 
@@ -67,20 +66,18 @@ def create_deepest_point_constraints(C, L, linked_cells):
         l1 = L[i]
         l2 = L[j]
 
-        diameter = 0.5
-
         (distMin, Ploc, Qloc, s, t), orientationI, orientationJ = signed_distance_capsule(i,
                                                                                           x1, q1, l1, j, x2, q2, l2, diameter, cache=cache)
 
         sep = distMin - (diameter + diameter) / 2
 
-        if sep < 0:
+        if sep < 0.5*diameter:
             norm = np.linalg.norm(Ploc - Qloc)
             if norm == 0:
                 norm = np.array([1.0, 0.0, 0.0])
             else:
                 norm = (Ploc - Qloc) / norm
-            normI = (Ploc - Qloc) / np.linalg.norm(Ploc - Qloc)
+            normI = norm
             normJ = -normI
 
             posI = Ploc - x1
@@ -132,7 +129,7 @@ def calculate_D_matrix(constraints, num_bodies):
     return D.tocsr()
 
 
-def calculate_stress_matrix(constraints, num_bodies, gamma):
+def calculate_stress_matrix(constraints, num_bodies):
     """
     Calculate the stress matrix for the system
     Args:
@@ -169,19 +166,17 @@ def calculate_stress_matrix(constraints, num_bodies, gamma):
     # Convert to sparse matrix format
     S = S.tocsr()
 
-    sigma = S.multiply(gamma)
-
-    return S, sigma
+    return S
 
 
 def calculate_impedance_matrix(stress_matrix, lamb):
     # Calculate the impedance matrix
-    I = np.exp(-lamb * np.sum(stress_matrix, axis=1).A1)
+    I = np.exp(-lamb * stress_matrix)
 
     return I
 
 
-def calculate_growth_rates(constraints, L, gamma, tau, lamb):
+def calculate_growth_rates(L, sigma,  lamb, tau):
     """
     Calculate actual growth rates with impedance: l_dot_n = (l_n / tau) * I_n(gamma)
 
@@ -193,14 +188,9 @@ def calculate_growth_rates(constraints, L, gamma, tau, lamb):
     Returns:
         Growth rates for each particle
     """
-    num_bodies = len(L)
-
-    S, sigma = calculate_stress_matrix(constraints, num_bodies, gamma)
 
     I = calculate_impedance_matrix(sigma, lamb)
 
     growth_rates = L / tau * I
 
-    S_total = np.sum(S, axis=1).A1
-
-    return S_total, sigma, growth_rates
+    return growth_rates

@@ -1,5 +1,5 @@
-import cProfile
 
+import cProfile
 import matplotlib.pyplot as plt
 import numpy as np
 from forces import calc_constraint_collision_forces_recursive
@@ -7,13 +7,14 @@ from generator import (make_particle_length, make_particle_position,
                        normalize_quaternions_vectorized)
 from physics import make_map, make_particle_mobility_matrix
 from quaternion import getDirectionVector
+from scipy.sparse import csr_matrix, vstack
 from verletlist import LinkedCellList
-from vtk import VTKLogger, VTKSimulationLogger
+from vtk import SimulationState, VTKLogger, VTKSimulationLogger
 
 np.seterr(all='warn')
 
 
-def init_particles():
+def init_particles(l0):
     """Initialize particle positions, lengths, and velocities"""
 
     # seed
@@ -21,21 +22,6 @@ def init_particles():
 
     ps = []
     ls = []
-
-    # for i in range(2):
-    #     pos = np.random.rand(3)  # Random position in [-1, 1]^3
-    #     pos[2] = 0.0  # Set z-coordinate to 0 for a flat plane
-
-    #     q = np.random.rand(4)  # Random quaternion in x, y plane
-    #     q[1] = 0.0  # Set y-component to 0 for a flat plane
-    #     q[2] = 0.0  # Set z-component to 0 for a flat plane
-    #     q /= np.linalg.norm(q)
-    #     p = make_particle_position(pos, q[0], [q[1], q[2], q[3]])
-
-    #     l = make_particle_length(1.0)
-
-    #     ps.append(p)
-    #     ls.append(l)
 
     pos1 = np.array([0.0, 0.0, 0.0])
     pos2 = np.array([1.0, 0, 0.0])
@@ -46,8 +32,8 @@ def init_particles():
     p1 = make_particle_position(pos1, q1[0], [q1[1], q1[2], q1[3]])
     p2 = make_particle_position(pos2, q2[0], [q2[1], q2[2], q2[3]])
 
-    l1 = make_particle_length(1.0)
-    l2 = make_particle_length(1.0)
+    l1 = make_particle_length(l0)
+    l2 = make_particle_length(l0)
 
     ps.append(p1)
     ls.append(l1)
@@ -96,19 +82,19 @@ def grow(L, dt, tao=0.1, lamb=0.1):
     return L
 
 
-def divideCells(C, L):
-    for i in range(len(L)):
-        if L[i] >= 2:
+def divideCells(C, l, L, l0):
+    for i in range(len(l)):
+        if l[i] >= 2 * l0:
             xi = C[7*i:7*i+3]
             q = C[7*i+3:7*i+7]
 
             dir = getDirectionVector(q)
 
-            newCenterLeft = xi - dir * (0.25 * L[i])
-            newCenterRight = xi + dir * (0.25 * L[i])
+            newCenterLeft = xi - dir * (0.25 * l[i])
+            newCenterRight = xi + dir * (0.25 * l[i])
 
             angle = np.random.uniform(-np.pi / 32.0,
-                                      np.pi / 32.0) / (1 + L[i])
+                                      np.pi / 32.0) / (1 + l[i])
 
             dqLeft = np.array([np.cos(angle), 0.0, 0.0, np.sin(angle)])
             dqRight = np.array([np.cos(-angle), 0.0, 0.0, np.sin(-angle)])
@@ -123,33 +109,46 @@ def divideCells(C, L):
                 (newCenterRight, newOrientationRight))
 
             C[7*i:7*i+7] = newParticleLeft
-            L[i] = 1
+            l[i] = l0
 
             C = np.concatenate((C, newParticleRight))
-            L = np.concatenate((L, [1]))
+            l = np.concatenate((l, [l0]))
 
-    return C, L
+    return C, l, L
 
 
-def simulation_step(C, L, linked_cells, dt, timestep=0, logger=None):
+t_last_saved = 0
+t_last_saved_frame = 0
+
+
+def simulation_step(state, linked_cells, dt, timestep=0, logger=None):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
 
     # grow the particles
     # L = grow(L, dt, 1, 0.05)
-    C, L = divideCells(C, L)
+    C, l, L = divideCells(state.C, state.l, state.L, state.l0)
+    state.C = C
+    state.l = l
+    state.L = L
 
     # Update positions
 
-    M = make_particle_mobility_matrix(L)
-
     final_state = calc_constraint_collision_forces_recursive(
-        C, L, M, dt, linked_cells, eps=0.001)
+        state, dt, linked_cells, eps=state.l0/1000)
 
-    if logger:
-        logger.log_timestep_complete(timestep, final_state)
+    # every 10 seconds log
+    global t_last_saved
+    global t_last_saved_frame
 
-    return final_state.C, final_state.l
+    if (timestep - t_last_saved) * dt >= 60:
+        t_last_saved = timestep
+
+        if logger:
+            logger.log_timestep_complete(t_last_saved_frame, dt, final_state)
+        t_last_saved_frame += 1
+
+    return final_state
 
 
 def main():
@@ -168,16 +167,15 @@ def main():
     ax.set_zlim((-BOX, BOX))
 
     # Initialize particles
-    C0, L0 = init_particles()
+    l0 = 1
+    C, l = init_particles(l0)
 
     # Time step
-    dt = 0.01
+    dt = 30
 
     # Store configurations for animation
-    C = C0
-    L = L0
 
-    linked_cells = LinkedCellList(cutoff_distance=2.5)
+    linked_cells = LinkedCellList(cutoff_distance=2.5 * l0)
 
     # Set up VTK logging
     vtk_logger = VTKLogger("vtk_output", prefix="Bacteria_Simulation_")
@@ -185,13 +183,18 @@ def main():
 
     timestep = 0
 
-    for frame in range(800):
-        print(f"\rFrame: {frame}, Particles: {len(L)}", end="", flush=True)
-        C, L = simulation_step(C, L, linked_cells, dt,
-                               timestep=timestep, logger=simulation_logger)
+    state = SimulationState(C=C, l=l, L=csr_matrix(np.ones((len(l), 1))), max_overlap=0.0, forces=np.zeros((len(l), 3)), torques=np.zeros(
+        (len(l), 3)), stresses=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0)
+
+    while timestep * dt < 60*60*60:
+        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}",
+              end="", flush=True)
+        final_state = simulation_step(state, linked_cells, dt,
+                                      timestep=timestep, logger=simulation_logger)
+        state = final_state
+
         timestep += 1
 
 
 if __name__ == "__main__":
-    # cProfile.run('main()', sort='tottime')
     main()

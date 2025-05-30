@@ -3,16 +3,16 @@ from scipy.sparse import block_diag
 from scipy.sparse import csr_matrix
 
 
-def make_particle_mobility_matrix(L):
+def make_particle_mobility_matrix(l, xi):
     """
     Optimized: Create a sparse block diagonal mobility matrix for n particles.
     """
-    n = len(L)
+    n = len(l)
     blocks = []
 
     for i in range(n):
-        l_i = L[i]
-        diag = np.array([l_i]*3 + [12 / (l_i**3)]*3)
+        l_i = l[i]
+        diag = 1/xi*np.array([1/l_i]*3 + [12 / (l_i**3)]*3)
         blocks.append(csr_matrix((diag, (range(6), range(6))), shape=(6, 6)))
 
     return block_diag(blocks, format='csr')

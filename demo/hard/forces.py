@@ -1,10 +1,10 @@
-
 import numpy as np
 from constraint import (calculate_D_matrix, calculate_growth_rates,
+                        calculate_stress_matrix,
                         create_deepest_point_constraints)
 from generator import normalize_quaternions_vectorized
 from optimization import BBPGD
-from physics import make_map
+from physics import make_map, make_particle_mobility_matrix
 from scipy.sparse import csr_matrix, hstack
 from vtk import SimulationState
 
@@ -61,7 +61,7 @@ def calc_constraint_collision_forces(C, L, M, dt, U_known=None):
     return F
 
 
-def calc_constraint_collision_forces_recursive(C, l, M, dt, linked_cells, eps,
+def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linked_cells, eps,
                                                max_iterations=100):
     """
     Calculate collision forces with optional logging support.
@@ -80,14 +80,17 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, linked_cells, eps,
     Returns:
         Tuple of (updated_C, updated_l)
     """
+
     # Initialize state variables
-    C_prev = C
+    C_prev = state.C
+    l = state.l
     gamma_prev = np.zeros((0,))  # Previous gamma values
     phi_prev = np.zeros((0,))  # Previous phi values
     ldot_prev = np.zeros((len(l),))  # Previous growth rates
 
     D_prev = csr_matrix((len(l)*6, 0))  # Previous D matrix
     L_prev = csr_matrix((len(l), 0))  # Previous L matrix
+    L_current = state.L
 
     # Initialize accumulating force and torque variables
     n_particles = len(l)
@@ -101,69 +104,90 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, linked_cells, eps,
     max_overlap = 0.0
     constraint_iterations = 0
 
+    xi = 50000
+
+    TAU = (54*60)
+    LAMBDA = 1.1e-3
+
+    LAMBDA_DIMENSIONLESS = (TAU / (xi * state.l0**2)) * LAMBDA
+    LAMBDA_DIMENSIONLESS = 1.1e-3
+    M = make_particle_mobility_matrix(state.l, xi)
+    G = make_map(C_prev)  # Configuration mapping
+
+    total_constraints = []
+
     # Main solver loop
     while constraint_iterations < max_iterations and not converged:
         # Generate new constraints from deepest penetrations
         new_constraints = create_deepest_point_constraints(
-            C_prev, l, linked_cells)
+            C_prev, l, 0.5*state.l0, linked_cells)
+        total_constraints.extend(new_constraints)
 
         # Build constraint vectors and matrices
         phi_new = np.array([c.delta0 for c in new_constraints])
-
-        D_new = calculate_D_matrix(new_constraints, len(l))
-        S, L_new, ldot_new = calculate_growth_rates(
-            new_constraints,  l, -phi_new, 1, 10000)
-
-        # Check convergence - if no significant overlaps, we're done
-        max_overlap = max([-c.delta0 for c in new_constraints]
-                          ) if new_constraints else 0
-
-        converged = (max_overlap < eps)
-
-        # If converged, prepare final length update and exit loop
-        if converged:
-            l_next = l + dt * ldot_new
-            break
-
-        # Continue with LCP solving if not converged
-        # Concatenate with previous iteration data
-        gamma_new_init = np.zeros((len(phi_new),))
-        gamma_current = np.concatenate([gamma_prev, gamma_new_init])
         phi_current = np.concatenate([phi_prev, phi_new])
 
+        D_new = calculate_D_matrix(new_constraints, len(l))
         D_current = hstack([D_prev, D_new])
+
+        gamma_new = - phi_new
+
+        gamma_current = np.concatenate([gamma_prev, gamma_new])
+
+        L_new = calculate_stress_matrix(new_constraints, len(l))
         L_current = hstack([L_prev, L_new])
 
-        # Define LCP problem functions
+        # Check convergence - if no significant overlaps, we're done
+        max_overlap = abs(np.min(phi_current)) if phi_current.size > 0 else 0
+        converged = (max_overlap <= eps) and constraint_iterations > 0
+
+        if converged:
+            break
+
+        gamma_prev_padded = np.pad(
+            gamma_prev, (0, len(gamma_current) - len(gamma_prev)), 'constant')
+
+        def calculate_ldot(gamma):
+            sigma = L_current @ gamma
+            ldot_new = calculate_growth_rates(
+                l, sigma, LAMBDA_DIMENSIONLESS, TAU)
+            return sigma, ldot_new
+
         def gradient(gamma):
             """Gradient function for the LCP solver"""
-            phi_movement = D_current.T @ M @ D_current @ (
-                gamma - gamma_current)
-            phi_growth = - L_current.T @ (ldot_new - ldot_prev)
-            return phi_current + dt * (phi_movement + phi_growth)
+            if len(gamma) == 0:
+                return np.zeros((len(gamma),))
 
-        def project(gradient_val, gamma):
-            """Projection function for complementarity constraints"""
-            return np.where(gamma > 0, gradient_val, np.minimum(gradient_val, 0))
+            phi_movement = D_current.T @ M @ D_current @ (
+                gamma - gamma_prev_padded)
+
+            _, ldot = calculate_ldot(gamma)
+
+            phi_growth = - L_current.T @ (ldot - ldot_prev)
+
+            return phi_current + dt * (phi_movement + phi_growth)
 
         def residual(gradient_val, gamma):
             """Residual function for convergence check"""
-            return np.linalg.norm(project(gradient_val, gamma), ord=np.inf)
+            projected = np.where(gamma > 0, gradient_val,
+                                 np.minimum(gradient_val, 0))
+            return np.linalg.norm(projected, ord=np.inf) if len(projected) > 0 else 0
 
         # Solve the Linear Complementarity Problem (LCP)
         gamma_next, iters = BBPGD(gradient, residual, gamma_current, eps=eps)
 
         # Calculate force increment
-        gamma_prev_padded = np.pad(
-            gamma_prev, (0, len(gamma_new_init)), 'constant')
+
         gamma_diff = gamma_next - gamma_prev_padded
+
+        sigma, ldot_new = calculate_ldot(gamma_next)
 
         # Update total forces
         df = D_current @ gamma_diff
 
         # Update configuration
         dU = M @ df
-        G = make_map(C_prev)  # Configuration mapping
+
         dC = G @ dU
         C_prev = C_prev + dt * dC
 
@@ -171,13 +195,13 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, linked_cells, eps,
         C_next = normalize_quaternions_vectorized(C_prev)
 
         # Update separation distances
-        phi_next = phi_current + dt * D_current.T @ dU
+        phi_next = gradient(gamma_next)
 
         # Accumulate forces, torques, and velocities for this iteration
         for i in range(n_particles):
             total_forces[i] += df[6*i:6*i+3]
             total_torques[i] += df[6*i+3:6*i+6]
-            total_stresses[i] += S[i]
+            total_stresses[i] += sigma[i]
         total_bbpgd_iterations += iters
 
         # Prepare for next iteration
@@ -193,22 +217,22 @@ def calc_constraint_collision_forces_recursive(C, l, M, dt, linked_cells, eps,
     if not converged:
         print("Max iterations reached without convergence.")
         print(f"Max overlap: {max_overlap}")
-        l_next = l + dt * ldot_new
-        C_final = C_next if constraint_iterations > 0 else C_prev
-    else:
-        C_final = C_prev
+
+    l_next = l + dt * ldot_prev
 
     # Log final state with accumulated forces and torques
 
     final_state = SimulationState(
-        C=C_final.copy(),
+        C=C_prev.copy(),
         l=l_next.copy(),
+        L=L_prev.copy(),
         max_overlap=max_overlap,
         forces=total_forces.copy(),
         torques=total_torques.copy(),
         stresses=total_stresses.copy(),
         constraint_iterations=constraint_iterations,
         avg_bbpgd_iterations=total_bbpgd_iterations /
-        constraint_iterations if constraint_iterations > 0 else 0
+        constraint_iterations if constraint_iterations > 0 else 0,
+        l0=state.l0
     )
     return final_state
