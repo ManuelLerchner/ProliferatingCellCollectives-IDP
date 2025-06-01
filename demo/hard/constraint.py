@@ -73,7 +73,7 @@ def create_deepest_point_constraints(C, L, diameter, linked_cells, phase=0):
 
         sep = distMin - (diameter + diameter) / 2
 
-        if sep < 0:
+        if sep < 0.3*diameter:
             norm = np.linalg.norm(Ploc - Qloc)
             if norm == 0:
                 norm = np.array([1.0, 0.0, 0.0])
@@ -195,4 +195,4 @@ def calculate_growth_rates(L, sigma,  lamb, tau):
 
     growth_rates = L / tau * I
 
-    return growth_rates
+    return I, growth_rates

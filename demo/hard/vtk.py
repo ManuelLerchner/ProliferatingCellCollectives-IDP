@@ -1,11 +1,11 @@
 import os
 import shutil
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, Callable, Union, List
 import time
-import numpy as np
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
 from constraint import ConstraintBlock
 from quaternion import getDirectionVector
 
@@ -20,7 +20,7 @@ class SimulationState:
     max_overlap: float
     forces: np.ndarray
     torques: np.ndarray
-    stresses: np.ndarray
+    impedance: np.ndarray
     constraint_iterations: int
     avg_bbpgd_iterations: int
     l0: float
@@ -366,7 +366,7 @@ class BacteriaDataExtractor(VTKDataExtractor):
             VTKField("forces", state.forces, 3),
             VTKField("torques", state.torques, 3),
             VTKField("directions", directions, 3),
-            VTKField("stresses", state.stresses, 1),
+            VTKField("impedance", state.impedance, 1),
             VTKField("lengths", lengths, 3),
             VTKField("typeIds", np.zeros(n_particles, dtype=int), 1, "Int32"),
             VTKField("ids", np.arange(n_particles, dtype=int), 1, "Int32"),

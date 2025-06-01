@@ -1,17 +1,16 @@
 
-from dataclasses import dataclass
-import pstats
-import cProfile
+
 import matplotlib.pyplot as plt
 import numpy as np
 from forces import calc_constraint_collision_forces_recursive
 from generator import (make_particle_length, make_particle_position,
                        normalize_quaternions_vectorized)
-from physics import make_map, make_particle_mobility_matrix
+from physics import make_map
 from quaternion import getDirectionVector
-from scipy.sparse import csr_matrix, vstack
+from scipy.sparse import csr_matrix
 from verletlist import LinkedCellList
-from vtk import SimulationState, create_bacteria_logger, create_constraint_logger
+from vtk import (SimulationState, create_bacteria_logger,
+                 create_constraint_logger)
 
 
 def init_particles(l0):
@@ -165,7 +164,7 @@ def main():
     C, l = init_particles(l0)
 
     # Time step
-    dt = 30
+    dt = 300
 
     # Store configurations for animation
 
@@ -178,10 +177,10 @@ def main():
     timestep = 0
 
     state = SimulationState(C=C, l=l, L=csr_matrix((len(l), 0)), max_overlap=0.0, forces=np.zeros((len(l), 3)), torques=np.zeros(
-        (len(l), 3)), stresses=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0, constraints=[])
+        (len(l), 3)), impedance=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0, constraints=[])
 
     while timestep * dt < 60*60*60:
-        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}",
+        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}, Constraints: {len(state.constraints)}",
               end="", flush=True)
         final_state = simulation_step(state, linked_cells, dt,
                                       timestep=timestep, loggers=[bacteria_logger])

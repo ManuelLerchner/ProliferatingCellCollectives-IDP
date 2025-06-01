@@ -100,13 +100,17 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
     max_overlap = 0.0
     constraint_iterations = 0
 
-    zeta = 200 * 3600
-    xi = zeta / state.l0
-
+    # ecoli
+    xi = 200 * 3600
     TAU = (54*60)
 
-    # LAMBDA_DIMENSIONLESS = (TAU / (xi * state.l0**2)) * LAMBDA
-    LAMBDA_DIMENSIONLESS = 1e-3
+    # tolerance agains growth
+    #  LAMBDA_ecoli = 2.44e-1
+    #  LAMBDA = 0 -> pressure has no effect on growth -> exponential growth
+
+    LAMBDA = 2.44e-1
+
+    LAMBDA_DIMENSIONLESS = (TAU / (xi * state.l0**2)) * LAMBDA
 
     M = make_particle_mobility_matrix(state.l, xi)
     G = make_map(C_prev)  # Configuration mapping
@@ -148,9 +152,9 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
                 l_current = l
 
             sigma = L_current @ gamma
-            ldot_new = calculate_growth_rates(
+            I, ldot_new = calculate_growth_rates(
                 l_current, sigma, LAMBDA_DIMENSIONLESS, TAU)
-            return sigma, ldot_new
+            return I, ldot_new
 
         def gradient(gamma):
             """Gradient function for the LCP solver"""
@@ -179,7 +183,7 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
 
         gamma_diff = gamma_next - gamma_prev_padded
 
-        sigma, ldot_new = calculate_ldot(gamma_next)
+        impedance, ldot_new = calculate_ldot(gamma_next)
 
         # Update total forces
         df = D_current @ gamma_diff
@@ -220,7 +224,7 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
     U_2d = U.reshape(n_particles, 6)
     total_forces = U_2d[:, :3]
     total_torques = U_2d[:, 3:]
-    total_stresses = sigma
+    impedance = impedance
 
     final_state = SimulationState(
         C=C_prev.copy(),
@@ -229,7 +233,7 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
         max_overlap=max_overlap,
         forces=total_forces.copy(),
         torques=total_torques.copy(),
-        stresses=total_stresses.copy(),
+        impedance=impedance.copy(),
         constraint_iterations=constraint_iterations,
         avg_bbpgd_iterations=total_bbpgd_iterations /
         constraint_iterations if constraint_iterations > 0 else 0,
