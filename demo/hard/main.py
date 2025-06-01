@@ -1,4 +1,6 @@
 
+from dataclasses import dataclass
+import pstats
 import cProfile
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,9 +11,7 @@ from physics import make_map, make_particle_mobility_matrix
 from quaternion import getDirectionVector
 from scipy.sparse import csr_matrix, vstack
 from verletlist import LinkedCellList
-from vtk import SimulationState, VTKLogger, VTKSimulationLogger
-
-np.seterr(all='warn')
+from vtk import SimulationState, create_bacteria_logger, create_constraint_logger
 
 
 def init_particles(l0):
@@ -24,21 +24,15 @@ def init_particles(l0):
     ls = []
 
     pos1 = np.array([0.0, 0.0, 0.0])
-    pos2 = np.array([1.0, 0, 0.0])
 
     q1 = np.array([1.0, 0.0, 0.0, 0.0])
-    q2 = np.array([1.0, 0.0, 0.0, 0.0])
 
     p1 = make_particle_position(pos1, q1[0], [q1[1], q1[2], q1[3]])
-    p2 = make_particle_position(pos2, q2[0], [q2[1], q2[2], q2[3]])
 
     l1 = make_particle_length(l0)
-    l2 = make_particle_length(l0)
 
     ps.append(p1)
     ls.append(l1)
-    ps.append(p2)
-    ls.append(l2)
 
     L = np.concatenate(ls)
     C = np.concatenate(ps, axis=0)
@@ -94,7 +88,7 @@ def divideCells(C, l, L, l0):
             newCenterRight = xi + dir * (0.25 * l[i])
 
             angle = np.random.uniform(-np.pi / 32.0,
-                                      np.pi / 32.0) / (1 + l[i])
+                                      np.pi / 32.0)
 
             dqLeft = np.array([np.cos(angle), 0.0, 0.0, np.sin(angle)])
             dqRight = np.array([np.cos(-angle), 0.0, 0.0, np.sin(-angle)])
@@ -121,7 +115,7 @@ t_last_saved = 0
 t_last_saved_frame = 0
 
 
-def simulation_step(state, linked_cells, dt, timestep=0, logger=None):
+def simulation_step(state, linked_cells, dt, timestep=0, loggers=[]):
     """Perform one simulation step and return updated configuration"""
     # Calculate forces
 
@@ -144,7 +138,7 @@ def simulation_step(state, linked_cells, dt, timestep=0, logger=None):
     if (timestep - t_last_saved) * dt >= 60:
         t_last_saved = timestep
 
-        if logger:
+        for logger in loggers:
             logger.log_timestep_complete(t_last_saved_frame, dt, final_state)
         t_last_saved_frame += 1
 
@@ -178,19 +172,19 @@ def main():
     linked_cells = LinkedCellList(cutoff_distance=2.5 * l0)
 
     # Set up VTK logging
-    vtk_logger = VTKLogger("vtk_output", prefix="Bacteria_Simulation_")
-    simulation_logger = VTKSimulationLogger(vtk_logger)
+    bacteria_logger = create_bacteria_logger("vtk_output")
+    constraint_logger = create_constraint_logger("vtk_output")
 
     timestep = 0
 
-    state = SimulationState(C=C, l=l, L=csr_matrix(np.ones((len(l), 1))), max_overlap=0.0, forces=np.zeros((len(l), 3)), torques=np.zeros(
-        (len(l), 3)), stresses=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0)
+    state = SimulationState(C=C, l=l, L=csr_matrix((len(l), 0)), max_overlap=0.0, forces=np.zeros((len(l), 3)), torques=np.zeros(
+        (len(l), 3)), stresses=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0, constraints=[])
 
     while timestep * dt < 60*60*60:
         print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}",
               end="", flush=True)
         final_state = simulation_step(state, linked_cells, dt,
-                                      timestep=timestep, logger=simulation_logger)
+                                      timestep=timestep, loggers=[bacteria_logger])
         state = final_state
 
         timestep += 1
@@ -198,3 +192,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # cProfile.run("main()", sort="cumtime")

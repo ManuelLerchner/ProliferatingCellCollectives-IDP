@@ -90,13 +90,9 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
 
     D_prev = csr_matrix((len(l)*6, 0))  # Previous D matrix
     L_prev = csr_matrix((len(l), 0))  # Previous L matrix
-    L_current = state.L
 
     # Initialize accumulating force and torque variables
     n_particles = len(l)
-    total_forces = np.zeros((n_particles, 3))
-    total_torques = np.zeros((n_particles, 3))
-    total_stresses = np.zeros((n_particles, 1))
     total_bbpgd_iterations = 0
 
     # Convergence tracking
@@ -104,13 +100,14 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
     max_overlap = 0.0
     constraint_iterations = 0
 
-    xi = 50000
+    zeta = 200 * 3600
+    xi = zeta / state.l0
 
     TAU = (54*60)
-    LAMBDA = 1.1e-3
 
-    LAMBDA_DIMENSIONLESS = (TAU / (xi * state.l0**2)) * LAMBDA
-    LAMBDA_DIMENSIONLESS = 1.1e-3
+    # LAMBDA_DIMENSIONLESS = (TAU / (xi * state.l0**2)) * LAMBDA
+    LAMBDA_DIMENSIONLESS = 1e-3
+
     M = make_particle_mobility_matrix(state.l, xi)
     G = make_map(C_prev)  # Configuration mapping
 
@@ -120,7 +117,7 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
     while constraint_iterations < max_iterations and not converged:
         # Generate new constraints from deepest penetrations
         new_constraints = create_deepest_point_constraints(
-            C_prev, l, 0.5*state.l0, linked_cells)
+            C_prev, l, 0.5*state.l0, linked_cells, phase=constraint_iterations)
         total_constraints.extend(new_constraints)
 
         # Build constraint vectors and matrices
@@ -130,27 +127,29 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
         D_new = calculate_D_matrix(new_constraints, len(l))
         D_current = hstack([D_prev, D_new])
 
-        gamma_new = - phi_new
+        gamma_new = np.zeros((len(new_constraints),))
 
         gamma_current = np.concatenate([gamma_prev, gamma_new])
 
         L_new = calculate_stress_matrix(new_constraints, len(l))
         L_current = hstack([L_prev, L_new])
 
-        # Check convergence - if no significant overlaps, we're done
-        max_overlap = abs(np.min(phi_current)) if phi_current.size > 0 else 0
+        max_overlap = np.max(
+            np.where(phi_current < 0, -phi_current, 0)) if len(phi_current) > 0 else 0.0
         converged = (max_overlap <= eps) and constraint_iterations > 0
-
-        if converged:
-            break
 
         gamma_prev_padded = np.pad(
             gamma_prev, (0, len(gamma_current) - len(gamma_prev)), 'constant')
 
         def calculate_ldot(gamma):
+            if constraint_iterations == 0:
+                l_current = np.zeros((len(l),))
+            else:
+                l_current = l
+
             sigma = L_current @ gamma
             ldot_new = calculate_growth_rates(
-                l, sigma, LAMBDA_DIMENSIONLESS, TAU)
+                l_current, sigma, LAMBDA_DIMENSIONLESS, TAU)
             return sigma, ldot_new
 
         def gradient(gamma):
@@ -197,11 +196,6 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
         # Update separation distances
         phi_next = gradient(gamma_next)
 
-        # Accumulate forces, torques, and velocities for this iteration
-        for i in range(n_particles):
-            total_forces[i] += df[6*i:6*i+3]
-            total_torques[i] += df[6*i+3:6*i+6]
-            total_stresses[i] += sigma[i]
         total_bbpgd_iterations += iters
 
         # Prepare for next iteration
@@ -222,6 +216,12 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
 
     # Log final state with accumulated forces and torques
 
+    U = D_current @ gamma_next
+    U_2d = U.reshape(n_particles, 6)
+    total_forces = U_2d[:, :3]
+    total_torques = U_2d[:, 3:]
+    total_stresses = sigma
+
     final_state = SimulationState(
         C=C_prev.copy(),
         l=l_next.copy(),
@@ -233,6 +233,7 @@ def calc_constraint_collision_forces_recursive(state: SimulationState, dt, linke
         constraint_iterations=constraint_iterations,
         avg_bbpgd_iterations=total_bbpgd_iterations /
         constraint_iterations if constraint_iterations > 0 else 0,
-        l0=state.l0
+        l0=state.l0,
+        constraints=total_constraints
     )
     return final_state

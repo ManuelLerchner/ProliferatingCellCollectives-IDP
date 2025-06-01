@@ -6,7 +6,7 @@ from scipy.sparse import lil_matrix
 class ConstraintBlock:
 
     def __init__(self, delta0_, gidI_, gidJ_, normI_, normJ_, posI_, posJ_, labI_,
-                 labJ_, orientationI_, orientationJ_, ):
+                 labJ_, orientationI_, orientationJ_, phase_):
         self.delta0 = delta0_
         """Constraint initial value"""
         self.gidI = gidI_
@@ -29,13 +29,15 @@ class ConstraintBlock:
         """Orientation of particle I"""
         self.orientationJ = orientationJ_
         """Orientation of particle J"""
+        self.phase = phase_
+        """Phase of constraint"""
 
     def __repr__(self):
         return f"ConstraintBlock(gidI={self.gidI}, gidJ={self.gidJ}, delta0={self.delta0}, " \
             f"normI={self.normI}, normJ={self.normJ}, posI={self.posI}, posJ={self.posJ})"
 
 
-def create_deepest_point_constraints(C, L, diameter, linked_cells):
+def create_deepest_point_constraints(C, L, diameter, linked_cells, phase=0):
     """
     Optimized constraint creation using Verlet list
     """
@@ -71,7 +73,7 @@ def create_deepest_point_constraints(C, L, diameter, linked_cells):
 
         sep = distMin - (diameter + diameter) / 2
 
-        if sep < 0.5*diameter:
+        if sep < 0:
             norm = np.linalg.norm(Ploc - Qloc)
             if norm == 0:
                 norm = np.array([1.0, 0.0, 0.0])
@@ -85,7 +87,7 @@ def create_deepest_point_constraints(C, L, diameter, linked_cells):
 
             conBlock = ConstraintBlock(
                 sep, i, j, normI, normJ, posI, posJ, Ploc, Qloc,
-                orientationI, orientationJ)
+                orientationI, orientationJ, phase)
 
             constraints.append(conBlock)
 

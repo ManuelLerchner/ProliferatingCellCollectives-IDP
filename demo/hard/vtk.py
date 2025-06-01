@@ -1,235 +1,13 @@
 import os
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict, Any, Optional, Callable, Union, List
 import time
-
 import numpy as np
+from abc import ABC, abstractmethod
+
+from constraint import ConstraintBlock
 from quaternion import getDirectionVector
-
-
-class VTKLogger:
-    """
-    Logger for writing PVTU (parallel VTK Unstructured Grid) files and managing VTU file references per timestep.
-    Each timestep produces a .pvtu file referencing a single .vtu file in the data folder.
-    """
-
-    def __init__(self, output_dir: str, prefix: str = 'Bacteria_Particles_0_'):
-        self.output_dir = output_dir
-        self.prefix = prefix
-        self.data_dir = os.path.join(output_dir, 'data')
-        self.t_start = time.monotonic_ns()
-
-        # completely delete the output directory
-        if os.path.exists(self.output_dir):
-            shutil.rmtree(self.output_dir)
-        os.makedirs(self.output_dir)
-        os.makedirs(self.data_dir)
-
-    def get_vtu_filename(self, timestep: int) -> str:
-        return f"{self.prefix}{timestep:07d}.vtu"
-
-    def get_pvtu_filename(self, timestep: int) -> str:
-        return f"{self.prefix}{timestep:07d}.pvtu"
-
-    def write_timestep_pvtu(self, timestep: int):
-        pvtu_filename = self.get_pvtu_filename(timestep)
-        vtu_filename = self.get_vtu_filename(timestep)
-        pvtu_path = os.path.join(self.output_dir, pvtu_filename)
-        with open(pvtu_path, 'w') as f:
-            f.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
-            f.write(
-                '<VTKFile byte_order="LittleEndian" type="PUnstructuredGrid" version="0.1">\n')
-            f.write('  <PUnstructuredGrid GhostLevel="0">\n')
-
-            # Field data for global timestep information
-            f.write('    <PFieldData>\n')
-            f.write(
-                '      <PDataArray Name="elapsed_time" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="simulation_time" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="avg_bbpgd_iterations" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="constraint_iterations" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
-            f.write(
-                '      <PDataArray Name="max_overlap" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
-            f.write('    </PFieldData>\n')
-
-            # Point data - per particle data
-            f.write('    <PPointData>\n')
-            f.write(
-                '      <PDataArray Name="forces" NumberOfComponents="3" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="torques" NumberOfComponents="3" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="directions" NumberOfComponents="3" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="stresses" NumberOfComponents="1" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="lengths" NumberOfComponents="3" format="ascii" type="Float32"/>\n')
-            f.write(
-                '      <PDataArray Name="typeIds" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
-            f.write(
-                '      <PDataArray Name="ids" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
-            f.write('    </PPointData>\n')
-
-            f.write('    <PCellData/>\n')
-            f.write('    <PPoints>\n')
-            f.write(
-                '      <PDataArray Name="positions" NumberOfComponents="3" format="ascii" type="Float32"/>\n')
-            f.write('    </PPoints>\n')
-            f.write('    <PCells>\n')
-            f.write(
-                '      <PDataArray Name="connectivity" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
-            f.write(
-                '      <PDataArray Name="offsets" NumberOfComponents="1" format="ascii" type="Int32"/>\n')
-            f.write(
-                '      <PDataArray Name="types" NumberOfComponents="1" format="ascii" type="UInt8"/>\n')
-            f.write('    </PCells>\n')
-            f.write(f'    <Piece Source="./data/{vtu_filename}"/>\n')
-            f.write('  </PUnstructuredGrid>\n')
-            f.write('</VTKFile>\n')
-
-    def add_vtu_file(self, timestep: int, dt: float, positions, forces, torques,
-                     directions, stresses, lengths, type_ids, ids, constraint_iterations, avg_bbpgd_iterations, max_overlap):
-        """
-        Create a VTU file with complete particle data for the given timestep.
-        """
-        vtu_filename = self.get_vtu_filename(timestep)
-        vtu_path = os.path.join(self.data_dir, vtu_filename)
-
-        positions = np.array(positions)
-        n_particles = len(positions)
-
-        t_elapsed_s = (time.monotonic_ns() - self.t_start) / 1e9
-
-        with open(vtu_path, 'w') as f:
-            f.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
-            f.write(
-                '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">\n')
-            f.write('  <UnstructuredGrid>\n')
-
-            # Field Data at UnstructuredGrid level - global information for this timestep
-            f.write('    <FieldData>\n')
-            f.write(
-                f'      <DataArray type="Float32" Name="elapsed_time" NumberOfTuples="1">{t_elapsed_s}</DataArray>\n')
-            f.write(
-                f'      <DataArray type="Float32" Name="simulation_time" NumberOfTuples="1">{dt * timestep}</DataArray>\n')
-            f.write(
-                f'      <DataArray type="Float32" Name="avg_bbpgd_iterations" NumberOfTuples="1">{avg_bbpgd_iterations}</DataArray>\n')
-            f.write(
-                f'      <DataArray type="Int32" Name="constraint_iterations" NumberOfTuples="1">{constraint_iterations}</DataArray>\n')
-            f.write(
-                f'      <DataArray type="Float32" Name="max_overlap" NumberOfTuples="1">{max_overlap}</DataArray>\n')
-            f.write('    </FieldData>\n')
-
-            f.write(
-                f'    <Piece NumberOfCells="{n_particles}" NumberOfPoints="{n_particles}">\n')
-
-            # Point Data - per particle data
-            f.write('      <PointData>\n')
-
-            # Forces
-            f.write(
-                '        <DataArray type="Float32" NumberOfComponents="3" Name="forces" format="ascii">\n')
-            for force in forces:
-                f.write(
-                    f'          {force[0]} {force[1]} {force[2]}\n')
-            f.write('        </DataArray>\n')
-
-            # Torques
-            f.write(
-                '        <DataArray type="Float32" NumberOfComponents="3" Name="torques" format="ascii">\n')
-            for torque in torques:
-                f.write(
-                    f'          {torque[0]} {torque[1]} {torque[2]}\n')
-            f.write('        </DataArray>\n')
-
-            # Directions
-            f.write(
-                '        <DataArray type="Float32" NumberOfComponents="3" Name="directions" format="ascii">\n')
-            for direction in directions:
-                f.write(
-                    f'          {direction[0]} {direction[1]} {direction[2]}\n')
-            f.write('        </DataArray>\n')
-
-            # Stresses
-            f.write(
-                '        <DataArray type="Float32" NumberOfComponents="1" Name="stresses" format="ascii">\n')
-            for stress in stresses.flatten():
-                f.write(f'          {stress}\n')
-            f.write('        </DataArray>\n')
-
-            # Lengths
-            f.write(
-                '        <DataArray type="Float32" NumberOfComponents="3" Name="lengths" format="ascii">\n')
-            for length in lengths:
-                f.write(
-                    f'          {length[0]} {length[1]} {length[2]}\n')
-            f.write('        </DataArray>\n')
-
-            # Type IDs
-            f.write(
-                '        <DataArray type="Int32" NumberOfComponents="1" Name="typeIds" format="ascii">\n')
-            for type_id in type_ids:
-                f.write(f'          {type_id}\n')
-            f.write('        </DataArray>\n')
-
-            # IDs
-            f.write(
-                '        <DataArray type="Int32" NumberOfComponents="1" Name="ids" format="ascii">\n')
-            for particle_id in ids:
-                f.write(f'          {particle_id}\n')
-            f.write('        </DataArray>\n')
-
-            f.write('      </PointData>\n')
-
-            # Cell Data (empty for vertex cells)
-            f.write('      <CellData>\n')
-            f.write('      </CellData>\n')
-
-            # Points - particle positions
-            f.write('      <Points>\n')
-            f.write(
-                '        <DataArray type="Float32" NumberOfComponents="3" Name="positions" format="ascii">\n')
-            for pos in positions:
-                f.write(f'          {pos[0]} {pos[1]} {pos[2]}\n')
-            f.write('        </DataArray>\n')
-            f.write('      </Points>\n')
-
-            # Cells - vertex cells for particles
-            f.write('      <Cells>\n')
-
-            # Connectivity - each vertex cell points to one point
-            f.write(
-                '        <DataArray type="Int32" Name="connectivity" format="ascii">\n')
-            for i in range(n_particles):
-                f.write(f'          {i}\n')
-            f.write('        </DataArray>\n')
-
-            # Offsets - cumulative count of connectivity entries
-            f.write(
-                '        <DataArray type="Int32" Name="offsets" format="ascii">\n')
-            for i in range(1, n_particles + 1):
-                f.write(f'          {i}\n')
-            f.write('        </DataArray>\n')
-
-            # Types - VTK_VERTEX = 1
-            f.write('        <DataArray type="UInt8" Name="types" format="ascii">\n')
-            for i in range(n_particles):
-                f.write('          1\n')
-            f.write('        </DataArray>\n')
-
-            f.write('      </Cells>\n')
-
-            f.write('    </Piece>\n')
-            f.write('  </UnstructuredGrid>\n')
-            f.write('</VTKFile>\n')
-
-    def clear_data_folder(self):
-        for fname in os.listdir(self.data_dir):
-            print(f"Removing {fname}")
-            os.remove(os.path.join(self.data_dir, fname))
 
 
 @dataclass
@@ -246,53 +24,427 @@ class SimulationState:
     constraint_iterations: int
     avg_bbpgd_iterations: int
     l0: float
+    constraints: list[ConstraintBlock]
 
 
-class VTKSimulationLogger:
-    """VTK-based simulation logger"""
+@dataclass
+class VTKField:
+    """Represents a field to be written to VTK files"""
+    name: str
+    data: np.ndarray
+    components: int = 1
+    data_type: str = "Float32"
+    location: str = "point"  # "point", "cell", or "field"
 
-    def __init__(self, vtk_logger, log_every_n_iterations: int = 1, log_iterations: bool = False):
+    def __post_init__(self):
+        self.data = np.array(self.data)
+        if self.components == 1 and self.data.ndim > 1:
+            self.data = self.data.flatten()
+
+
+@dataclass
+class VTKFieldData:
+    """Container for field data (global simulation metadata)"""
+    fields: Dict[str, Union[float, int, str]] = field(default_factory=dict)
+
+    def add_field(self, name: str, value: Union[float, int, str], data_type: str = None):
+        """Add a field data entry"""
+        if data_type is None:
+            if isinstance(value, int):
+                data_type = "Int32"
+            elif isinstance(value, float):
+                data_type = "Float32"
+            else:
+                data_type = "String"
+
+        self.fields[name] = {"value": value, "type": data_type}
+
+
+@dataclass
+class VTKGeometry:
+    """Container for VTK geometry data"""
+    positions: np.ndarray
+    connectivity: Optional[np.ndarray] = None
+    offsets: Optional[np.ndarray] = None
+    cell_types: Optional[np.ndarray] = None
+
+    def __post_init__(self):
+        self.positions = np.array(self.positions)
+        n_points = len(self.positions)
+
+        # Default to vertex cells if no connectivity specified
+        if self.connectivity is None:
+            self.connectivity = np.arange(n_points)
+            self.offsets = np.arange(1, n_points + 1)
+            self.cell_types = np.ones(
+                n_points, dtype=np.uint8)  # VTK_VERTEX = 1
+
+
+class VTKDataExtractor(ABC):
+    """Abstract base class for extracting simulation data for VTK output"""
+
+    @abstractmethod
+    def extract_geometry(self, state: Any) -> VTKGeometry:
+        """Extract geometry (positions, connectivity) from simulation state"""
+        pass
+
+    @abstractmethod
+    def extract_point_data(self, state: Any) -> List[VTKField]:
+        """Extract point data fields from simulation state"""
+        pass
+
+    @abstractmethod
+    def extract_cell_data(self, state: Any) -> List[VTKField]:
+        """Extract cell data fields from simulation state"""
+        pass
+
+    @abstractmethod
+    def extract_field_data(self, state: Any, timestep: int, dt: float, elapsed_time: float) -> VTKFieldData:
+        """Extract field data (global metadata) from simulation state"""
+        pass
+
+
+class GenericVTKLogger:
+    """
+    Generic logger for writing PVTU (parallel VTK Unstructured Grid) files.
+    Can be customized for different simulation types through data extractors.
+    """
+
+    def __init__(self, output_dir: str, prefix: str = 'simulation_',
+                 data_extractor: Optional[VTKDataExtractor] = None):
+        self.output_dir = output_dir
+        self.prefix = prefix
+        self.data_dir = os.path.join(output_dir, 'data')
+        self.data_extractor = data_extractor
+        self.t_start = time.monotonic_ns()
+
+        # Setup output directories
+        if os.path.exists(self.output_dir):
+            shutil.rmtree(self.output_dir)
+        os.makedirs(self.output_dir)
+        os.makedirs(self.data_dir)
+
+    def get_vtu_filename(self, timestep: int) -> str:
+        return f"{self.prefix}{timestep:07d}.vtu"
+
+    def get_pvtu_filename(self, timestep: int) -> str:
+        return f"{self.prefix}{timestep:07d}.pvtu"
+
+    def write_timestep_pvtu(self, timestep: int, point_fields: List[VTKField],
+                            cell_fields: List[VTKField], field_data: VTKFieldData):
+        """Write PVTU file referencing the VTU file for this timestep"""
+        pvtu_filename = self.get_pvtu_filename(timestep)
+        vtu_filename = self.get_vtu_filename(timestep)
+        pvtu_path = os.path.join(self.output_dir, pvtu_filename)
+
+        with open(pvtu_path, 'w') as f:
+            f.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
+            f.write(
+                '<VTKFile byte_order="LittleEndian" type="PUnstructuredGrid" version="0.1">\n')
+            f.write('  <PUnstructuredGrid GhostLevel="0">\n')
+
+            # Field data
+            if field_data.fields:
+                f.write('    <PFieldData>\n')
+                for name, info in field_data.fields.items():
+                    f.write(f'      <PDataArray Name="{name}" NumberOfComponents="1" '
+                            f'format="ascii" type="{info["type"]}"/>\n')
+                f.write('    </PFieldData>\n')
+
+            # Point data
+            if point_fields:
+                f.write('    <PPointData>\n')
+                for field in point_fields:
+                    f.write(f'      <PDataArray Name="{field.name}" '
+                            f'NumberOfComponents="{field.components}" '
+                            f'format="ascii" type="{field.data_type}"/>\n')
+                f.write('    </PPointData>\n')
+
+            # Cell data
+            if cell_fields:
+                f.write('    <PCellData>\n')
+                for field in cell_fields:
+                    f.write(f'      <PDataArray Name="{field.name}" '
+                            f'NumberOfComponents="{field.components}" '
+                            f'format="ascii" type="{field.data_type}"/>\n')
+                f.write('    </PCellData>\n')
+            else:
+                f.write('    <PCellData/>\n')
+
+            # Points
+            f.write('    <PPoints>\n')
+            f.write('      <PDataArray Name="positions" NumberOfComponents="3" '
+                    'format="ascii" type="Float32"/>\n')
+            f.write('    </PPoints>\n')
+
+            # Cells
+            f.write('    <PCells>\n')
+            f.write('      <PDataArray Name="connectivity" NumberOfComponents="1" '
+                    'format="ascii" type="Int32"/>\n')
+            f.write('      <PDataArray Name="offsets" NumberOfComponents="1" '
+                    'format="ascii" type="Int32"/>\n')
+            f.write('      <PDataArray Name="types" NumberOfComponents="1" '
+                    'format="ascii" type="UInt8"/>\n')
+            f.write('    </PCells>\n')
+
+            f.write(f'    <Piece Source="./data/{vtu_filename}"/>\n')
+            f.write('  </PUnstructuredGrid>\n')
+            f.write('</VTKFile>\n')
+
+    def add_vtu_file(self, timestep: int, dt: float, geometry: VTKGeometry,
+                     point_fields: List[VTKField], cell_fields: List[VTKField],
+                     field_data: VTKFieldData):
+        """Create a VTU file with simulation data for the given timestep"""
+        vtu_filename = self.get_vtu_filename(timestep)
+        vtu_path = os.path.join(self.data_dir, vtu_filename)
+
+        n_points = len(geometry.positions)
+        n_cells = len(
+            geometry.offsets) if geometry.offsets is not None else n_points
+
+        with open(vtu_path, 'w') as f:
+            f.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
+            f.write(
+                '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">\n')
+            f.write('  <UnstructuredGrid>\n')
+
+            # Field Data
+            if field_data.fields:
+                f.write('    <FieldData>\n')
+                for name, info in field_data.fields.items():
+                    f.write(f'      <DataArray type="{info["type"]}" Name="{name}" '
+                            f'NumberOfTuples="1">{info["value"]}</DataArray>\n')
+                f.write('    </FieldData>\n')
+
+            f.write(
+                f'    <Piece NumberOfCells="{n_cells}" NumberOfPoints="{n_points}">\n')
+
+            # Point Data
+            if point_fields:
+                f.write('      <PointData>\n')
+                for field in point_fields:
+                    self._write_data_array(f, field, "        ")
+                f.write('      </PointData>\n')
+
+            # Cell Data
+            if cell_fields:
+                f.write('      <CellData>\n')
+                for field in cell_fields:
+                    self._write_data_array(f, field, "        ")
+                f.write('      </CellData>\n')
+            else:
+                f.write('      <CellData>\n')
+                f.write('      </CellData>\n')
+
+            # Points
+            f.write('      <Points>\n')
+            f.write('        <DataArray type="Float32" NumberOfComponents="3" '
+                    'Name="positions" format="ascii">\n')
+            for pos in geometry.positions:
+                if len(pos) == 2:  # 2D case
+                    f.write(f'          {pos[0]} {pos[1]} 0.0\n')
+                else:  # 3D case
+                    f.write(f'          {pos[0]} {pos[1]} {pos[2]}\n')
+            f.write('        </DataArray>\n')
+            f.write('      </Points>\n')
+
+            # Cells
+            f.write('      <Cells>\n')
+
+            # Connectivity
+            f.write(
+                '        <DataArray type="Int32" Name="connectivity" format="ascii">\n')
+            for conn in geometry.connectivity:
+                f.write(f'          {conn}\n')
+            f.write('        </DataArray>\n')
+
+            # Offsets
+            f.write(
+                '        <DataArray type="Int32" Name="offsets" format="ascii">\n')
+            for offset in geometry.offsets:
+                f.write(f'          {offset}\n')
+            f.write('        </DataArray>\n')
+
+            # Cell types
+            f.write('        <DataArray type="UInt8" Name="types" format="ascii">\n')
+            for cell_type in geometry.cell_types:
+                f.write(f'          {cell_type}\n')
+            f.write('        </DataArray>\n')
+
+            f.write('      </Cells>\n')
+            f.write('    </Piece>\n')
+            f.write('  </UnstructuredGrid>\n')
+            f.write('</VTKFile>\n')
+
+    def _write_data_array(self, f, field: VTKField, indent: str):
+        """Write a data array to the VTU file"""
+        f.write(f'{indent}<DataArray type="{field.data_type}" '
+                f'NumberOfComponents="{field.components}" '
+                f'Name="{field.name}" format="ascii">\n')
+
+        if field.components == 1:
+            for value in field.data.flatten():
+                f.write(f'{indent}  {value}\n')
+        else:
+            for row in field.data.reshape(-1, field.components):
+                f.write(f'{indent}  {" ".join(map(str, row))}\n')
+
+        f.write(f'{indent}</DataArray>\n')
+
+    def log_timestep(self, timestep: int, dt: float, state: Any):
+        """Log a complete timestep using the data extractor"""
+        if self.data_extractor is None:
+            raise ValueError("No data extractor provided")
+
+        elapsed_time = (time.monotonic_ns() - self.t_start) / 1e9
+
+        geometry = self.data_extractor.extract_geometry(state)
+        point_fields = self.data_extractor.extract_point_data(state)
+        cell_fields = self.data_extractor.extract_cell_data(state)
+        field_data = self.data_extractor.extract_field_data(
+            state, timestep, dt, elapsed_time)
+
+        self.add_vtu_file(timestep, dt, geometry,
+                          point_fields, cell_fields, field_data)
+        self.write_timestep_pvtu(
+            timestep, point_fields, cell_fields, field_data)
+
+    def clear_data_folder(self):
+        """Clear all VTU files from the data folder"""
+        for fname in os.listdir(self.data_dir):
+            print(f"Removing {fname}")
+            os.remove(os.path.join(self.data_dir, fname))
+
+
+class GenericSimulationLogger:
+    """Generic simulation logger using VTK output"""
+
+    def __init__(self, vtk_logger: GenericVTKLogger, log_every_n_iterations: int = 1):
         self.vtk_logger = vtk_logger
         self.log_every_n_iterations = log_every_n_iterations
-        self.log_iterations = log_iterations
 
-    def log_timestep_complete(self, iteration: int, dt: float, final_state: SimulationState):
-        """Log final timestep data"""
-        n_particles = len(final_state.l)
-        positions = self._extract_positions(final_state.C, n_particles)
+    def should_log(self, iteration: int) -> bool:
+        """Check if this iteration should be logged"""
+        return iteration % self.log_every_n_iterations == 0
 
-        # Extract quaternions
-        quaternions = self._extract_quaternions(final_state.C, n_particles)
+    def log_timestep_complete(self, iteration: int, dt: float, state: Any):
+        """Log timestep if it should be logged"""
+        if self.should_log(iteration):
+            self.vtk_logger.log_timestep(iteration, dt, state)
 
-        # Log complete timestep data
-        self.vtk_logger.add_vtu_file(
-            iteration,
-            dt,
-            positions,
-            final_state.forces,
-            final_state.torques,
-            np.array([getDirectionVector(q) for q in quaternions]),
-            final_state.stresses,
-            np.column_stack(
-                [final_state.l, 0.5*final_state.l0 * np.ones(n_particles), 0.5*final_state.l0 * np.ones(n_particles)]),
-            np.zeros(n_particles, dtype=int),
-            np.arange(n_particles, dtype=int),
-            final_state.constraint_iterations,
-            final_state.avg_bbpgd_iterations,
-            final_state.max_overlap
-        )
-        self.vtk_logger.write_timestep_pvtu(iteration)
 
-    def _extract_positions(self, C: np.ndarray, n_particles: int) -> np.ndarray:
-        """Extract 3D positions from configuration vector"""
+# Example implementation for the original bacteria simulation
+class BacteriaDataExtractor(VTKDataExtractor):
+    """Data extractor for bacteria particle simulation"""
+
+    def extract_geometry(self, state) -> VTKGeometry:
+        """Extract positions from bacteria simulation state"""
+        n_particles = len(state.l)
         positions = np.zeros((n_particles, 3))
         for i in range(n_particles):
-            positions[i] = C[7*i:7*i+3]
-        return positions
+            positions[i] = state.C[7*i:7*i+3]
+        return VTKGeometry(positions)
 
-    def _extract_quaternions(self, C: np.ndarray, n_particles: int) -> np.ndarray:
-        """Extract quaternions from configuration vector"""
+    def extract_point_data(self, state) -> List[VTKField]:
+        """Extract point data from bacteria simulation state"""
+        n_particles = len(state.l)
+
         quaternions = np.zeros((n_particles, 4))
         for i in range(n_particles):
-            quaternions[i] = C[7*i+3:7*i+7]
-        return quaternions
+            quaternions[i] = state.C[7*i+3:7*i+7]
+
+        directions = np.array([getDirectionVector(q)
+                               for q in quaternions])
+
+        lengths = np.column_stack([
+            state.l,
+            0.5 * state.l0 * np.ones(n_particles),
+            0.5 * state.l0 * np.ones(n_particles)
+        ])
+
+        return [
+            VTKField("forces", state.forces, 3),
+            VTKField("torques", state.torques, 3),
+            VTKField("directions", directions, 3),
+            VTKField("stresses", state.stresses, 1),
+            VTKField("lengths", lengths, 3),
+            VTKField("typeIds", np.zeros(n_particles, dtype=int), 1, "Int32"),
+            VTKField("ids", np.arange(n_particles, dtype=int), 1, "Int32"),
+        ]
+
+    def extract_cell_data(self, state) -> List[VTKField]:
+        """No cell data for bacteria simulation"""
+        return []
+
+    def extract_field_data(self, state, timestep: int, dt: float, elapsed_time: float) -> VTKFieldData:
+        """Extract global metadata from bacteria simulation state"""
+        field_data = VTKFieldData()
+        field_data.add_field("elapsed_time", elapsed_time)
+        field_data.add_field("simulation_time", dt * timestep)
+        field_data.add_field("avg_bbpgd_iterations",
+                             state.avg_bbpgd_iterations)
+        field_data.add_field("constraint_iterations",
+                             state.constraint_iterations)
+        if len(state.constraints) != 0:
+            pass
+        field_data.add_field("max_overlap", state.max_overlap)
+        field_data.add_field("num_particles", len(state.l))
+        return field_data
+
+
+class ConstraintDataExtractor(VTKDataExtractor):
+    """Data extractor for constraint simulation"""
+
+    def extract_geometry(self, state) -> VTKGeometry:
+        """Extract positions from constraint simulation state"""
+        n_constraints = len(state.constraints)
+        positions = np.zeros((n_constraints, 3))
+        for i in range(n_constraints):
+            constraint = state.constraints[i]
+            constraint_center = (constraint.labI + constraint.labJ) / 2
+            positions[i] = constraint_center
+        return VTKGeometry(positions)
+
+    def extract_point_data(self, state) -> List[VTKField]:
+        """Extract point data from constraint simulation state"""
+        n_constraints = len(state.constraints)
+        normals = np.zeros((n_constraints, 3))
+        deltas = np.zeros((n_constraints, 1))
+        phases = np.zeros((n_constraints, 1))
+        for i in range(n_constraints):
+            constraint = state.constraints[i]
+            normals[i] = constraint.normI
+            deltas[i] = constraint.delta0
+            phases[i] = constraint.phase
+        return [
+            VTKField("normals", normals, 3),
+            VTKField("deltas", deltas, 1),
+            VTKField("phases", phases, 1),
+        ]
+
+    def extract_cell_data(self, state) -> List[VTKField]:
+        """Extract cell data from constraint simulation state"""
+        return []
+
+    def extract_field_data(self, state, timestep: int, dt: float, elapsed_time: float) -> VTKFieldData:
+        """Extract global metadata from constraint simulation state"""
+        field_data = VTKFieldData()
+        field_data.add_field("num_constraints", len(state.constraints))
+        return field_data
+
+
+# Usage example:
+def create_bacteria_logger(output_dir: str) -> GenericSimulationLogger:
+    """Create a logger configured for bacteria simulation"""
+    extractor = BacteriaDataExtractor()
+    vtk_logger = GenericVTKLogger(
+        output_dir, 'Bacteria_Particles_', extractor)
+    return GenericSimulationLogger(vtk_logger)
+
+
+def create_constraint_logger(output_dir: str) -> GenericSimulationLogger:
+    """Create a logger configured for constraint simulation"""
+    extractor = ConstraintDataExtractor()
+    vtk_logger = GenericVTKLogger(
+        output_dir, 'Constraint_Particles_', extractor)
+    return GenericSimulationLogger(vtk_logger)
