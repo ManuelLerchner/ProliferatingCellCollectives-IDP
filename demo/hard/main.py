@@ -179,14 +179,20 @@ def main():
     state = SimulationState(C=C, l=l, L=csr_matrix((len(l), 0)), max_overlap=0.0, forces=np.zeros((len(l), 3)), torques=np.zeros(
         (len(l), 3)), impedance=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0, constraints=[])
 
-    while timestep * dt < 60*60*60:
-        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}, Constraints: {len(state.constraints)}",
+    while True:
+        estimated_radius = np.sqrt(len(state.l)*0.7/np.pi)
+
+        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}, estimated radius: {estimated_radius:.2f}, Constraints: {len(state.constraints)}",
+
               end="", flush=True)
         final_state = simulation_step(state, linked_cells, dt,
                                       timestep=timestep, loggers=[bacteria_logger])
         state = final_state
 
         timestep += 1
+
+        if estimated_radius > 150*l0:
+            break
 
 
 if __name__ == "__main__":
