@@ -128,7 +128,7 @@ def simulation_step(state, linked_cells, dt, timestep=0, loggers=[]):
     # Update positions
 
     final_state = calc_constraint_collision_forces_recursive(
-        state, dt, linked_cells, eps=state.l0/1000)
+        state, dt, linked_cells, eps=state.l0/100)
 
     # every 10 seconds log
     global t_last_saved
@@ -164,7 +164,7 @@ def main():
     C, l = init_particles(l0)
 
     # Time step
-    dt = 300
+    dt = 120
 
     # Store configurations for animation
 
