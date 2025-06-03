@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                // "/usr/lib/petscdir/petsc3.15/x86_64-linux-gnu-real/include",
+                "/usr/include/petsc",
+                "/usr/lib/petsc/include",
+                // "/usr/share/petsc/3.15/include/petsc/finclude",
+                "/usr/lib/x86_64-linux-gnu/openmpi/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c23",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
