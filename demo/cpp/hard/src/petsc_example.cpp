@@ -194,7 +194,7 @@ PetscErrorCode SolveBBPGD(Mat A, Vec b, Vec gamma, PetscInt max_iter, PetscReal 
   PetscFunctionReturn(0);
 }
 
-int main(int argc, char **argv) {
+int demo(int argc, char **argv) {
   // At the beginning of main(), after PetscInitialize()
   PetscCall(PetscLogDefaultBegin());
 
