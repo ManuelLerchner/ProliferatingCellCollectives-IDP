@@ -9,6 +9,6 @@ int main(int argc, char** argv) {
   BacterialSystem system(argc, argv);
   system.run();
 
-  // PetscFinalize();
-  // return EXIT_SUCCESS;
+  PetscFinalize();
+  return EXIT_SUCCESS;
 }
