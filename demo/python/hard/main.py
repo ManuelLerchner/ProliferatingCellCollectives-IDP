@@ -160,11 +160,11 @@ def main():
     ax.set_zlim((-BOX, BOX))
 
     # Initialize particles
-    l0 = 1
+    l0 = 1e-6
     C, l = init_particles(l0)
 
     # Time step
-    dt = 120
+    dt = 180
 
     # Store configurations for animation
 
@@ -180,9 +180,11 @@ def main():
         (len(l), 3)), impedance=np.zeros((len(l), 1)), constraint_iterations=0, avg_bbpgd_iterations=0, l0=l0, constraints=[])
 
     while True:
-        estimated_radius = np.sqrt(len(state.l)*0.7/np.pi)
+        colony_area = np.sum(state.l * state.l0/2)
+        # radius of a circle with the same area
+        colony_radius = np.sqrt(colony_area / np.pi)
 
-        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}, estimated radius: {estimated_radius:.2f}, Constraints: {len(state.constraints)}",
+        print(f"\rMinutes: {timestep * dt / 60:.2f}, Particles: {len(state.l)}, estimated radius: {colony_radius*1e6:.2f}µm, Constraints: {len(state.constraints)}",
 
               end="", flush=True)
         final_state = simulation_step(state, linked_cells, dt,
@@ -191,7 +193,7 @@ def main():
 
         timestep += 1
 
-        if estimated_radius > 150*l0:
+        if colony_radius > 150*l0:
             break
 
 
