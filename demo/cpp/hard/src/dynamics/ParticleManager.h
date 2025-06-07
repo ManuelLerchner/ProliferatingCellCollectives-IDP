@@ -43,7 +43,8 @@ class ParticleManager {
   void timeStep();
   void commitNewParticles();
 
-  ISLocalToGlobalMappingWrapper createLocalToGlobalMapping();
+  ISLocalToGlobalMappingWrapper createLocalToGlobalMapping(int local_num_particles, int components_per_particle);
+  ISLocalToGlobalMappingWrapper create_constraint_map(int local_num_constraints);
 
   // The global particle count, consistent across all ranks
   PetscInt global_particle_count = 0;

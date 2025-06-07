@@ -1,8 +1,14 @@
 #include "Forces.h"
 
+#include "Particle.h"
 #include "util/ArrayMath.h"
 
-MatWrapper calculate_Jacobian(const std::vector<Constraint>& local_contacts, PetscInt local_num_bodies, PetscInt global_num_bodies) {
+MatWrapper calculate_Jacobian(
+    const std::vector<Constraint>& local_contacts,
+    PetscInt local_num_bodies,
+    PetscInt global_num_bodies,
+    ISLocalToGlobalMapping body_dof_map_6N,
+    ISLocalToGlobalMapping constraint_map_N) {
   PetscInt local_num_constraints = local_contacts.size();
   PetscInt global_num_constraints;
   MPI_Allreduce(&local_num_constraints, &global_num_constraints, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
@@ -22,7 +28,8 @@ MatWrapper calculate_Jacobian(const std::vector<Constraint>& local_contacts, Pet
   MatMPIAIJSetPreallocation(D, 1, NULL, 0, NULL);
   MatSeqAIJSetPreallocation(D, 1, NULL);
 
-  // Calculate the global column index offset
+  MatSetLocalToGlobalMapping(D, body_dof_map_6N, constraint_map_N);
+
   PetscInt col_start_offset;
   MPI_Scan(&local_num_constraints, &col_start_offset, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
   col_start_offset -= local_num_constraints;
