@@ -1,53 +1,48 @@
 #pragma once
 #include <petsc.h>
 
-#include <memory>
-#include <vector>  // For std::vector
+#include <vector>
 
 #include "Bacteria.h"
 #include "ParticleData.h"
 
-class BacterialSystem {
+class ParticleManager {
  public:
-  BacterialSystem(int argc, char** argv);
+  ParticleManager();
 
-  void initializeSystem();
+  void queueNewParticle(Particle p);
+
   void run();
 
  private:
   // --- New Data Structure ---
   // Each rank stores a list of the bacteria it is responsible for.
-  std::vector<Bacterium> local_bacteria_;
+  std::vector<Particle> new_particle_buffer;
+  std::vector<Particle> local_particles;
 
   // --- PETSc Objects ---
-  DM dm_;
+  DM mobility_matrix;
   Vec configuration_;  // Persistent configuration vector
   Vec forces_;
   Mat jacobian_;
   Vec lambda_;
 
   // Reusable vectors for configuration updates
-  std::vector<PetscInt> indices_;
-  std::vector<PetscScalar> values_;
+  std::vector<PetscInt> indices;
+  std::vector<PetscScalar> values;
 
   // Simulation parameters
-  double time_;
-  double dt_;
-  int current_step_;
+  double time;
+  double dt;
+  int current_step;
 
   // --- Refactored Methods ---
   void initializeParticles();
-  void addParticle(Bacterium p);
   void cleanup();
   void detectContacts();
   void timeStep();
+  void commitNewParticles();
 
   // The global particle count, consistent across all ranks
-  PetscInt global_particle_count_;
-
-  // These are no longer needed in the new design
-  // void redistributeVectors(PetscInt new_local_size);
-  // int particles_per_rank_;
-  // int local_estimate_;
-  // int current_particles_;
+  PetscInt global_particle_count = 0;
 };

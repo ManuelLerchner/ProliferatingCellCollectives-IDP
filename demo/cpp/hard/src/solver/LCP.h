@@ -2,6 +2,6 @@
 
 #include <petsc.h>
 
-#include "dynamics/BacterialSystem.h"
+#include "dynamics/ParticleManager.h"
 
 Vec solveLCP(Mat A, Vec b);

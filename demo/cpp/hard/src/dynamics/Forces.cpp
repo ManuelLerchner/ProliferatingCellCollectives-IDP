@@ -1,65 +1,73 @@
 #include "Forces.h"
 
-#include <omp.h>
-
-#include <iostream>
-#include <memory>
-#include <vector>
-
-#include "Constraint.h"
-#include "petscmat.h"
 #include "util/ArrayMath.h"
 
-std::unique_ptr<Mat> calculate_Jacobian(std::vector<Constraint> contacts, int num_bodies) {
-  int num_constraints = contacts.size();
-  int matrix_rows = 6 * num_bodies;
-  int matrix_cols = num_constraints;
+MatWrapper calculate_Jacobian(const std::vector<Constraint>& local_contacts, PetscInt local_num_bodies, PetscInt global_num_bodies) {
+  PetscInt local_num_constraints = local_contacts.size();
+  PetscInt global_num_constraints;
+  MPI_Allreduce(&local_num_constraints, &global_num_constraints, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
 
-  std::unique_ptr<Mat> D = std::make_unique<Mat>();
-  MatCreate(PETSC_COMM_WORLD, D.get());
-  MatSetSizes(*D, PETSC_DECIDE, PETSC_DECIDE, matrix_rows, matrix_cols);
-  MatSetType(*D, MATAIJ);
-  MatSetFromOptions(*D);
+  PetscInt local_row_count = 6 * local_num_bodies;
 
-  // --- Step 1: Correct Parallel Preallocation ---
-  // For this specific problem, each row of the Jacobian will have at most `num_constraints` non-zeros.
-  // Since we only have one constraint, we know each affected row has exactly one non-zero.
-  // We can provide this as a hint. A dense preallocation is also an option for simplicity if the number of constraints is small.
-  MatMPIAIJSetPreallocation(*D, 1, NULL, 1, NULL);
-  MatSeqAIJSetPreallocation(*D, 1, NULL);
+  PetscInt matrix_rows = 6 * global_num_bodies;
+  PetscInt matrix_cols = global_num_constraints;
 
-  // --- Step 2: Fill The Matrix (Parallel Safe) ---
+  // D is a (6 * global_num_bodies, global_num_constraints) matrix
+  MatWrapper D;
+  MatCreate(PETSC_COMM_WORLD, D.get_ref());
+  MatSetSizes(D, local_row_count, 1, matrix_rows, matrix_cols);
+  MatSetType(D, MATAIJ);
+  MatSetFromOptions(D);
+
+  MatMPIAIJSetPreallocation(D, 1, NULL, 0, NULL);
+  MatSeqAIJSetPreallocation(D, 1, NULL);
+
+  // Calculate the global column index offset
+  PetscInt col_start_offset;
+  MPI_Scan(&local_num_constraints, &col_start_offset, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+  col_start_offset -= local_num_constraints;
+
   PetscInt rstart, rend;
-  MatGetOwnershipRange(*D, &rstart, &rend);
+  MatGetOwnershipRange(D, &rstart, &rend);
 
-  for (int c_idx = 0; c_idx < num_constraints; c_idx++) {
-    const auto& constraint = contacts[c_idx];
+#pragma omp parallel for
+  for (int c_local_idx = 0; c_local_idx < local_contacts.size(); ++c_local_idx) {
+    PetscInt c_global_idx = col_start_offset + c_local_idx;
+    const auto& constraint = local_contacts[c_local_idx];
 
-    const std::array<double, 3> n_i = constraint.normI;
-    const std::array<double, 3> r_i = constraint.rPosI;
-    std::array<double, 3> torque_i = cross_product(r_i, n_i);
-    std::array<double, 6> forces_i = {n_i[0], n_i[1], n_i[2], torque_i[0], torque_i[1], torque_i[2]};
+    // normal vectors
+    const auto n_i = constraint.normI;
+    const auto n_j = -n_i;
 
-    const std::array<double, 3> n_j = -n_i;
-    const std::array<double, 3> r_j = constraint.rPosJ;
-    std::array<double, 3> torque_j = cross_product(r_j, n_j);
-    std::array<double, 6> forces_j = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
+    // contact points
+    const auto r_i = constraint.rPosI;
+    const auto r_j = constraint.rPosJ;
 
-    // Each process sets values only for the rows it owns.
-    for (int k = 0; k < 6; ++k) {
-      PetscInt row_i = constraint.gidI * 6 + k;
-      if (row_i >= rstart && row_i < rend) {
-        MatSetValue(*D, row_i, c_idx, forces_i[k], INSERT_VALUES);
-      }
-      PetscInt row_j = constraint.gidJ * 6 + k;
-      if (row_j >= rstart && row_j < rend) {
-        MatSetValue(*D, row_j, c_idx, forces_j[k], INSERT_VALUES);
-      }
+    // torques
+    const auto torque_i = cross_product(r_i, n_i);
+    const auto torque_j = cross_product(r_j, n_j);
+
+    // force vectors (6, 1)
+    double F_i[6] = {n_i[0], n_i[1], n_i[2], torque_i[0], torque_i[1], torque_i[2]};
+    double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
+
+    // Indices in the global matrix
+    int gi_global = constraint.gidI * 6;
+    int gj_global = constraint.gidJ * 6;
+    PetscInt ids_i[6] = {gi_global + 0, gi_global + 1, gi_global + 2, gi_global + 3, gi_global + 4, gi_global + 5};
+    PetscInt ids_j[6] = {gj_global + 0, gj_global + 1, gj_global + 2, gj_global + 3, gj_global + 4, gj_global + 5};
+
+    if (gi_global >= rstart && gi_global < rend) {
+      MatSetValues(D, 6, ids_i, 1, &c_global_idx, F_i, INSERT_VALUES);
+    }
+
+    if (gj_global >= rstart && gj_global < rend) {
+      MatSetValues(D, 6, ids_j, 1, &c_global_idx, F_j, INSERT_VALUES);
     }
   }
 
-  MatAssemblyBegin(*D, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(*D, MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY);
 
   return D;
 }

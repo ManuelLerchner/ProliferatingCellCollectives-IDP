@@ -6,11 +6,12 @@
 #include <memory>
 #include <vector>
 
-#include "BacterialSystem.h"
 #include "Constraint.h"
 #include "ParticleData.h"
+#include "ParticleManager.h"
 #include "petscmat.h"
 #include "util/ArrayMath.h"
+#include "util/PetscRaii.h"
 
 std::unique_ptr<Mat> calculate_MobilityMatrix(Vec configuration, int number_of_particles) {
   std::unique_ptr<Mat> M = std::make_unique<Mat>();

@@ -7,5 +7,6 @@
 #include <vector>
 
 #include "Constraint.h"
+#include "util/PetscRaii.h"
 
-std::unique_ptr<Mat> calculate_Jacobian(std::vector<Constraint> constraints, int num_bodies);
+MatWrapper calculate_Jacobian(const std::vector<Constraint>& local_contacts, PetscInt local_num_bodies, PetscInt global_num_bodies);
