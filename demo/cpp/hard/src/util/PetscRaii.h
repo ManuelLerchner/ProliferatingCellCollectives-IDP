@@ -98,5 +98,11 @@ struct PetscObjectTraits<Vec> {
   static void destroy(Vec* obj) { VecDestroy(obj); }
 };
 
+template <>
+struct PetscObjectTraits<ISLocalToGlobalMapping> {
+  static void destroy(ISLocalToGlobalMapping* obj) { ISLocalToGlobalMappingDestroy(obj); }
+};
+
 using MatWrapper = SmartPetscObject<Mat>;
 using VecWrapper = SmartPetscObject<Vec>;
+using ISLocalToGlobalMappingWrapper = SmartPetscObject<ISLocalToGlobalMapping>;

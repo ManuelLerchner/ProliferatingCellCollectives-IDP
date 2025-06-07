@@ -3,6 +3,7 @@
 #include <petsc.h>
 #include <solver/LCP.h>
 
+#include <algorithm>
 #include <iostream>
 #include <numeric>
 #include <unordered_map>
@@ -12,7 +13,6 @@
 #include "Forces.h"
 #include "ParticleData.h"
 #include "Physics.h"
-#include "util/PetscRaii.h"
 
 ParticleManager::ParticleManager() {
 }
@@ -48,6 +48,28 @@ void ParticleManager::commitNewParticles() {
   this->global_particle_count += total_added_this_step;
 }
 
+ISLocalToGlobalMappingWrapper ParticleManager::createLocalToGlobalMapping() {
+  std::sort(local_particles.begin(), local_particles.end(),
+            [](const Particle& a, const Particle& b) { return a.id < b.id; });
+
+  PetscInt local_num_particles = local_particles.size();
+  PetscInt local_dims = 6 * local_num_particles;
+
+  std::vector<PetscInt> ownership_map(local_dims);
+  for (PetscInt i = 0; i < local_num_particles; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      ownership_map[i * 6 + j] = local_particles[i].id * 6 + j;
+    }
+  }
+  IS is_local_rows;
+  ISCreateGeneral(PETSC_COMM_SELF, local_dims, ownership_map.data(), PETSC_COPY_VALUES, &is_local_rows);
+  ISLocalToGlobalMappingWrapper ltog_map;
+  ISLocalToGlobalMappingCreateIS(is_local_rows, ltog_map.get_ref());
+  ISDestroy(&is_local_rows);
+
+  return ltog_map;
+}
+
 void ParticleManager::timeStep() {
   std::vector<Constraint> local_constraints;
 
@@ -59,14 +81,15 @@ void ParticleManager::timeStep() {
     }
   }
 
+  ISLocalToGlobalMappingWrapper ltog_map = createLocalToGlobalMapping();
+
   MatWrapper D = calculate_Jacobian(local_constraints, local_particles.size(), global_particle_count);
-
-  // std::unique_ptr<Mat> M = calculate_MobilityMatrix(configuration, global_particle_count_);
-
   PetscPrintf(PETSC_COMM_WORLD, "D Matrix:\n");
   MatView(D.get(), PETSC_VIEWER_STDOUT_WORLD);
-  // PetscPrintf(PETSC_COMM_WORLD, "Mobility Matrix M:\n");
-  // MatView(*M, PETSC_VIEWER_STDOUT_WORLD);
+
+  MatWrapper M = calculate_MobilityMatrix(local_particles, global_particle_count, ltog_map);
+  PetscPrintf(PETSC_COMM_WORLD, "Mobility Matrix M:\n");
+  MatView(M.get(), PETSC_VIEWER_STDOUT_WORLD);
 }
 
 void ParticleManager::run() {

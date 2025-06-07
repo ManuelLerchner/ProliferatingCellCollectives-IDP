@@ -2,6 +2,11 @@
 
 #include <petsc.h>
 
-#include <memory>
+#include <vector>
 
-std::unique_ptr<Mat> calculate_MobilityMatrix(Vec configuration, int number_of_particles);
+#include "Particle.h"
+#include "util/PetscRaii.h"
+
+MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& ltog_map);
+
+MatWrapper calculate_QuaternionMap(std::vector<Particle>& local_particles, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& ltog_map);

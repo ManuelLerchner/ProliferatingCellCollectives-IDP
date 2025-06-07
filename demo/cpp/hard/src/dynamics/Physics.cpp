@@ -2,6 +2,7 @@
 
 #include <omp.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -13,48 +14,43 @@
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
-std::unique_ptr<Mat> calculate_MobilityMatrix(Vec configuration, int number_of_particles) {
-  std::unique_ptr<Mat> M = std::make_unique<Mat>();
+MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& ltog_map) {
+  PetscInt local_num_particles = local_particles.size();
+  PetscInt dims = 6 * global_num_particles;
+  PetscInt local_dims = 6 * local_num_particles;
 
-  int dims = 6 * number_of_particles;
+  // M is a (6 * global_num_particles, 6 * global_num_particles) matrix
+  MatWrapper M;
+  MatCreate(PETSC_COMM_WORLD, M.get_ref());
+  MatSetType(M, MATMPIAIJ);
+  MatSetSizes(M, PETSC_DECIDE, PETSC_DECIDE, dims, dims);
+  MatSetFromOptions(M);
 
-  MatCreate(PETSC_COMM_WORLD, M.get());
-  MatSetType(*M, MATMPIAIJ);
-  MatSetSizes(*M, PETSC_DECIDE, PETSC_DECIDE, dims, dims);
-  MatMPIAIJSetPreallocation(*M, 36, NULL, 36, NULL);
-  MatSetFromOptions(*M);
+  MatMPIAIJSetPreallocation(M, 1, NULL, 0, NULL);
+  MatSeqAIJSetPreallocation(M, 1, NULL);
 
-  PetscInt local_start, local_end;
-  VecGetOwnershipRange(configuration, &local_start, &local_end);
-  PetscInt local_particle_count = (local_end - local_start) / COMPONENTS_PER_PARTICLE;
+  MatSetLocalToGlobalMapping(M, ltog_map, ltog_map);
 
-  const double* configuration_array;
-  VecGetArrayRead(configuration, &configuration_array);
+  for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
+    const auto& particle = local_particles[p_idx];
+    double inv_len = 1.0 / particle.length;
+    double inv_len3_x_12 = 12.0 / (particle.length * particle.length * particle.length);
 
-  std::cout << "local_start: " << local_start << std::endl;
-  std::cout << "local_end: " << local_end << std::endl;
-  std::cout << "local_particle_count: " << local_particle_count << std::endl;
+    // DEBUG
+    // inv_len = particle.id;
+    // inv_len3_x_12 = particle.id;
 
-  for (int i = 0; i < local_particle_count; i++) {
-    int global_particle_idx = local_start / COMPONENTS_PER_PARTICLE + i;
-
-    auto length = get_length(configuration_array, i);
-
-    double mLinear = 1.0 / length;
-    double mAngular = 12.0 / (length * length * length);
-
-    MatSetValue(*M, global_particle_idx * 6, global_particle_idx * 6, mLinear, INSERT_VALUES);
-    MatSetValue(*M, global_particle_idx * 6 + 1, global_particle_idx * 6 + 1, mLinear, INSERT_VALUES);
-    MatSetValue(*M, global_particle_idx * 6 + 2, global_particle_idx * 6 + 2, mLinear, INSERT_VALUES);
-    MatSetValue(*M, global_particle_idx * 6 + 3, global_particle_idx * 6 + 3, mAngular, INSERT_VALUES);
-    MatSetValue(*M, global_particle_idx * 6 + 4, global_particle_idx * 6 + 4, mAngular, INSERT_VALUES);
-    MatSetValue(*M, global_particle_idx * 6 + 5, global_particle_idx * 6 + 5, mAngular, INSERT_VALUES);
+    for (int i = 0; i < 3; ++i) {
+      MatSetValueLocal(M, p_idx * 6 + i, p_idx * 6 + i, inv_len, INSERT_VALUES);
+    }
+    for (int i = 3; i < 6; ++i) {
+      MatSetValueLocal(M, p_idx * 6 + i, p_idx * 6 + i, inv_len3_x_12, INSERT_VALUES);
+    }
   }
 
-  VecRestoreArrayRead(configuration, &configuration_array);
-
-  MatAssemblyBegin(*M, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(*M, MAT_FINAL_ASSEMBLY);
+  // --- Phase 4: Assembly ---
+  MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
 
   return M;
 }

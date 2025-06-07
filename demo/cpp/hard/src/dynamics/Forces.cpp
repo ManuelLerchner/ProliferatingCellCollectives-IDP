@@ -30,7 +30,6 @@ MatWrapper calculate_Jacobian(const std::vector<Constraint>& local_contacts, Pet
   PetscInt rstart, rend;
   MatGetOwnershipRange(D, &rstart, &rend);
 
-#pragma omp parallel for
   for (int c_local_idx = 0; c_local_idx < local_contacts.size(); ++c_local_idx) {
     PetscInt c_global_idx = col_start_offset + c_local_idx;
     const auto& constraint = local_contacts[c_local_idx];
@@ -56,6 +55,10 @@ MatWrapper calculate_Jacobian(const std::vector<Constraint>& local_contacts, Pet
     int gj_global = constraint.gidJ * 6;
     PetscInt ids_i[6] = {gi_global + 0, gi_global + 1, gi_global + 2, gi_global + 3, gi_global + 4, gi_global + 5};
     PetscInt ids_j[6] = {gj_global + 0, gj_global + 1, gj_global + 2, gj_global + 3, gj_global + 4, gj_global + 5};
+
+    // DEBUG
+    //  double F_i[6] = {gi_global, gi_global, gi_global, gi_global, gi_global, gi_global};
+    //  double F_j[6] = {gj_global, gj_global, gj_global, gj_global, gj_global, gj_global};
 
     if (gi_global >= rstart && gi_global < rend) {
       MatSetValues(D, 6, ids_i, 1, &c_global_idx, F_i, INSERT_VALUES);

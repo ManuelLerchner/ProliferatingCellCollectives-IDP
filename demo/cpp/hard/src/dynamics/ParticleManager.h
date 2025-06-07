@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "Bacteria.h"
-#include "ParticleData.h"
+#include "Particle.h"
+#include "util/PetscRaii.h"
 
 class ParticleManager {
  public:
@@ -42,6 +42,8 @@ class ParticleManager {
   void detectContacts();
   void timeStep();
   void commitNewParticles();
+
+  ISLocalToGlobalMappingWrapper createLocalToGlobalMapping();
 
   // The global particle count, consistent across all ranks
   PetscInt global_particle_count = 0;
