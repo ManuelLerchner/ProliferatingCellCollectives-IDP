@@ -14,7 +14,7 @@
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
-MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& ltog_map) {
+MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, double xi, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& ltog_map) {
   PetscInt local_num_particles = local_particles.size();
   PetscInt dims = 6 * global_num_particles;
   PetscInt local_dims = 6 * local_num_particles;
@@ -33,8 +33,8 @@ MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, Pets
 
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
-    double inv_len = 1.0 / particle.length;
-    double inv_len3_x_12 = 12.0 / (particle.length * particle.length * particle.length);
+    double inv_len = 1.0 / particle.getLength();
+    double inv_len3_x_12 = 12.0 / (particle.getLength() * particle.getLength() * particle.getLength());
 
     // DEBUG
     // inv_len = particle.id;
@@ -51,6 +51,9 @@ MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, Pets
   // --- Phase 4: Assembly ---
   MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
+
+  // multiply by xi
+  MatScale(M, 1 / xi);
 
   return M;
 }
@@ -89,7 +92,7 @@ MatWrapper calculate_QuaternionMap(std::vector<Particle>& local_particles, Petsc
 
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
-    auto [s, wx, wy, wz] = particle.quaternion;
+    auto [s, wx, wy, wz] = particle.getQuaternion();
 
     // Identity block (here filled with 2 as we divide by 0.5 later)
     for (int i = 0; i < 3; ++i) {
@@ -106,7 +109,7 @@ MatWrapper calculate_QuaternionMap(std::vector<Particle>& local_particles, Petsc
         {-wy, wx, s}};
 
     PetscInt lrows[4] = {p_idx * 7 + 3, p_idx * 7 + 4, p_idx * 7 + 5, p_idx * 7 + 6};
-    PetscInt lcols[3] = {p_idx * 6 + 0, p_idx * 6 + 1, p_idx * 6 + 2};
+    PetscInt lcols[3] = {p_idx * 6 + 3, p_idx * 6 + 4, p_idx * 6 + 5};
 
     MatSetValuesLocal(G, 4, lrows, 3, lcols, &xi_vals[0][0], INSERT_VALUES);
   }

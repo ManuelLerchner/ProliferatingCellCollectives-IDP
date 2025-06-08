@@ -15,3 +15,6 @@ MatWrapper calculate_Jacobian(
     PetscInt global_num_bodies,
     ISLocalToGlobalMapping body_dof_map_6N,
     ISLocalToGlobalMapping constraint_map_N);
+
+VecWrapper create_phi_vector(const std::vector<Constraint>& local_contacts,
+                             ISLocalToGlobalMapping constraint_map_N);

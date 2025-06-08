@@ -8,7 +8,7 @@
 
 class ParticleManager {
  public:
-  ParticleManager();
+  ParticleManager(double dt);
 
   void queueNewParticle(Particle p);
 
@@ -42,6 +42,9 @@ class ParticleManager {
   void detectContacts();
   void timeStep();
   void commitNewParticles();
+
+  VecWrapper estimate_phi_next(const VecWrapper& phi, const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma, double dt);
+  void updateLocalParticlesFromVector(const VecWrapper& dC);
 
   ISLocalToGlobalMappingWrapper createLocalToGlobalMapping(int local_num_particles, int components_per_particle);
   ISLocalToGlobalMappingWrapper create_constraint_map(int local_num_constraints);
