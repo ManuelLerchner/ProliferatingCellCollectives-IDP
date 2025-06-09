@@ -1,4 +1,4 @@
-#include "LCP.h"
+#include "BBPGD.h"
 
 #include <iostream>
 
@@ -6,8 +6,7 @@ VecWrapper BBPGD(
     std::function<VecWrapper(const VecWrapper&)> gradient,
     std::function<double(const VecWrapper&, const VecWrapper&)> residual,
     const VecWrapper& gamma0,
-    double eps,
-    int max_iterations) {
+    const SolverConfig& config) {
   // Initialize gamma with gamma0
   VecWrapper gamma;
   VecDuplicate(gamma0.get(), gamma.get_ref());
@@ -33,7 +32,7 @@ VecWrapper BBPGD(
   VecDuplicate(gamma.get(), zero_vec.get_ref());
   VecZeroEntries(zero_vec.get());
 
-  for (int i = 0; i < max_iterations; i++) {
+  for (int i = 0; i < config.max_iterations; i++) {
     // Store previous values
     VecCopy(gamma.get(), gamma_prev.get());
     VecCopy(g.get(), g_prev.get());
@@ -52,7 +51,7 @@ VecWrapper BBPGD(
     res = residual(g, gamma);
 
     // Step 9-11: Check convergence
-    if (res <= eps) {
+    if (res <= config.tolerance) {
       PetscPrintf(PETSC_COMM_WORLD, "BBPGD converged after %d iterations, residual: %e\n", i + 1, res);
       break;
     }

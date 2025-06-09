@@ -1,54 +1,40 @@
 #pragma once
 #include <petsc.h>
 
+#include <memory>
 #include <vector>
 
+#include "Config.h"
+#include "MappingManager.h"
 #include "Particle.h"
+#include "PhysicsEngine.h"
 #include "util/PetscRaii.h"
 
 class ParticleManager {
  public:
-  ParticleManager(double dt);
+ public:
+  ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config);
 
   void queueNewParticle(Particle p);
-
+  void commitNewParticles();
+  void timeStep();
   void run();
 
  private:
-  // --- New Data Structure ---
-  // Each rank stores a list of the bacteria it is responsible for.
-  std::vector<Particle> new_particle_buffer;
-  std::vector<Particle> local_particles;
+  void updateLocalParticlesFromSolution(const VecWrapper& solution);
+  void validateParticleIDs() const;
 
-  // --- PETSc Objects ---
-  DM mobility_matrix;
-  Vec configuration_;  // Persistent configuration vector
-  Vec forces_;
-  Mat jacobian_;
-  Vec lambda_;
+  std::vector<Particle> local_particles;
+  std::vector<Particle> new_particle_buffer;
+  PetscInt global_particle_count = 0;
+
+  // Composition instead of doing everything inline
+  std::unique_ptr<PhysicsEngine> physics_engine;
+  std::unique_ptr<ConstraintGenerator> constraint_generator;
+  std::unique_ptr<MappingManager> mapping_manager;
+  PhysicsConfig config;
 
   // Reusable vectors for configuration updates
   std::vector<PetscInt> indices;
   std::vector<PetscScalar> values;
-
-  // Simulation parameters
-  double time;
-  double dt;
-  int current_step;
-
-  // --- Refactored Methods ---
-  void initializeParticles();
-  void cleanup();
-  void detectContacts();
-  void timeStep();
-  void commitNewParticles();
-
-  VecWrapper estimate_phi_next(const VecWrapper& phi, const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma, double dt);
-  void updateLocalParticlesFromVector(const VecWrapper& dC);
-
-  ISLocalToGlobalMappingWrapper createLocalToGlobalMapping(int local_num_particles, int components_per_particle);
-  ISLocalToGlobalMappingWrapper create_constraint_map(int local_num_constraints);
-
-  // The global particle count, consistent across all ranks
-  PetscInt global_particle_count = 0;
 };

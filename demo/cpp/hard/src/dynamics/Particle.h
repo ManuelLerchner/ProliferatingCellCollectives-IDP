@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cmath>
+#include <iostream>
 
 // Constants for vector operations
 static constexpr int POSITION_SIZE = 3;
@@ -92,5 +93,4 @@ class Particle {
   const std::array<double, QUATERNION_SIZE>& getQuaternion() const {
     return quaternion;
   }
-  
 };

@@ -14,21 +14,110 @@
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
-MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, double xi, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& ltog_map) {
+MatWrapper calculate_Jacobian(
+    const std::vector<Constraint>& local_constraints,
+    PetscInt local_num_bodies,
+    ISLocalToGlobalMapping col_map_6d,
+    ISLocalToGlobalMapping constraint_map_N) {
+  PetscInt local_row_count = 6 * local_num_bodies;
+
+  // D is a (6 * global_num_bodies, global_num_constraints) matrix
+  MatWrapper D;
+  MatCreate(PETSC_COMM_WORLD, D.get_ref());
+  MatSetSizes(D, local_row_count, local_constraints.size(), PETSC_DETERMINE, PETSC_DETERMINE);
+  MatSetType(D, MATAIJ);
+  MatSetFromOptions(D);
+
+  MatMPIAIJSetPreallocation(D, 1, NULL, 0, NULL);
+  MatSeqAIJSetPreallocation(D, 1, NULL);
+
+  MatSetLocalToGlobalMapping(D, col_map_6d, constraint_map_N);
+
+  for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
+    const auto& constraint = local_constraints[c_local_idx];
+
+    // Normal vectors
+    const auto n_i = constraint.normI;
+    const auto n_j = -n_i;
+
+    // Contact points
+    const auto r_i = constraint.rPosI;
+    const auto r_j = constraint.rPosJ;
+
+    // Torques
+    const auto torque_i = cross_product(r_i, n_i);
+    const auto torque_j = cross_product(r_j, n_j);
+
+    // Force vectors (6, 1)
+    double F_i[6] = {n_i[0], n_i[1], n_i[2], torque_i[0], torque_i[1], torque_i[2]};
+    double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
+
+    // Local body indices (assuming bodies are locally indexed 0, 1, 2, ...)
+    // You'll need to convert global body IDs to local indices
+    int gi_local = constraint.gidI;  // This should be the local index of body I
+    int gj_local = constraint.gidJ;  // This should be the local index of body J
+
+    PetscInt local_ids_i[6] = {gi_local * 6 + 0, gi_local * 6 + 1, gi_local * 6 + 2,
+                               gi_local * 6 + 3, gi_local * 6 + 4, gi_local * 6 + 5};
+    PetscInt local_ids_j[6] = {gj_local * 6 + 0, gj_local * 6 + 1, gj_local * 6 + 2,
+                               gj_local * 6 + 3, gj_local * 6 + 4, gj_local * 6 + 5};
+
+    // Use local constraint index
+    PetscInt c_local = c_local_idx;
+
+    // Set values using local indices - PETSc will handle global mapping
+    // Check if body I is owned by this process
+    if (gi_local >= 0 && gi_local < local_num_bodies) {
+      MatSetValuesLocal(D, 6, local_ids_i, 1, &c_local, F_i, INSERT_VALUES);
+    }
+
+    // Check if body J is owned by this process
+    if (gj_local >= 0 && gj_local < local_num_bodies) {
+      MatSetValuesLocal(D, 6, local_ids_j, 1, &c_local, F_j, INSERT_VALUES);
+    }
+  }
+
+  MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY);
+
+  return D;
+}
+
+VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints, ISLocalToGlobalMapping constraint_map_N) {
+  // phi is a (global_num_constraints, 1) vector
+  VecWrapper phi;
+  VecCreate(PETSC_COMM_WORLD, phi.get_ref());
+  VecSetSizes(phi, local_constraints.size(), PETSC_DETERMINE);  // Fixed: local size first
+  VecSetFromOptions(phi);
+
+  // Set the local-to-global mapping (consistent with Jacobian)
+  VecSetLocalToGlobalMapping(phi, constraint_map_N);
+
+  // Set values using local indices (let PETSc handle the mapping)
+  for (int i = 0; i < local_constraints.size(); ++i) {
+    VecSetValueLocal(phi, i, local_constraints[i].delta0, INSERT_VALUES);  // Using local indexing
+  }
+
+  VecAssemblyBegin(phi);
+  VecAssemblyEnd(phi);
+
+  return phi;
+}
+
+MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, PetscInt global_num_particles, double xi, ISLocalToGlobalMappingWrapper& col_map_6d) {
   PetscInt local_num_particles = local_particles.size();
-  PetscInt dims = 6 * global_num_particles;
   PetscInt local_dims = 6 * local_num_particles;
 
   // M is a (6 * global_num_particles, 6 * global_num_particles) matrix
   MatWrapper M;
   MatCreate(PETSC_COMM_WORLD, M.get_ref());
   MatSetType(M, MATMPIAIJ);
-  MatSetSizes(M, local_dims, local_dims, dims, dims);
+  MatSetSizes(M, local_dims, local_dims, PETSC_DETERMINE, PETSC_DETERMINE);
 
   MatMPIAIJSetPreallocation(M, 1, NULL, 0, NULL);
   MatSeqAIJSetPreallocation(M, 1, NULL);
 
-  MatSetLocalToGlobalMapping(M, ltog_map, ltog_map);
+  MatSetLocalToGlobalMapping(M, col_map_6d, col_map_6d);
 
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
@@ -57,10 +146,8 @@ MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, doub
   return M;
 }
 
-MatWrapper calculate_QuaternionMap(std::vector<Particle>& local_particles, PetscInt global_num_particles, ISLocalToGlobalMappingWrapper& row_map_7d, ISLocalToGlobalMappingWrapper& col_map_6d) {
+MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles, ISLocalToGlobalMappingWrapper& row_map_7d, ISLocalToGlobalMappingWrapper& col_map_6d) {
   PetscInt local_num_particles = local_particles.size();
-  PetscInt global_rows = 7 * global_num_particles;
-  PetscInt global_cols = 6 * global_num_particles;
   PetscInt local_rows = 7 * local_num_particles;
   PetscInt local_cols = 6 * local_num_particles;
 
@@ -68,7 +155,7 @@ MatWrapper calculate_QuaternionMap(std::vector<Particle>& local_particles, Petsc
   MatWrapper G;
   MatCreate(PETSC_COMM_WORLD, G.get_ref());
   MatSetType(G, MATMPIAIJ);
-  MatSetSizes(G, local_rows, local_cols, global_rows, global_cols);
+  MatSetSizes(G, local_rows, local_cols, PETSC_DETERMINE, PETSC_DETERMINE);
 
   std::vector<PetscInt> d_nnz(local_rows);
   std::vector<PetscInt> o_nnz(local_rows, 0);  // All blocks are local
