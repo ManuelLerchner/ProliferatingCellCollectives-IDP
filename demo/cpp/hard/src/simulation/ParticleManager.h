@@ -4,13 +4,13 @@
 #include <memory>
 #include <vector>
 
-#include "util/Config.h"
-#include "simulation/Particle.h"
 #include "dynamics/PhysicsEngine.h"
+#include "simulation/Particle.h"
+#include "spatial/ConstraintGenerator.h"
+#include "util/Config.h"
 #include "util/PetscRaii.h"
 
 class ParticleManager {
- public:
  public:
   ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config);
 

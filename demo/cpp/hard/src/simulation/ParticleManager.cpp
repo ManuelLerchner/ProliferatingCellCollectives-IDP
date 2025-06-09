@@ -10,6 +10,7 @@
 #include "dynamics/Constraint.h"
 #include "dynamics/Physics.h"
 #include "dynamics/PhysicsEngine.h"
+#include "spatial/ConstraintGenerator.h"
 
 ParticleManager::ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config) {
   constraint_generator = std::make_unique<ConstraintGenerator>();
@@ -56,24 +57,10 @@ void ParticleManager::commitNewParticles() {
 }
 
 void ParticleManager::timeStep() {
-  std::vector<Constraint> local_constraints;
+  // Generate real collision constraints using the collision detection system
+  std::vector<Constraint> local_constraints = constraint_generator->generateConstraints(local_particles);
 
-  for (int i = 0; i < local_particles.size(); i += 2) {
-    if (i + 1 < local_particles.size()) {
-      int id_i = local_particles[i].getId();
-      int id_j = local_particles[i + 1].getId();
-      local_constraints.emplace_back(Constraint(
-          -0.000000009999999999999999,
-          id_i,
-          id_j,
-          {1, 0, 0},              // normI
-          {-0.0000000025, 0, 0},  // posI
-          {0.0000000025, 0, 0},   // posJ
-          {0.00000000245, 0, 0},  // labI
-          {-0.00000000245, 0, 0}  // labJ
-          ));
-    }
-  }
+  std::cout << "Found " << local_constraints.size() << " constraints" << std::endl;
 
   auto mappings = createMappings(local_particles, local_constraints);
   auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));

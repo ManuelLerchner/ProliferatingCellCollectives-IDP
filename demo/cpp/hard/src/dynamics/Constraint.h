@@ -23,4 +23,6 @@ class Constraint {
   std::array<double, 3> labI;
   // lab frame location of collision point on particle J
   std::array<double, 3> labJ;
+
+  void print() const;
 };

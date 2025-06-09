@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "Constraint.h"
-#include "simulation/ParticleManager.h"
 #include "petscmat.h"
+#include "simulation/ParticleManager.h"
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
@@ -18,6 +18,8 @@ MatWrapper calculate_Jacobian(
     PetscInt local_num_bodies,
     ISLocalToGlobalMapping col_map_6d,
     ISLocalToGlobalMapping constraint_map_N) {
+  using namespace utils::ArrayMath;
+
   PetscInt local_row_count = 6 * local_num_bodies;
 
   // D is a (6 * global_num_bodies, global_num_constraints) matrix
@@ -27,8 +29,31 @@ MatWrapper calculate_Jacobian(
   MatSetType(D, MATAIJ);
   MatSetFromOptions(D);
 
-  MatMPIAIJSetPreallocation(D, 1, NULL, 0, NULL);
-  MatSeqAIJSetPreallocation(D, 1, NULL);
+  // Precise preallocation: count constraints per particle
+  std::vector<PetscInt> d_nnz(local_row_count, 0);
+  std::vector<PetscInt> o_nnz(local_row_count, 0);
+
+  // Count how many constraints each local particle is involved in
+  for (const auto& constraint : local_constraints) {
+    int gi_local = constraint.gidI;
+    int gj_local = constraint.gidJ;
+
+    // Each constraint affects 6 DOFs (rows) for each particle
+    if (gi_local >= 0 && gi_local < local_num_bodies) {
+      for (int dof = 0; dof < 6; ++dof) {
+        d_nnz[gi_local * 6 + dof]++;
+      }
+    }
+
+    if (gj_local >= 0 && gj_local < local_num_bodies) {
+      for (int dof = 0; dof < 6; ++dof) {
+        d_nnz[gj_local * 6 + dof]++;
+      }
+    }
+  }
+
+  MatMPIAIJSetPreallocation(D, 0, d_nnz.data(), 0, o_nnz.data());
+  MatSeqAIJSetPreallocation(D, 0, d_nnz.data());
 
   MatSetLocalToGlobalMapping(D, col_map_6d, constraint_map_N);
 

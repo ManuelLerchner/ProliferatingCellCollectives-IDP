@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "util/Config.h"
 #include "Constraint.h"
 #include "MappingManager.h"
 #include "simulation/Particle.h"
+#include "util/Config.h"
 #include "util/PetscRaii.h"
 
 class PhysicsEngine {
@@ -23,9 +23,4 @@ class PhysicsEngine {
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;
-};
-
-class ConstraintGenerator {
- public:
-  std::vector<Constraint> generateConstraints(const std::vector<Particle>& particles);
 };
