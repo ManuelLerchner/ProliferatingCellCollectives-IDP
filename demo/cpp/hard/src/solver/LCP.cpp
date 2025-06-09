@@ -15,6 +15,7 @@ VecWrapper BBPGD(
 
   // Compute initial gradient and residual
   VecWrapper g = gradient(gamma);
+
   double res = residual(g, gamma);
 
   // Initial step size

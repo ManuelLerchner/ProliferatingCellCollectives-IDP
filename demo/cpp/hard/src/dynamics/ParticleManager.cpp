@@ -204,8 +204,6 @@ void ParticleManager::timeStep() {
   // PetscPrintf(PETSC_COMM_WORLD, "Phi Vector:\n");
   // VecView(phi.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  // create gamma matrix of shape (constraint_count, 1)
-
   // make function to calculate the gradient of phi_next
   auto gradient = [&](const VecWrapper& gamma) -> VecWrapper {
     return estimate_phi_next(phi, D, M, gamma, dt);
@@ -243,7 +241,7 @@ void ParticleManager::timeStep() {
   VecWrapper gamma;
   VecCreate(PETSC_COMM_WORLD, gamma.get_ref());
   VecSetSizes(gamma, local_constraints.size(), PETSC_DETERMINE);
-  VecSetFromOptions(gamma);
+  VecSetType(gamma, VECSTANDARD);
   VecZeroEntries(gamma.get());
 
   VecWrapper gamma_next = BBPGD(gradient, residual, gamma, 1e-8, 1000);

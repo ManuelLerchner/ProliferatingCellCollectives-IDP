@@ -23,8 +23,7 @@ MatWrapper calculate_MobilityMatrix(std::vector<Particle>& local_particles, doub
   MatWrapper M;
   MatCreate(PETSC_COMM_WORLD, M.get_ref());
   MatSetType(M, MATMPIAIJ);
-  MatSetSizes(M, PETSC_DECIDE, PETSC_DECIDE, dims, dims);
-  MatSetFromOptions(M);
+  MatSetSizes(M, local_dims, local_dims, dims, dims);
 
   MatMPIAIJSetPreallocation(M, 1, NULL, 0, NULL);
   MatSeqAIJSetPreallocation(M, 1, NULL);
@@ -63,13 +62,13 @@ MatWrapper calculate_QuaternionMap(std::vector<Particle>& local_particles, Petsc
   PetscInt global_rows = 7 * global_num_particles;
   PetscInt global_cols = 6 * global_num_particles;
   PetscInt local_rows = 7 * local_num_particles;
+  PetscInt local_cols = 6 * local_num_particles;
 
   // G is a (7 * global_num_particles, 6 * global_num_particles) matrix
   MatWrapper G;
   MatCreate(PETSC_COMM_WORLD, G.get_ref());
   MatSetType(G, MATMPIAIJ);
-  MatSetSizes(G, PETSC_DECIDE, PETSC_DECIDE, global_rows, global_cols);
-  MatSetFromOptions(G);
+  MatSetSizes(G, local_rows, local_cols, global_rows, global_cols);
 
   std::vector<PetscInt> d_nnz(local_rows);
   std::vector<PetscInt> o_nnz(local_rows, 0);  // All blocks are local
