@@ -8,8 +8,7 @@
 #include <vector>
 
 #include "Constraint.h"
-#include "ParticleData.h"
-#include "ParticleManager.h"
+#include "simulation/ParticleManager.h"
 #include "petscmat.h"
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"

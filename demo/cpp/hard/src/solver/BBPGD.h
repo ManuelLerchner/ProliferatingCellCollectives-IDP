@@ -4,7 +4,7 @@
 
 #include <functional>
 
-#include "dynamics/Config.h"
+#include "util/Config.h"
 #include "util/PetscRaii.h"
 
 VecWrapper BBPGD(

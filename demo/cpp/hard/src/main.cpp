@@ -1,8 +1,8 @@
 #include <mpi.h>
 #include <petsc.h>
 
-#include "dynamics/Config.h"
-#include "dynamics/ParticleManager.h"
+#include "simulation/ParticleManager.h"
+#include "util/Config.h"
 
 int main(int argc, char** argv) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);

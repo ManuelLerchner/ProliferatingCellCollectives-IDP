@@ -6,14 +6,14 @@
 
 #include "Constraint.h"
 #include "MappingManager.h"
-#include "Particle.h"
 #include "Physics.h"
+#include "simulation/Particle.h"
 #include "solver/BBPGD.h"
 #include "util/PetscRaii.h"
 
 PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config) {}
 
-PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints, MappingManager::Mappings mappings) {
+PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints, Mappings mappings) {
   PetscInt local_num_bodies = local_particles.size();
   PetscInt local_num_constraints = local_constraints.size();
 

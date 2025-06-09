@@ -7,14 +7,12 @@
 #include <numeric>
 #include <vector>
 
-#include "Constraint.h"
-#include "ParticleData.h"
-#include "Physics.h"
-#include "PhysicsEngine.h"
+#include "dynamics/Constraint.h"
+#include "dynamics/Physics.h"
+#include "dynamics/PhysicsEngine.h"
 
 ParticleManager::ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config) {
   constraint_generator = std::make_unique<ConstraintGenerator>();
-  mapping_manager = std::make_unique<MappingManager>();
 
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 }
@@ -77,7 +75,7 @@ void ParticleManager::timeStep() {
     }
   }
 
-  auto mappings = mapping_manager->createMappings(local_particles, local_constraints);
+  auto mappings = createMappings(local_particles, local_constraints);
   auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));
 
   auto deltaC = physics_engine->solveConstraints(matrices, physics_engine->solver_config.dt);

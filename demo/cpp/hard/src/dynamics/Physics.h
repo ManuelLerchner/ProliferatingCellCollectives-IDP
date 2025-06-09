@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Constraint.h"
-#include "Particle.h"
+#include "simulation/Particle.h"
 #include "util/PetscRaii.h"
 
 MatWrapper calculate_Jacobian(

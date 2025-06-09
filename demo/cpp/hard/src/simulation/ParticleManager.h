@@ -4,10 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include "Config.h"
-#include "MappingManager.h"
-#include "Particle.h"
-#include "PhysicsEngine.h"
+#include "util/Config.h"
+#include "simulation/Particle.h"
+#include "dynamics/PhysicsEngine.h"
 #include "util/PetscRaii.h"
 
 class ParticleManager {
@@ -31,7 +30,6 @@ class ParticleManager {
   // Composition instead of doing everything inline
   std::unique_ptr<PhysicsEngine> physics_engine;
   std::unique_ptr<ConstraintGenerator> constraint_generator;
-  std::unique_ptr<MappingManager> mapping_manager;
   PhysicsConfig config;
 
   // Reusable vectors for configuration updates

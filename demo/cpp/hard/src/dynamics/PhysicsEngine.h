@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "Config.h"
+#include "util/Config.h"
 #include "Constraint.h"
 #include "MappingManager.h"
-#include "Particle.h"
+#include "simulation/Particle.h"
 #include "util/PetscRaii.h"
 
 class PhysicsEngine {
@@ -17,7 +17,7 @@ class PhysicsEngine {
     VecWrapper phi;
   };
 
-  PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints, MappingManager::Mappings mappings);
+  PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints, Mappings mappings);
 
   VecWrapper solveConstraints(const PhysicsMatrices& matrices, double dt);
 

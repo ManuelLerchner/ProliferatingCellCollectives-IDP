@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "Constraint.h"
-#include "Particle.h"
+#include "simulation/Particle.h"
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
@@ -55,7 +55,7 @@ ISLocalToGlobalMappingWrapper create_constraint_map(int local_num_constraints) {
   return ltog_map;
 }
 
-MappingManager::Mappings MappingManager::createMappings(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints) {
+Mappings createMappings(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints) {
   auto col_map_6d = createLocalToGlobalMapping(local_particles, 6);
   auto row_map_7d = createLocalToGlobalMapping(local_particles, 7);
   auto constraint_map = create_constraint_map(local_constraints.size());
