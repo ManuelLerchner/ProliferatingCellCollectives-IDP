@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "dynamics/PhysicsEngine.h"
+#include "logger/VTK.h"
 #include "simulation/Particle.h"
 #include "spatial/ConstraintGenerator.h"
 #include "util/Config.h"
@@ -16,8 +17,10 @@ class ParticleManager {
 
   void queueNewParticle(Particle p);
   void commitNewParticles();
-  void timeStep();
-  void run();
+  void run(int num_steps);
+
+  // VTK logging functionality
+  void enableVTKLogging(const std::string& output_dir, int log_every_n_iterations = 1);
 
  private:
   void updateLocalParticlesFromSolution(const VecWrapper& solution);
@@ -35,4 +38,11 @@ class ParticleManager {
   // Reusable vectors for configuration updates
   std::vector<PetscInt> indices;
   std::vector<PetscScalar> values;
+
+  // VTK logging
+  std::unique_ptr<vtk::SimulationLogger> vtk_logger_;
+
+  // Helper method to create simulation state for VTK logging
+  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
+      const std::vector<class Constraint>& constraints) const;
 };

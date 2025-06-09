@@ -10,7 +10,7 @@
 
 MatWrapper calculate_Jacobian(
     const std::vector<Constraint>& local_constraints,
-    PetscInt local_num_bodies,
+    const std::vector<Particle>& local_particles,
     ISLocalToGlobalMapping col_map_6d,
     ISLocalToGlobalMapping constraint_map_N);
 

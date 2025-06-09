@@ -20,7 +20,7 @@ CollisionDetector::CollisionDetector(double collision_tolerance)
 std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getParticleEndpoints(const Particle& p) {
   using namespace utils::ArrayMath;
   const auto& pos = p.getPosition();
-  auto dir = getDirectionVector(p.getQuaternion());
+  auto dir = utils::Quaternion::getDirectionVector(p.getQuaternion());
   double diameter = 0.5;
   double length = p.getLength();
 
@@ -142,8 +142,10 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
         // Create constraint
         constraints.emplace_back(Constraint(
             -overlap,       // negative overlap indicates penetration
-            p1.getId(),     // particle I ID
-            p2.getId(),     // particle J ID
+            p1.setGID(),    // particle I global ID
+            p2.setGID(),    // particle J global ID
+            i,              // particle I local index
+            j,              // particle J local index
             normal,         // surface normal from I to J
             rPos1,          // relative position on particle I
             rPos2,          // relative position on particle J
@@ -169,7 +171,7 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
     } else {
       // Find ghost particle by ID
       for (const auto& ghost : ghost_particles) {
-        if (ghost.getId() == pair.global_id_i) {
+        if (ghost.setGID() == pair.global_id_i) {
           p1 = &ghost;
           break;
         }
@@ -185,7 +187,7 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
     } else {
       // Find ghost particle by ID
       for (const auto& ghost : ghost_particles) {
-        if (ghost.getId() == pair.global_id_j) {
+        if (ghost.setGID() == pair.global_id_j) {
           p2 = &ghost;
           break;
         }
@@ -194,6 +196,24 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
 
     // Skip local-local pairs as they were already handled in the first loop
     if (is_local_local_pair) {
+      continue;
+    }
+
+    // OWNERSHIP RULE: Only create constraint if this rank ownedByUs the particle with the smaller ID
+    // This prevents duplicate constraints across ranks
+    PetscInt smaller_id = std::min(pair.global_id_i, pair.global_id_j);
+    bool owns_smaller_id = false;
+
+    // Check if any local particle has the smaller ID
+    for (const auto& local_p : local_particles) {
+      if (local_p.setGID() == smaller_id) {
+        owns_smaller_id = true;
+        break;
+      }
+    }
+
+    // Skip if this rank doesn't own the particle with smaller ID
+    if (!owns_smaller_id) {
       continue;
     }
 
@@ -216,11 +236,34 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
             contact_point[1] - pos2[1],
             contact_point[2] - pos2[2]};
 
-        // Create constraint
+        // Create constraint with proper local indices
+        // For cross-rank constraints, we need to determine which particles are actually local
+        int local_i = -1, local_j = -1;
+
+        // Only set local index if the particle is actually in our local particle array
+        // Check if particle I is local (local_idx_i is valid AND it's not a ghost)
+        if (pair.local_idx_i >= 0 && pair.local_idx_i < local_particles.size()) {
+          // Verify this is actually the right particle by checking ID
+          if (local_particles[pair.local_idx_i].setGID() == pair.global_id_i) {
+            local_i = pair.local_idx_i;
+          }
+        }
+
+        // Check if particle J is local (local_idx_j is valid AND it's not a ghost)
+        if (pair.local_idx_j >= 0 && pair.local_idx_j < local_particles.size()) {
+          // Verify this is actually the right particle by checking ID
+          if (local_particles[pair.local_idx_j].setGID() == pair.global_id_j) {
+            local_j = pair.local_idx_j;
+          }
+        }
+
         constraints.emplace_back(Constraint(
             -overlap,          // negative overlap indicates penetration
-            pair.global_id_i,  // particle I ID
-            pair.global_id_j,  // particle J ID
+            pair.global_id_i,  // particle I global ID
+            pair.global_id_j,  // particle J global ID
+            local_i,           // particle I local index (-1 if not local)
+            local_j,           // particle J local index (-1 if not local)
+            true,              // this rank ownedByUs the constraint
             normal,            // surface normal from I to J
             rPos1,             // relative position on particle I
             rPos2,             // relative position on particle J
@@ -259,7 +302,7 @@ std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Pa
     const auto& pos = p.getPosition();
     const auto& quat = p.getQuaternion();
 
-    local_data.push_back(static_cast<double>(p.getId()));
+    local_data.push_back(static_cast<double>(p.setGID()));
     local_data.insert(local_data.end(), pos.begin(), pos.end());
     local_data.insert(local_data.end(), quat.begin(), quat.end());
     local_data.push_back(p.getLength());
@@ -305,13 +348,13 @@ std::vector<Particle> CollisionDetector::filterGhostParticles(
   // Create set of local particle IDs for quick lookup
   std::unordered_set<PetscInt> local_ids;
   for (const auto& p : local_particles) {
-    local_ids.insert(p.getId());
+    local_ids.insert(p.setGID());
   }
 
   // Find particles within cutoff distance of local particles
   for (const auto& candidate : all_particles) {
     // Skip if this is a local particle
-    if (local_ids.find(candidate.getId()) != local_ids.end()) {
+    if (local_ids.find(candidate.setGID()) != local_ids.end()) {
       continue;
     }
 

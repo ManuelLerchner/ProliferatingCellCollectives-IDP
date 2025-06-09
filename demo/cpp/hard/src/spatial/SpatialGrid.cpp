@@ -128,8 +128,8 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
             CollisionPair pair;
             pair.local_idx_i = idx1 >= 0 ? idx1 : -1;
             pair.local_idx_j = idx2 >= 0 ? idx2 : -1;
-            pair.global_id_i = idx1 >= 0 ? local_particles[idx1].getId() : ghost_particles[-(idx1 + 1)].getId();
-            pair.global_id_j = idx2 >= 0 ? local_particles[idx2].getId() : ghost_particles[-(idx2 + 1)].getId();
+            pair.global_id_i = idx1 >= 0 ? local_particles[idx1].setGID() : ghost_particles[-(idx1 + 1)].setGID();
+            pair.global_id_j = idx2 >= 0 ? local_particles[idx2].setGID() : ghost_particles[-(idx2 + 1)].setGID();
             pair.is_cross_rank = (idx1 < 0) || (idx2 < 0);
 
             pairs.push_back(pair);
@@ -155,8 +155,8 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
               CollisionPair pair;
               pair.local_idx_i = p1_idx >= 0 ? p1_idx : -1;
               pair.local_idx_j = p2_idx >= 0 ? p2_idx : -1;
-              pair.global_id_i = p1_idx >= 0 ? local_particles[p1_idx].getId() : ghost_particles[-(p1_idx + 1)].getId();
-              pair.global_id_j = p2_idx >= 0 ? local_particles[p2_idx].getId() : ghost_particles[-(p2_idx + 1)].getId();
+              pair.global_id_i = p1_idx >= 0 ? local_particles[p1_idx].setGID() : ghost_particles[-(p1_idx + 1)].setGID();
+              pair.global_id_j = p2_idx >= 0 ? local_particles[p2_idx].setGID() : ghost_particles[-(p2_idx + 1)].setGID();
               pair.is_cross_rank = (p1_idx < 0) || (p2_idx < 0);
 
               pairs.push_back(pair);

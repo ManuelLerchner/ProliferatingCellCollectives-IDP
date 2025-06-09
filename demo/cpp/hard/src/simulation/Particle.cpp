@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-Particle::Particle(PetscInt id, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter) : id(id), position(position), quaternion(quaternion), length(length), diameter(diameter) {}
+Particle::Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter) : gID(gID), position(position), quaternion(quaternion), length(length), diameter(diameter) {}
 
 void Particle::updatePosition(const PetscScalar* data, int offset, double dt) {
   position[0] += dt * PetscRealPart(data[offset + 0]);
@@ -41,18 +41,18 @@ void Particle::normalizeQuaternion() {
 
 void Particle::printState() const {
   fprintf(stdout, "Particle %d: pos=[%f, %f, %f], quat=[%f, %f, %f, %f]\n",
-          id,
+          gID,
           position[0], position[1], position[2],
           quaternion[0], quaternion[1],
           quaternion[2], quaternion[3]);
 }
 
-PetscInt Particle::getId() const {
-  return id;
+PetscInt Particle::setGID() const {
+  return gID;
 }
 
-void Particle::setId(PetscInt id) {
-  this->id = id;
+void Particle::setGID(PetscInt gID) {
+  this->gID = gID;
 }
 
 const std::array<double, POSITION_SIZE>& Particle::getPosition() const {
@@ -70,5 +70,3 @@ double Particle::getDiameter() const {
 const std::array<double, QUATERNION_SIZE>& Particle::getQuaternion() const {
   return quaternion;
 }
-
- 

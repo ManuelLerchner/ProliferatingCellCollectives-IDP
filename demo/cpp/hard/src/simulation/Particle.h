@@ -10,7 +10,7 @@ static constexpr int STATE_SIZE = POSITION_SIZE + QUATERNION_SIZE;
 
 class Particle {
  public:
-  Particle(PetscInt id, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter);
+  Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter);
 
   void updatePosition(const PetscScalar* data, int offset, double dt);
 
@@ -29,16 +29,16 @@ class Particle {
 
   double getDiameter() const;
 
-  PetscInt getId() const;
+  PetscInt setGID() const;
 
-  void setId(PetscInt id);
+  void setGID(PetscInt gID);
 
   static constexpr int getStateSize() {
     return STATE_SIZE;
   }
 
  private:
-  PetscInt id;
+  PetscInt gID;
   std::array<double, POSITION_SIZE> position;
   std::array<double, QUATERNION_SIZE> quaternion;
   double length;

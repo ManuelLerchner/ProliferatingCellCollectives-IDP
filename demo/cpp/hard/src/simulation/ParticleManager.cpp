@@ -10,6 +10,7 @@
 #include "dynamics/Constraint.h"
 #include "dynamics/Physics.h"
 #include "dynamics/PhysicsEngine.h"
+#include "logger/VTK.h"
 #include "spatial/ConstraintGenerator.h"
 
 ParticleManager::ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config) {
@@ -34,7 +35,7 @@ void ParticleManager::commitNewParticles() {
   std::vector<PetscInt> new_ids(num_to_add_local);
   std::iota(new_ids.begin(), new_ids.end(), first_id_for_this_rank);
   for (PetscInt i = 0; i < num_to_add_local; ++i) {
-    new_particle_buffer[i].setId(new_ids[i]);
+    new_particle_buffer[i].setGID(new_ids[i]);
   }
 
   local_particles.insert(
@@ -45,7 +46,7 @@ void ParticleManager::commitNewParticles() {
   // Sort particles by ID to maintain ordering across all ranks
   if (new_particle_buffer.size() > 0) {
     std::sort(local_particles.begin(), local_particles.end(),
-              [](const Particle& a, const Particle& b) { return a.getId() < b.getId(); });
+              [](const Particle& a, const Particle& b) { return a.setGID() < b.setGID(); });
   }
 
   new_particle_buffer.clear();
@@ -54,20 +55,6 @@ void ParticleManager::commitNewParticles() {
   MPI_Allreduce(&num_to_add_local, &total_added_this_step, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
 
   this->global_particle_count += total_added_this_step;
-}
-
-void ParticleManager::timeStep() {
-  // Generate real collision constraints using the collision detection system
-  std::vector<Constraint> local_constraints = constraint_generator->generateConstraints(local_particles);
-
-  std::cout << "Found " << local_constraints.size() << " constraints" << std::endl;
-
-  auto mappings = createMappings(local_particles, local_constraints);
-  auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));
-
-  auto deltaC = physics_engine->solveConstraints(matrices, physics_engine->solver_config.dt);
-
-  updateLocalParticlesFromSolution(deltaC);
 }
 
 void ParticleManager::updateLocalParticlesFromSolution(const VecWrapper& dC) {
@@ -93,18 +80,39 @@ void ParticleManager::updateLocalParticlesFromSolution(const VecWrapper& dC) {
   VecRestoreArrayRead(dC.get(), &dC_array);
 }
 
-void ParticleManager::run() {
-  for (int i = 0; i < 2; i++) {
+void ParticleManager::run(int num_steps) {
+  for (int i = 0; i < num_steps; i++) {
     commitNewParticles();
 
     // Validate particle IDs after committing new particles
     validateParticleIDs();
 
+    // VTK logging if enabled
+    if (vtk_logger_ && i == 0) {
+      auto sim_state = createSimulationState({});
+      vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
+    }
+
+    // Generate real collision constraints using the collision detection system
+    std::vector<Constraint> local_constraints = constraint_generator->generateConstraints(local_particles);
+
+    std::cout << "Found " << local_constraints.size() << " constraints" << std::endl;
+
+    auto mappings = createMappings(local_particles, local_constraints);
+    auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));
+
+    auto deltaC = physics_engine->solveConstraints(matrices, physics_engine->solver_config.dt);
+
+    updateLocalParticlesFromSolution(deltaC);
+
+    if (vtk_logger_) {
+      auto sim_state = createSimulationState({});
+      vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
+    }
+
     for (const auto& p : local_particles) {
       p.printState();
     }
-
-    timeStep();
   }
 }
 
@@ -115,9 +123,9 @@ void ParticleManager::validateParticleIDs() const {
 
   // Check local sorting
   for (size_t i = 1; i < local_particles.size(); ++i) {
-    if (local_particles[i - 1].getId() >= local_particles[i].getId()) {
+    if (local_particles[i - 1].setGID() >= local_particles[i].setGID()) {
       PetscPrintf(PETSC_COMM_WORLD, "ERROR: Local particles not sorted at rank %d: ID[%zu]=%d >= ID[%zu]=%d\n",
-                  rank, i - 1, local_particles[i - 1].getId(), i, local_particles[i].getId());
+                  rank, i - 1, local_particles[i - 1].setGID(), i, local_particles[i].setGID());
     }
   }
 
@@ -125,7 +133,7 @@ void ParticleManager::validateParticleIDs() const {
   if (global_particle_count < 10000) {  // Only for reasonable sizes
     std::vector<PetscInt> local_ids;
     for (const auto& p : local_particles) {
-      local_ids.push_back(p.getId());
+      local_ids.push_back(p.setGID());
     }
 
     PetscInt local_count = local_ids.size();
@@ -153,4 +161,35 @@ void ParticleManager::validateParticleIDs() const {
       PetscPrintf(PETSC_COMM_WORLD, "Particle ID validation complete. Global count: %d\n", global_particle_count);
     }
   }
+}
+
+void ParticleManager::enableVTKLogging(const std::string& output_dir, int log_every_n_iterations) {
+  vtk_logger_ = vtk::createParticleLogger(output_dir);
+}
+
+std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationState(
+    const std::vector<Constraint>& constraints) const {
+  auto state = std::make_unique<vtk::ParticleSimulationState>();
+
+  // Copy particles
+  state->particles = local_particles;
+  state->constraints = constraints;
+
+  // Initialize empty force/torque vectors (would be populated by physics engine in full implementation)
+  state->forces.resize(local_particles.size(), {0.0, 0.0, 0.0});
+  state->torques.resize(local_particles.size(), {0.0, 0.0, 0.0});
+  state->impedance.resize(local_particles.size(), 1.0);
+
+  // Calculate max overlap from constraints
+  state->max_overlap = 0.0;
+  for (const auto& constraint : constraints) {
+    state->max_overlap = std::max(state->max_overlap, std::abs(constraint.delta0));
+  }
+
+  // Set other state values
+  state->constraint_iterations = constraints.size();
+  state->avg_bbpgd_iterations = 1;  // Would be set by solver in full implementation
+  state->l0 = 1.0;                  // Default particle length
+
+  return state;
 }

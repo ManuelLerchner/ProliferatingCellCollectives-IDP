@@ -17,7 +17,7 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   PetscInt local_num_bodies = local_particles.size();
   PetscInt local_num_constraints = local_constraints.size();
 
-  MatWrapper D = calculate_Jacobian(local_constraints, local_num_bodies, mappings.row_map_7d, mappings.constraint_map);
+  MatWrapper D = calculate_Jacobian(local_constraints, local_particles, mappings.col_map_6d, mappings.constraint_map);
   // PetscPrintf(PETSC_COMM_WORLD, "D Matrix:\n");
   // MatView(D.get(), PETSC_VIEWER_STDOUT_WORLD);
 
@@ -36,9 +36,8 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   return {.D = std::move(D), .M = std::move(M), .G = std::move(G), .phi = std::move(phi)};
 }
 
-VecWrapper estimate_phi_next(const VecWrapper& phi, const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma, double dt) {
+VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma) {
   // phi_dot = D^T @ G @ M @ D @ gamma
-  // phi_next = phi + dt * phi_dot
 
   // t1 = D @ gamma
   VecWrapper t1;
@@ -56,17 +55,21 @@ VecWrapper estimate_phi_next(const VecWrapper& phi, const MatWrapper& D, const M
   MatCreateVecs(D.get(), phi_dot.get_ref(), NULL);
   MatMultTranspose(D, t2.get(), phi_dot.get());
 
-  VecWrapper phi_next;
-  VecDuplicate(phi.get(), phi_next.get_ref());
-  VecCopy(phi.get(), phi_next.get());
-  VecAXPY(phi_next.get(), dt, phi_dot.get());
-
-  return std::move(phi_next);
+  return std::move(phi_dot);
 }
 
 VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, double dt) {
   auto gradient = [&](const VecWrapper& gamma) -> VecWrapper {
-    return estimate_phi_next(matrices.phi, matrices.D, matrices.M, gamma, dt);
+    // phi_next = phi + dt * phi_dot
+    auto phi_dot = estimate_phi_dot(matrices.D, matrices.M, gamma);
+
+    // phi_next = phi + dt * phi_dot
+    VecWrapper phi_next;
+    VecDuplicate(matrices.phi.get(), phi_next.get_ref());
+    VecCopy(matrices.phi.get(), phi_next.get());
+    VecAXPY(phi_next.get(), dt, phi_dot.get());
+
+    return phi_next;
   };
 
   auto residual = [&](const VecWrapper& gradient_val, const VecWrapper& gamma) -> double {
@@ -103,6 +106,8 @@ VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, doub
 
   VecWrapper gamma0;
   VecDuplicate(matrices.phi.get(), gamma0.get_ref());
+  VecZeroEntries(gamma0.get());
+
   VecWrapper gamma = BBPGD(gradient, residual, gamma0, solver_config);
 
   // Calculate forces
@@ -118,8 +123,6 @@ VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, doub
   VecWrapper deltaC;
   MatCreateVecs(matrices.G.get(), NULL, deltaC.get_ref());
   MatMult(matrices.G.get(), dU.get(), deltaC.get());
-
-  VecScale(deltaC.get(), dt);
 
   return std::move(deltaC);
 }

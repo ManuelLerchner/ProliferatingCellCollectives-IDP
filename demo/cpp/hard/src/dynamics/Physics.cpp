@@ -15,11 +15,12 @@
 
 MatWrapper calculate_Jacobian(
     const std::vector<Constraint>& local_constraints,
-    PetscInt local_num_bodies,
+    const std::vector<Particle>& local_particles,
     ISLocalToGlobalMapping col_map_6d,
     ISLocalToGlobalMapping constraint_map_N) {
   using namespace utils::ArrayMath;
 
+  PetscInt local_num_bodies = local_particles.size();
   PetscInt local_row_count = 6 * local_num_bodies;
 
   // D is a (6 * global_num_bodies, global_num_constraints) matrix
@@ -35,19 +36,15 @@ MatWrapper calculate_Jacobian(
 
   // Count how many constraints each local particle is involved in
   for (const auto& constraint : local_constraints) {
-    int gi_local = constraint.gidI;
-    int gj_local = constraint.gidJ;
-
-    // Each constraint affects 6 DOFs (rows) for each particle
-    if (gi_local >= 0 && gi_local < local_num_bodies) {
+    if (constraint.localI >= 0 && constraint.localI < local_num_bodies) {
       for (int dof = 0; dof < 6; ++dof) {
-        d_nnz[gi_local * 6 + dof]++;
+        d_nnz[constraint.localI * 6 + dof]++;
       }
     }
 
-    if (gj_local >= 0 && gj_local < local_num_bodies) {
+    if (constraint.localJ >= 0 && constraint.localJ < local_num_bodies) {
       for (int dof = 0; dof < 6; ++dof) {
-        d_nnz[gj_local * 6 + dof]++;
+        d_nnz[constraint.localJ * 6 + dof]++;
       }
     }
   }
@@ -76,28 +73,19 @@ MatWrapper calculate_Jacobian(
     double F_i[6] = {n_i[0], n_i[1], n_i[2], torque_i[0], torque_i[1], torque_i[2]};
     double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
-    // Local body indices (assuming bodies are locally indexed 0, 1, 2, ...)
-    // You'll need to convert global body IDs to local indices
-    int gi_local = constraint.gidI;  // This should be the local index of body I
-    int gj_local = constraint.gidJ;  // This should be the local index of body J
-
-    PetscInt local_ids_i[6] = {gi_local * 6 + 0, gi_local * 6 + 1, gi_local * 6 + 2,
-                               gi_local * 6 + 3, gi_local * 6 + 4, gi_local * 6 + 5};
-    PetscInt local_ids_j[6] = {gj_local * 6 + 0, gj_local * 6 + 1, gj_local * 6 + 2,
-                               gj_local * 6 + 3, gj_local * 6 + 4, gj_local * 6 + 5};
-
-    // Use local constraint index
-    PetscInt c_local = c_local_idx;
-
     // Set values using local indices - PETSc will handle global mapping
     // Check if body I is owned by this process
-    if (gi_local >= 0 && gi_local < local_num_bodies) {
-      MatSetValuesLocal(D, 6, local_ids_i, 1, &c_local, F_i, INSERT_VALUES);
+    if (constraint.localI >= 0) {
+      PetscInt local_ids_i[6] = {constraint.localI * 6 + 0, constraint.localI * 6 + 1, constraint.localI * 6 + 2,
+                                 constraint.localI * 6 + 3, constraint.localI * 6 + 4, constraint.localI * 6 + 5};
+      MatSetValuesLocal(D, 6, local_ids_i, 1, &c_local_idx, F_i, INSERT_VALUES);
     }
 
     // Check if body J is owned by this process
-    if (gj_local >= 0 && gj_local < local_num_bodies) {
-      MatSetValuesLocal(D, 6, local_ids_j, 1, &c_local, F_j, INSERT_VALUES);
+    if (constraint.localJ >= 0) {
+      PetscInt local_ids_j[6] = {constraint.localJ * 6 + 0, constraint.localJ * 6 + 1, constraint.localJ * 6 + 2,
+                                 constraint.localJ * 6 + 3, constraint.localJ * 6 + 4, constraint.localJ * 6 + 5};
+      MatSetValuesLocal(D, 6, local_ids_j, 1, &c_local_idx, F_j, INSERT_VALUES);
     }
   }
 
