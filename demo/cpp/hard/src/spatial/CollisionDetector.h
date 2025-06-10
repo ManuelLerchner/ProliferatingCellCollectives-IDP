@@ -1,11 +1,26 @@
 #pragma once
 
 #include <array>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include "dynamics/Constraint.h"
 #include "simulation/Particle.h"
 #include "spatial/SpatialGrid.h"
+
+struct CollisionDetails {
+  bool collision_detected;   // Actual penetration/overlap
+  bool potential_collision;  // Early warning: separation < 0.3 * diameter
+  double overlap;
+  double min_distance;
+  double sum_radii;
+  double separation_ratio;  // min_distance / (0.3 * average_diameter)
+  std::array<double, 3> contact_point;
+  std::array<double, 3> normal;
+  std::array<double, 3> closest_p1;
+  std::array<double, 3> closest_p2;
+};
 
 class CollisionDetector {
  public:
@@ -25,11 +40,34 @@ class CollisionDetector {
   double collision_tolerance_;
   SpatialGrid spatial_grid_;
 
-  bool checkSpherocylinderCollision(
-      const Particle& p1, const Particle& p2,
-      double& overlap, std::array<double, 3>& contact_point,
-      std::array<double, 3>& normal);
+  CollisionDetails checkSpherocylinderCollision(
+      const Particle& p1, const Particle& p2);
 
   std::array<double, 3> getParticleDirection(const Particle& p);
   std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
+
+  // Simplified helper methods
+  void updateSpatialGrid(
+      const std::vector<Particle>& local_particles,
+      const std::vector<Particle>& ghost_particles);
+
+  void checkParticlePairs(
+      const std::vector<Particle>& particles1,
+      const std::vector<Particle>& particles2,
+      std::vector<Constraint>& constraints,
+      bool same_array);
+
+  void checkSpatialGridPairs(
+      const std::vector<Particle>& local_particles,
+      const std::vector<Particle>& ghost_particles,
+      std::vector<Constraint>& constraints);
+
+  const Particle* getParticle(
+      int local_idx, int global_id,
+      const std::vector<Particle>& local_particles,
+      const std::unordered_map<int, const Particle*>& ghost_map);
+
+  std::optional<Constraint> tryCreateConstraint(
+      const Particle& p1, const Particle& p2,
+      int local_i, int local_j, bool p1_local, bool p2_local);
 };

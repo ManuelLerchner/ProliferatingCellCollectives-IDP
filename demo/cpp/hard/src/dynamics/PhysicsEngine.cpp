@@ -59,6 +59,20 @@ VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecW
 }
 
 VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, double dt) {
+  PetscInt phi_size;
+  VecGetLocalSize(matrices.phi.get(), &phi_size);
+
+  // Check if all constraints are already satisfied (zero residual case)
+  PetscReal phi_norm;
+  VecNorm(matrices.phi.get(), NORM_2, &phi_norm);
+  if (phi_norm < 1e-16) {
+    PetscPrintf(PETSC_COMM_WORLD, "INFO: All constraints satisfied (phi_norm=%g) - returning zero forces\n", phi_norm);
+    VecWrapper zero_solution;
+    VecDuplicate(matrices.phi.get(), zero_solution.get_ref());
+    VecZeroEntries(zero_solution.get());
+    return zero_solution;
+  }
+
   auto gradient = [&](const VecWrapper& gamma) -> VecWrapper {
     // phi_next = phi + dt * phi_dot
     auto phi_dot = estimate_phi_dot(matrices.D, matrices.M, gamma);

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "util/ArrayMath.h"
@@ -24,17 +25,21 @@ std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getPa
   double diameter = 0.5;
   double length = p.getLength();
 
-  // Calculate endpoints of the rod
-  std::array<double, 3> start_point = pos - (length / 2 - diameter / 2) * dir;
-  std::array<double, 3> end_point = pos + (length / 2 - diameter / 2) * dir;
+  // Calculate endpoints of the rod using ArrayMath operations
+  double half_core_length = length / 2 - diameter / 2;
+  std::array<double, 3> half_length_vector = half_core_length * dir;
+  std::array<double, 3> start_point = pos - half_length_vector;
+  std::array<double, 3> end_point = pos + half_length_vector;
 
   return {start_point, end_point};
 }
 
-bool CollisionDetector::checkSpherocylinderCollision(
-    const Particle& p1, const Particle& p2,
-    double& overlap, std::array<double, 3>& contact_point,
-    std::array<double, 3>& normal) {
+CollisionDetails CollisionDetector::checkSpherocylinderCollision(
+    const Particle& p1, const Particle& p2) {
+  using namespace utils::ArrayMath;
+
+  CollisionDetails details;
+
   // Get the line segments (cylindrical cores) of both particles
   auto [p1_start, p1_end] = getParticleEndpoints(p1);
   auto [p2_start, p2_end] = getParticleEndpoints(p2);
@@ -42,38 +47,40 @@ bool CollisionDetector::checkSpherocylinderCollision(
   // Use DCPQuery for accurate segment-segment distance calculation
   DCPQuery distance_query;
   std::array<double, 3> closest_p1, closest_p2;
-  double min_distance = distance_query(p1_start, p1_end, p2_start, p2_end, closest_p1, closest_p2);
+  details.min_distance = distance_query(p1_start, p1_end, p2_start, p2_end, closest_p1, closest_p2);
 
-  // Check for collision
-  double sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
-  overlap = sum_radii - min_distance;
+  // Store closest points
+  details.closest_p1 = closest_p1;
+  details.closest_p2 = closest_p2;
 
-  if (overlap > collision_tolerance_) {
-    // Collision detected
+  // Calculate radii and overlap
+  details.sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
+  details.overlap = details.sum_radii - details.min_distance;
 
-    // Calculate contact point (midpoint between closest points)
-    contact_point = {
-        (closest_p1[0] + closest_p2[0]) / 2.0,
-        (closest_p1[1] + closest_p2[1]) / 2.0,
-        (closest_p1[2] + closest_p2[2]) / 2.0};
+  double separation = details.min_distance - details.sum_radii;
 
-    // Calculate normal vector (from p2 to p1)
-    double dx = closest_p1[0] - closest_p2[0];
-    double dy = closest_p1[1] - closest_p2[1];
-    double dz = closest_p1[2] - closest_p2[2];
+  details.potential_collision = separation < 0.3 * details.sum_radii;
 
-    double norm_length = std::sqrt(dx * dx + dy * dy + dz * dz);
-    if (norm_length > std::numeric_limits<double>::epsilon()) {
-      normal = {dx / norm_length, dy / norm_length, dz / norm_length};
-    } else {
-      // Particles are exactly on top of each other, use arbitrary normal
-      normal = {1.0, 0.0, 0.0};
-    }
+  // Check for actual collision
+  details.collision_detected = details.overlap > collision_tolerance_;
 
-    return true;
+  // Calculate early warning threshold (separation < 0.3 * diameter)
+  double average_diameter = (p1.getDiameter() + p2.getDiameter()) / 2.0;
+  double warning_threshold = 0.3 * average_diameter;
+
+  if (details.collision_detected || details.potential_collision) {
+    // Calculate contact point and normal using ArrayMath
+    details.contact_point = 0.5 * (closest_p1 + closest_p2);
+
+    std::array<double, 3> direction = closest_p1 - closest_p2;
+    details.normal = normalize(direction);
   }
 
-  return false;
+  return details;
+}
+
+std::array<double, 3> CollisionDetector::getParticleDirection(const Particle& p) {
+  return utils::Quaternion::getDirectionVector(p.getQuaternion());
 }
 
 std::vector<Constraint> CollisionDetector::detectCollisions(
@@ -81,200 +88,143 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
     const std::vector<Particle>& ghost_particles) {
   std::vector<Constraint> constraints;
 
-  // Update spatial grid bounds based on particle positions
-  if (!local_particles.empty()) {
-    std::array<double, 3> min_pos = local_particles[0].getPosition();
-    std::array<double, 3> max_pos = min_pos;
+  // Simple approach: check all local-local pairs directly
+  checkParticlePairs(local_particles, local_particles, constraints, true);
 
-    for (const auto& p : local_particles) {
-      const auto& pos = p.getPosition();
-      for (int i = 0; i < 3; ++i) {
-        min_pos[i] = std::min(min_pos[i], pos[i] - p.getLength());
-        max_pos[i] = std::max(max_pos[i], pos[i] + p.getLength());
-      }
-    }
-
-    for (const auto& p : ghost_particles) {
-      const auto& pos = p.getPosition();
-      for (int i = 0; i < 3; ++i) {
-        min_pos[i] = std::min(min_pos[i], pos[i] - p.getLength());
-        max_pos[i] = std::max(max_pos[i], pos[i] + p.getLength());
-      }
-    }
-
-    // Recreate spatial grid with updated bounds
-    double max_particle_size = 0.0;
-    for (const auto& p : local_particles) {
-      max_particle_size = std::max(max_particle_size, p.getLength());
-    }
-    for (const auto& p : ghost_particles) {
-      max_particle_size = std::max(max_particle_size, p.getLength());
-    }
-
-    double cell_size = std::max(1.0, max_particle_size);
-    spatial_grid_ = SpatialGrid(cell_size, min_pos, max_pos);
-  }
-
-  // Check collisions between local particles
-  for (int i = 0; i < local_particles.size(); ++i) {
-    for (int j = i + 1; j < local_particles.size(); ++j) {
-      const Particle& p1 = local_particles[i];
-      const Particle& p2 = local_particles[j];
-
-      double overlap;
-      std::array<double, 3> contact_point, normal;
-
-      if (checkSpherocylinderCollision(p1, p2, overlap, contact_point, normal)) {
-        // Calculate relative positions on particles
-        const auto& pos1 = p1.getPosition();
-        const auto& pos2 = p2.getPosition();
-
-        std::array<double, 3> rPos1 = {
-            contact_point[0] - pos1[0],
-            contact_point[1] - pos1[1],
-            contact_point[2] - pos1[2]};
-
-        std::array<double, 3> rPos2 = {
-            contact_point[0] - pos2[0],
-            contact_point[1] - pos2[1],
-            contact_point[2] - pos2[2]};
-
-        // Create constraint
-        constraints.emplace_back(Constraint(
-            -overlap,       // negative overlap indicates penetration
-            p1.setGID(),    // particle I global ID
-            p2.setGID(),    // particle J global ID
-            i,              // particle I local index
-            j,              // particle J local index
-            normal,         // surface normal from I to J
-            rPos1,          // relative position on particle I
-            rPos2,          // relative position on particle J
-            contact_point,  // lab frame location on particle I
-            contact_point   // lab frame location on particle J
-            ));
-      }
-    }
-  }
-
-  // Find potential collision pairs using spatial grid for local-ghost interactions
-  auto collision_pairs = spatial_grid_.findPotentialCollisions(local_particles, ghost_particles);
-
-  // Check each potential pair for actual collision (local-ghost interactions ONLY)
-  for (const auto& pair : collision_pairs) {
-    const Particle* p1 = nullptr;
-    const Particle* p2 = nullptr;
-    bool is_local_local_pair = false;
-
-    // Get particle references and check if this is a local-local pair (already handled above)
-    if (pair.local_idx_i >= 0) {
-      p1 = &local_particles[pair.local_idx_i];
-    } else {
-      // Find ghost particle by ID
-      for (const auto& ghost : ghost_particles) {
-        if (ghost.setGID() == pair.global_id_i) {
-          p1 = &ghost;
-          break;
-        }
-      }
-    }
-
-    if (pair.local_idx_j >= 0) {
-      p2 = &local_particles[pair.local_idx_j];
-      // If both particles are local, this is a local-local pair that was already handled
-      if (pair.local_idx_i >= 0) {
-        is_local_local_pair = true;
-      }
-    } else {
-      // Find ghost particle by ID
-      for (const auto& ghost : ghost_particles) {
-        if (ghost.setGID() == pair.global_id_j) {
-          p2 = &ghost;
-          break;
-        }
-      }
-    }
-
-    // Skip local-local pairs as they were already handled in the first loop
-    if (is_local_local_pair) {
-      continue;
-    }
-
-    // OWNERSHIP RULE: Only create constraint if this rank ownedByUs the particle with the smaller ID
-    // This prevents duplicate constraints across ranks
-    PetscInt smaller_id = std::min(pair.global_id_i, pair.global_id_j);
-    bool owns_smaller_id = false;
-
-    // Check if any local particle has the smaller ID
-    for (const auto& local_p : local_particles) {
-      if (local_p.setGID() == smaller_id) {
-        owns_smaller_id = true;
-        break;
-      }
-    }
-
-    // Skip if this rank doesn't own the particle with smaller ID
-    if (!owns_smaller_id) {
-      continue;
-    }
-
-    if (p1 && p2) {
-      double overlap;
-      std::array<double, 3> contact_point, normal;
-
-      if (checkSpherocylinderCollision(*p1, *p2, overlap, contact_point, normal)) {
-        // Calculate relative positions on particles
-        const auto& pos1 = p1->getPosition();
-        const auto& pos2 = p2->getPosition();
-
-        std::array<double, 3> rPos1 = {
-            contact_point[0] - pos1[0],
-            contact_point[1] - pos1[1],
-            contact_point[2] - pos1[2]};
-
-        std::array<double, 3> rPos2 = {
-            contact_point[0] - pos2[0],
-            contact_point[1] - pos2[1],
-            contact_point[2] - pos2[2]};
-
-        // Create constraint with proper local indices
-        // For cross-rank constraints, we need to determine which particles are actually local
-        int local_i = -1, local_j = -1;
-
-        // Only set local index if the particle is actually in our local particle array
-        // Check if particle I is local (local_idx_i is valid AND it's not a ghost)
-        if (pair.local_idx_i >= 0 && pair.local_idx_i < local_particles.size()) {
-          // Verify this is actually the right particle by checking ID
-          if (local_particles[pair.local_idx_i].setGID() == pair.global_id_i) {
-            local_i = pair.local_idx_i;
-          }
-        }
-
-        // Check if particle J is local (local_idx_j is valid AND it's not a ghost)
-        if (pair.local_idx_j >= 0 && pair.local_idx_j < local_particles.size()) {
-          // Verify this is actually the right particle by checking ID
-          if (local_particles[pair.local_idx_j].setGID() == pair.global_id_j) {
-            local_j = pair.local_idx_j;
-          }
-        }
-
-        constraints.emplace_back(Constraint(
-            -overlap,          // negative overlap indicates penetration
-            pair.global_id_i,  // particle I global ID
-            pair.global_id_j,  // particle J global ID
-            local_i,           // particle I local index (-1 if not local)
-            local_j,           // particle J local index (-1 if not local)
-            true,              // this rank ownedByUs the constraint
-            normal,            // surface normal from I to J
-            rPos1,             // relative position on particle I
-            rPos2,             // relative position on particle J
-            contact_point,     // lab frame location on particle I
-            contact_point      // lab frame location on particle J
-            ));
-      }
-    }
+  // Check local-ghost pairs using spatial grid
+  if (!ghost_particles.empty()) {
+    updateSpatialGrid(local_particles, ghost_particles);
+    checkSpatialGridPairs(local_particles, ghost_particles, constraints);
   }
 
   return constraints;
+}
+
+void CollisionDetector::updateSpatialGrid(
+    const std::vector<Particle>& local_particles,
+    const std::vector<Particle>& ghost_particles) {
+  if (local_particles.empty()) return;
+
+  // Calculate bounds
+  std::array<double, 3> min_pos = local_particles[0].getPosition();
+  std::array<double, 3> max_pos = min_pos;
+
+  auto updateBounds = [&](const Particle& p) {
+    const auto& pos = p.getPosition();
+    for (int i = 0; i < 3; ++i) {
+      min_pos[i] = std::min(min_pos[i], pos[i] - p.getLength());
+      max_pos[i] = std::max(max_pos[i], pos[i] + p.getLength());
+    }
+  };
+
+  for (const auto& p : local_particles) updateBounds(p);
+  for (const auto& p : ghost_particles) updateBounds(p);
+
+  // Calculate cell size
+  double max_particle_size = 0.0;
+  for (const auto& p : local_particles) {
+    max_particle_size = std::max(max_particle_size, p.getLength());
+  }
+  for (const auto& p : ghost_particles) {
+    max_particle_size = std::max(max_particle_size, p.getLength());
+  }
+
+  double cell_size = std::max(1.0, max_particle_size);
+  spatial_grid_ = SpatialGrid(cell_size, min_pos, max_pos);
+}
+
+void CollisionDetector::checkParticlePairs(
+    const std::vector<Particle>& particles1,
+    const std::vector<Particle>& particles2,
+    std::vector<Constraint>& constraints,
+    bool same_array) {
+  int start_j = same_array ? 1 : 0;
+
+  for (int i = 0; i < particles1.size(); ++i) {
+    int j_start = same_array ? i + start_j : 0;
+
+    for (int j = j_start; j < particles2.size(); ++j) {
+      auto constraint = tryCreateConstraint(
+          particles1[i], particles2[j],
+          i, same_array ? j : -1,  // local indices
+          true, same_array);       // locality flags
+
+      if (constraint.has_value()) {
+        constraints.push_back(constraint.value());
+      }
+    }
+  }
+}
+
+void CollisionDetector::checkSpatialGridPairs(
+    const std::vector<Particle>& local_particles,
+    const std::vector<Particle>& ghost_particles,
+    std::vector<Constraint>& constraints) {
+  // Create ghost lookup map for efficiency
+  std::unordered_map<int, const Particle*> ghost_map;
+  for (const auto& ghost : ghost_particles) {
+    ghost_map[ghost.setGID()] = &ghost;
+  }
+
+  auto collision_pairs = spatial_grid_.findPotentialCollisions(local_particles, ghost_particles);
+
+  for (const auto& pair : collision_pairs) {
+    // Skip local-local pairs (already handled)
+    if (pair.local_idx_i >= 0 && pair.local_idx_j >= 0) continue;
+
+    // Get particles
+    const Particle* p1 = getParticle(pair.local_idx_i, pair.global_id_i, local_particles, ghost_map);
+    const Particle* p2 = getParticle(pair.local_idx_j, pair.global_id_j, local_particles, ghost_map);
+
+    if (!p1 || !p2) continue;
+
+    auto constraint = tryCreateConstraint(
+        *p1, *p2,
+        pair.local_idx_i, pair.local_idx_j,
+        pair.local_idx_i >= 0, pair.local_idx_j >= 0);
+
+    if (constraint.has_value()) {
+      constraints.push_back(constraint.value());
+    }
+  }
+}
+
+const Particle* CollisionDetector::getParticle(
+    int local_idx, int global_id,
+    const std::vector<Particle>& local_particles,
+    const std::unordered_map<int, const Particle*>& ghost_map) {
+  if (local_idx >= 0 && local_idx < local_particles.size()) {
+    return &local_particles[local_idx];
+  }
+
+  auto it = ghost_map.find(global_id);
+  return (it != ghost_map.end()) ? it->second : nullptr;
+}
+
+std::optional<Constraint> CollisionDetector::tryCreateConstraint(
+    const Particle& p1, const Particle& p2,
+    int local_i, int local_j, bool p1_local, bool p2_local) {
+  CollisionDetails details = checkSpherocylinderCollision(p1, p2);
+
+  if (!details.collision_detected && !details.potential_collision) {
+    return std::nullopt;
+  }
+
+  using namespace utils::ArrayMath;
+
+  const auto& pos1 = p1.getPosition();
+  const auto& pos2 = p2.getPosition();
+  std::array<double, 3> rPos1 = details.contact_point - pos1;
+  std::array<double, 3> rPos2 = details.contact_point - pos2;
+
+  return Constraint(
+      -details.overlap,
+      p1.setGID(), p2.setGID(),
+      local_i, local_j,
+      p1_local, p2_local,
+      details.normal,
+      rPos1, rPos2,
+      details.contact_point);
 }
 
 std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Particle>& local_particles) {
@@ -343,6 +293,7 @@ std::vector<Particle> CollisionDetector::filterGhostParticles(
     const std::vector<Particle>& all_particles,
     const std::vector<Particle>& local_particles,
     double cutoff_distance) {
+  using namespace utils::ArrayMath;
   std::vector<Particle> ghost_particles;
 
   // Create set of local particle IDs for quick lookup
@@ -358,22 +309,20 @@ std::vector<Particle> CollisionDetector::filterGhostParticles(
       continue;
     }
 
-    // Check distance to any local particle
+    // Check distance to any local particle using ArrayMath
     bool within_cutoff = false;
     const auto& cand_pos = candidate.getPosition();
 
     for (const auto& local_p : local_particles) {
       const auto& local_pos = local_p.getPosition();
 
-      double dx = cand_pos[0] - local_pos[0];
-      double dy = cand_pos[1] - local_pos[1];
-      double dz = cand_pos[2] - local_pos[2];
-      double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+      // Use ArrayMath distance function for cleaner code
+      double dist = distance(cand_pos, local_pos);
 
       // Include some margin for particle sizes
       double margin = (candidate.getLength() + local_p.getLength()) / 2.0;
 
-      if (distance < cutoff_distance + margin) {
+      if (dist < cutoff_distance + margin) {
         within_cutoff = true;
         break;
       }

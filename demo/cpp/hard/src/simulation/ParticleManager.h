@@ -19,9 +19,6 @@ class ParticleManager {
   void commitNewParticles();
   void run(int num_steps);
 
-  // VTK logging functionality
-  void enableVTKLogging(const std::string& output_dir, int log_every_n_iterations = 1);
-
  private:
   void updateLocalParticlesFromSolution(const VecWrapper& solution);
   void validateParticleIDs() const;
@@ -41,6 +38,7 @@ class ParticleManager {
 
   // VTK logging
   std::unique_ptr<vtk::SimulationLogger> vtk_logger_;
+  std::unique_ptr<vtk::SimulationLogger> constraint_loggers_;
 
   // Helper method to create simulation state for VTK logging
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(

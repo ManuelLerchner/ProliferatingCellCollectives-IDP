@@ -15,8 +15,10 @@
 
 ParticleManager::ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config) {
   constraint_generator = std::make_unique<ConstraintGenerator>();
-
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
+
+  vtk_logger_ = vtk::createParticleLogger("./vtk_output");
+  constraint_loggers_ = vtk::createConstraintLogger("./vtk_output");
 }
 
 void ParticleManager::queueNewParticle(Particle p) {
@@ -87,7 +89,7 @@ void ParticleManager::run(int num_steps) {
     // Validate particle IDs after committing new particles
     validateParticleIDs();
 
-    // VTK logging if enabled
+    // VTK logging if enabled (initial state with no constraints)
     if (vtk_logger_ && i == 0) {
       auto sim_state = createSimulationState({});
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
@@ -95,8 +97,6 @@ void ParticleManager::run(int num_steps) {
 
     // Generate real collision constraints using the collision detection system
     std::vector<Constraint> local_constraints = constraint_generator->generateConstraints(local_particles);
-
-    std::cout << "Found " << local_constraints.size() << " constraints" << std::endl;
 
     auto mappings = createMappings(local_particles, local_constraints);
     auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));
@@ -106,12 +106,9 @@ void ParticleManager::run(int num_steps) {
     updateLocalParticlesFromSolution(deltaC);
 
     if (vtk_logger_) {
-      auto sim_state = createSimulationState({});
+      auto sim_state = createSimulationState(local_constraints);
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
-    }
-
-    for (const auto& p : local_particles) {
-      p.printState();
+      constraint_loggers_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
     }
   }
 }
@@ -158,13 +155,8 @@ void ParticleManager::validateParticleIDs() const {
           PetscPrintf(PETSC_COMM_WORLD, "ERROR: Duplicate global ID found: %d\n", all_ids[i]);
         }
       }
-      PetscPrintf(PETSC_COMM_WORLD, "Particle ID validation complete. Global count: %d\n", global_particle_count);
     }
   }
-}
-
-void ParticleManager::enableVTKLogging(const std::string& output_dir, int log_every_n_iterations) {
-  vtk_logger_ = vtk::createParticleLogger(output_dir);
 }
 
 std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationState(

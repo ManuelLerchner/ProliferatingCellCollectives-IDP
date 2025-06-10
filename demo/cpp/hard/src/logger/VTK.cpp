@@ -2,6 +2,7 @@
 
 #include <mpi.h>
 
+#include <cmath>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -184,7 +185,16 @@ void VTKLogger::addVTUFile(int timestep, double dt, const VTKGeometry& geometry,
     file << "    <FieldData>\n";
     for (const auto& [name, info] : field_data.fields) {
       file << "      <DataArray type=\"" << dataTypeToString(info.type) << "\" Name=\"" << name << "\" "
-           << "NumberOfTuples=\"1\">" << info.value_str << "</DataArray>\n";
+           << "NumberOfTuples=\"1\">";
+
+      // Cast to appropriate type if needed
+      if (info.type == DataType::Float32 && info.is_numeric) {
+        file << static_cast<float>(info.value_num);
+      } else {
+        file << info.value_str;
+      }
+
+      file << "</DataArray>\n";
     }
     file << "    </FieldData>\n";
   }
@@ -217,7 +227,8 @@ void VTKLogger::addVTUFile(int timestep, double dt, const VTKGeometry& geometry,
   file << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" "
        << "Name=\"positions\" format=\"ascii\">\n";
   for (const auto& pos : geometry.positions) {
-    file << "          " << pos[0] << " " << pos[1] << " " << pos[2] << "\n";
+    file << "          " << static_cast<float>(pos[0]) << " "
+         << static_cast<float>(pos[1]) << " " << static_cast<float>(pos[2]) << "\n";
   }
   file << "        </DataArray>\n";
   file << "      </Points>\n";
@@ -259,13 +270,25 @@ void VTKLogger::writeDataArray(std::ofstream& file, const VTKField& field, const
 
   if (field.components == 1) {
     for (double value : field.data) {
-      file << indent << "  " << value << "\n";
+      if (field.data_type == DataType::Float32) {
+        file << indent << "  " << static_cast<float>(value) << "\n";
+      } else if (field.data_type == DataType::Int32) {
+        file << indent << "  " << static_cast<int>(value) << "\n";
+      } else {
+        file << indent << "  " << value << "\n";
+      }
     }
   } else {
     for (size_t i = 0; i < field.data.size(); i += field.components) {
       file << indent << "  ";
       for (int j = 0; j < field.components && i + j < field.data.size(); ++j) {
-        file << field.data[i + j];
+        if (field.data_type == DataType::Float32) {
+          file << static_cast<float>(field.data[i + j]);
+        } else if (field.data_type == DataType::Int32) {
+          file << static_cast<int>(field.data[i + j]);
+        } else {
+          file << field.data[i + j];
+        }
         if (j < field.components - 1) file << " ";
       }
       file << "\n";
@@ -443,13 +466,16 @@ VTKGeometry ConstraintDataExtractor::extractGeometry(const void* state) {
   positions.reserve(sim_state->constraints.size());
 
   for (const auto& constraint : sim_state->constraints) {
-    // Calculate constraint center as midpoint between contact points
-    auto pos1 = constraint.rPosI;
-    auto pos2 = constraint.rPosJ;
-    std::array<double, 3> center = {
-        (pos1[0] + pos2[0]) / 2.0,
-        (pos1[1] + pos2[1]) / 2.0,
-        (pos1[2] + pos2[2]) / 2.0};
+    // Validate and sanitize contact point to avoid VTK parsing errors
+    auto center = constraint.contactPoint;
+
+    // Check for invalid/corrupted values and fix them
+    for (int i = 0; i < 3; ++i) {
+      if (std::isnan(center[i]) || std::isinf(center[i]) || std::abs(center[i]) > 1e10) {
+        center[i] = 0.0;  // Replace invalid values with 0
+      }
+    }
+
     positions.push_back(center);
   }
 
@@ -462,19 +488,48 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
 
   const size_t n_constraints = sim_state->constraints.size();
 
+  // Get MPI rank for ownership information
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  // Extract constraint information (keeping only essential fields)
   std::vector<std::array<double, 3>> normals;
-  std::vector<double> deltas;
+  std::vector<std::array<double, 3>> contact_positions;
+  std::vector<int> constraint_ranks;
+  std::vector<double> overlap_magnitudes;
 
+  // Reserve space for all vectors (one value per constraint)
   normals.reserve(n_constraints);
-  deltas.reserve(n_constraints);
+  contact_positions.reserve(n_constraints);
+  constraint_ranks.reserve(n_constraints);
+  overlap_magnitudes.reserve(n_constraints);
 
+  int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
+    // Basic constraint data
     normals.push_back(constraint.normI);
-    deltas.push_back(constraint.delta0);
+    overlap_magnitudes.push_back(-constraint.delta0);  // Positive overlap value
+
+    // Contact positions - sanitize for VTK output
+    auto sanitized_contact = constraint.contactPoint;
+    for (int i = 0; i < 3; ++i) {
+      if (std::isnan(sanitized_contact[i]) || std::isinf(sanitized_contact[i]) || std::abs(sanitized_contact[i]) > 1e10) {
+        sanitized_contact[i] = 0.0;
+      }
+    }
+    contact_positions.push_back(sanitized_contact);
+
+    // Rank information
+    constraint_ranks.push_back(rank);
+
+    constraint_index++;
   }
 
+  // Add essential fields only
   fields.emplace_back("normals", normals);
-  fields.emplace_back("deltas", deltas);
+  fields.emplace_back("overlap_magnitudes", overlap_magnitudes);
+  fields.emplace_back("constraint_ranks", constraint_ranks, DataType::Int32);
+  fields.emplace_back("contact_positions", contact_positions);
 
   return fields;
 }
@@ -487,8 +542,40 @@ std::vector<VTKField> ConstraintDataExtractor::extractCellData(const void* state
 VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time) {
   const auto* sim_state = static_cast<const ParticleSimulationState*>(state);
 
+  // Get MPI rank and size information
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
   VTKFieldData field_data;
+
+  // Basic constraint information
   field_data.addField("num_constraints", static_cast<int>(sim_state->constraints.size()));
+  field_data.addField("elapsed_time", elapsed_time);
+  field_data.addField("simulation_time", dt * timestep);
+
+  // Solver information
+  field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
+  field_data.addField("constraint_iterations", sim_state->constraint_iterations);
+  field_data.addField("max_overlap", sim_state->max_overlap);
+
+  // MPI information
+  field_data.addField("mpi_rank", rank);
+  field_data.addField("mpi_size", size);
+
+  // Count cross-rank constraints
+  int cross_rank_count = 0;
+  double max_constraint_overlap = 0.0;
+
+  for (const auto& constraint : sim_state->constraints) {
+    if (constraint.localI == -1 || constraint.localJ == -1) {
+      cross_rank_count++;
+    }
+    max_constraint_overlap = std::max(max_constraint_overlap, -constraint.delta0);
+  }
+
+  field_data.addField("cross_rank_constraints", cross_rank_count);
+  field_data.addField("max_constraint_overlap", max_constraint_overlap);
 
   return field_data;
 }

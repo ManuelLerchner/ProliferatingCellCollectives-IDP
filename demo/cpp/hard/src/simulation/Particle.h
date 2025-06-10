@@ -22,6 +22,10 @@ class Particle {
 
   void printState() const;
 
+  // Validation methods
+  bool isValid() const;
+  void validateAndWarn() const;
+
   const std::array<double, POSITION_SIZE>& getPosition() const;
   const std::array<double, QUATERNION_SIZE>& getQuaternion() const;
 

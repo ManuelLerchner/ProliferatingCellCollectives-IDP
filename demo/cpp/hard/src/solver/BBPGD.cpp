@@ -32,7 +32,9 @@ VecWrapper BBPGD(
   VecDuplicate(gamma.get(), zero_vec.get_ref());
   VecZeroEntries(zero_vec.get());
 
-  for (int i = 0; i < config.max_iterations; i++) {
+  int i = 0;
+
+  for (i = 0; i < config.max_iterations; i++) {
     // Store previous values
     VecCopy(gamma.get(), gamma_prev.get());
     VecCopy(g.get(), g_prev.get());
@@ -52,7 +54,6 @@ VecWrapper BBPGD(
 
     // Step 9-11: Check convergence
     if (res <= config.tolerance) {
-      PetscPrintf(PETSC_COMM_WORLD, "BBPGD converged after %d iterations, residual: %e\n", i + 1, res);
       break;
     }
 
@@ -74,15 +75,13 @@ VecWrapper BBPGD(
     VecDot(delta_gamma.get(), delta_g.get(), &denominator);    // δγ^T δg
 
     // Avoid division by zero
-    if (PetscAbsScalar(denominator) > 1e-14) {
-      alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
-      // Ensure alpha is positive and reasonable
-      alpha = std::max(1e-12, std::min(alpha, 1e12));
-    }
+    alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
+    // Ensure alpha is positive and reasonable
+    alpha = std::max(1e-12, std::min(alpha, 1e12));
+  }
 
-    if (i % 100 == 0) {
-      PetscPrintf(PETSC_COMM_WORLD, "BBPGD iteration %d, residual: %e, alpha: %e\n", i, res, alpha);
-    }
+  if (i == config.max_iterations) {
+    PetscPrintf(PETSC_COMM_WORLD, "BBPGD did not converge after %d iterations, residual: %e\n", i + 1, res);
   }
 
   return std::move(gamma);

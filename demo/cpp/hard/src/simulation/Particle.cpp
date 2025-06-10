@@ -23,6 +23,9 @@ void Particle::updateState(const PetscScalar* data, int particle_index, double d
   int base_offset = particle_index * STATE_SIZE;
   updatePosition(data, base_offset, dt);
   updateQuaternion(data, base_offset + POSITION_SIZE, dt);
+
+  // Final validation after complete state update
+  validateAndWarn();
 }
 
 void Particle::normalizeQuaternion() {
@@ -36,6 +39,71 @@ void Particle::normalizeQuaternion() {
     quaternion[1] /= norm;
     quaternion[2] /= norm;
     quaternion[3] /= norm;
+  } else {
+    // Fallback to unit quaternion if norm is too small
+    PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d quaternion norm too small (%g), resetting to unit quaternion\n", gID, norm);
+    quaternion[0] = 1.0;
+    quaternion[1] = 0.0;
+    quaternion[2] = 0.0;
+    quaternion[3] = 0.0;
+  }
+
+  // Validate after normalization
+  validateAndWarn();
+}
+
+bool Particle::isValid() const {
+  // Check position
+  for (int i = 0; i < POSITION_SIZE; ++i) {
+    if (!std::isfinite(position[i])) {
+      return false;
+    }
+  }
+
+  // Check quaternion
+  for (int i = 0; i < QUATERNION_SIZE; ++i) {
+    if (!std::isfinite(quaternion[i])) {
+      return false;
+    }
+  }
+
+  // Check physical properties
+  if (!std::isfinite(length) || !std::isfinite(diameter)) {
+    return false;
+  }
+
+  return true;
+}
+
+void Particle::validateAndWarn() const {
+  // Check position for NaN/infinity
+  for (int i = 0; i < POSITION_SIZE; ++i) {
+    if (!std::isfinite(position[i])) {
+      PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d position[%d] = %g (non-finite)\n", gID, i, position[i]);
+    }
+  }
+
+  // Check quaternion for NaN/infinity
+  for (int i = 0; i < QUATERNION_SIZE; ++i) {
+    if (!std::isfinite(quaternion[i])) {
+      PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d quaternion[%d] = %g (non-finite)\n", gID, i, quaternion[i]);
+    }
+  }
+
+  // Check physical properties
+  if (!std::isfinite(length)) {
+    PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d length = %g (non-finite)\n", gID, length);
+  }
+
+  if (!std::isfinite(diameter)) {
+    PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d diameter = %g (non-finite)\n", gID, diameter);
+  }
+
+  // Check for extremely large values that might indicate numerical issues
+  for (int i = 0; i < POSITION_SIZE; ++i) {
+    if (std::abs(position[i]) > 1e6) {
+      PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d position[%d] = %g (extremely large)\n", gID, i, position[i]);
+    }
   }
 }
 

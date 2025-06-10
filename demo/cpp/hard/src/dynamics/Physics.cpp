@@ -73,16 +73,15 @@ MatWrapper calculate_Jacobian(
     double F_i[6] = {n_i[0], n_i[1], n_i[2], torque_i[0], torque_i[1], torque_i[2]};
     double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
-    // Set values using local indices - PETSc will handle global mapping
     // Check if body I is owned by this process
-    if (constraint.localI >= 0) {
+    if (constraint.particleI_isLocal) {
       PetscInt local_ids_i[6] = {constraint.localI * 6 + 0, constraint.localI * 6 + 1, constraint.localI * 6 + 2,
                                  constraint.localI * 6 + 3, constraint.localI * 6 + 4, constraint.localI * 6 + 5};
       MatSetValuesLocal(D, 6, local_ids_i, 1, &c_local_idx, F_i, INSERT_VALUES);
     }
 
     // Check if body J is owned by this process
-    if (constraint.localJ >= 0) {
+    if (constraint.particleJ_isLocal) {
       PetscInt local_ids_j[6] = {constraint.localJ * 6 + 0, constraint.localJ * 6 + 1, constraint.localJ * 6 + 2,
                                  constraint.localJ * 6 + 3, constraint.localJ * 6 + 4, constraint.localJ * 6 + 5};
       MatSetValuesLocal(D, 6, local_ids_j, 1, &c_local_idx, F_j, INSERT_VALUES);
