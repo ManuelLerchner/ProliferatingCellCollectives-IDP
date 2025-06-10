@@ -147,7 +147,8 @@ void CollisionDetector::checkParticlePairs(
       auto constraint = tryCreateConstraint(
           particles1[i], particles2[j],
           i, same_array ? j : -1,  // local indices
-          true, same_array);       // locality flags
+          true, same_array,
+          collision_tolerance_);  // locality flags
 
       if (constraint.has_value()) {
         constraints.push_back(constraint.value());
@@ -181,7 +182,8 @@ void CollisionDetector::checkSpatialGridPairs(
     auto constraint = tryCreateConstraint(
         *p1, *p2,
         pair.local_idx_i, pair.local_idx_j,
-        pair.local_idx_i >= 0, pair.local_idx_j >= 0);
+        pair.local_idx_i >= 0, pair.local_idx_j >= 0,
+        collision_tolerance_);
 
     if (constraint.has_value()) {
       constraints.push_back(constraint.value());
@@ -203,7 +205,7 @@ const Particle* CollisionDetector::getParticle(
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     const Particle& p1, const Particle& p2,
-    int local_i, int local_j, bool p1_local, bool p2_local) {
+    int local_i, int local_j, bool p1_local, bool p2_local, double tolerance) {
   CollisionDetails details = checkSpherocylinderCollision(p1, p2);
 
   if (!details.collision_detected && !details.potential_collision) {
@@ -219,6 +221,7 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
 
   return Constraint(
       -details.overlap,
+      details.overlap > tolerance,
       p1.setGID(), p2.setGID(),
       local_i, local_j,
       p1_local, p2_local,

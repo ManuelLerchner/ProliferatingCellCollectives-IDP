@@ -17,6 +17,10 @@ VecWrapper BBPGD(
 
   double res = residual(g, gamma);
 
+  if (res <= config.tolerance) {
+    return gamma;
+  }
+
   // Initial step size
   double alpha = 1.0 / res;
 
@@ -74,14 +78,11 @@ VecWrapper BBPGD(
     VecDot(delta_gamma.get(), delta_gamma.get(), &numerator);  // ||δγ||²
     VecDot(delta_gamma.get(), delta_g.get(), &denominator);    // δγ^T δg
 
-    // Avoid division by zero
     alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
-    // Ensure alpha is positive and reasonable
-    alpha = std::max(1e-12, std::min(alpha, 1e12));
   }
 
   if (i == config.max_iterations) {
-    PetscPrintf(PETSC_COMM_WORLD, "BBPGD did not converge after %d iterations, residual: %e\n", i + 1, res);
+    PetscPrintf(PETSC_COMM_WORLD, "BBPGD did not converge after %d iterations, residual: %e\n", i, res);
   }
 
   return std::move(gamma);

@@ -495,20 +495,23 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   // Extract constraint information (keeping only essential fields)
   std::vector<std::array<double, 3>> normals;
   std::vector<std::array<double, 3>> contact_positions;
-  std::vector<int> constraint_ranks;
+  std::vector<int> ranks;
   std::vector<double> overlap_magnitudes;
+  std::vector<int> violated;
 
   // Reserve space for all vectors (one value per constraint)
   normals.reserve(n_constraints);
   contact_positions.reserve(n_constraints);
-  constraint_ranks.reserve(n_constraints);
+  ranks.reserve(n_constraints);
   overlap_magnitudes.reserve(n_constraints);
+  violated.reserve(n_constraints);
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
     // Basic constraint data
     normals.push_back(constraint.normI);
     overlap_magnitudes.push_back(-constraint.delta0);  // Positive overlap value
+    violated.push_back(constraint.violated ? 1 : 0);
 
     // Contact positions - sanitize for VTK output
     auto sanitized_contact = constraint.contactPoint;
@@ -520,7 +523,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
     contact_positions.push_back(sanitized_contact);
 
     // Rank information
-    constraint_ranks.push_back(rank);
+    ranks.push_back(rank);
 
     constraint_index++;
   }
@@ -528,7 +531,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   // Add essential fields only
   fields.emplace_back("normals", normals);
   fields.emplace_back("overlap_magnitudes", overlap_magnitudes);
-  fields.emplace_back("constraint_ranks", constraint_ranks, DataType::Int32);
+  fields.emplace_back("violated", violated, DataType::Int32);
+  fields.emplace_back("rank", ranks, DataType::Int32);
   fields.emplace_back("contact_positions", contact_positions);
 
   return fields;

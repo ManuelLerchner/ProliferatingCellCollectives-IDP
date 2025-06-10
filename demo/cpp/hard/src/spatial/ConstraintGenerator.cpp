@@ -4,8 +4,8 @@
 #include "dynamics/Constraint.h"
 #include "simulation/Particle.h"
 
-ConstraintGenerator::ConstraintGenerator()
-    : collision_detector_(CollisionDetector(1e-6)), ghost_cutoff_distance_(5.0) {
+ConstraintGenerator::ConstraintGenerator(double collision_tolerance, double ghost_cutoff_distance)
+    : collision_detector_(CollisionDetector(collision_tolerance)), ghost_cutoff_distance_(ghost_cutoff_distance) {
 }
 
 std::vector<Constraint> ConstraintGenerator::generateConstraints(const std::vector<Particle>& local_particles) {

@@ -24,7 +24,7 @@ struct CollisionDetails {
 
 class CollisionDetector {
  public:
-  CollisionDetector(double collision_tolerance = 1e-6);
+  CollisionDetector(double collision_tolerance);
 
   std::vector<Constraint> detectCollisions(
       const std::vector<Particle>& local_particles,
@@ -69,5 +69,5 @@ class CollisionDetector {
 
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,
-      int local_i, int local_j, bool p1_local, bool p2_local);
+      int local_i, int local_j, bool p1_local, bool p2_local, double tolerance);
 };

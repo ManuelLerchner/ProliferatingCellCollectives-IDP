@@ -14,7 +14,7 @@
 #include "spatial/ConstraintGenerator.h"
 
 ParticleManager::ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config) {
-  constraint_generator = std::make_unique<ConstraintGenerator>();
+  constraint_generator = std::make_unique<ConstraintGenerator>(solver_config.tolerance, 2.5 * physics_config.l0);
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 
   vtk_logger_ = vtk::createParticleLogger("./vtk_output");
@@ -83,6 +83,9 @@ void ParticleManager::updateLocalParticlesFromSolution(const VecWrapper& dC) {
 }
 
 void ParticleManager::run(int num_steps) {
+  // Print progress information
+  printProgress(0, num_steps, {});
+
   for (int i = 0; i < num_steps; i++) {
     commitNewParticles();
 
@@ -110,7 +113,11 @@ void ParticleManager::run(int num_steps) {
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
       constraint_loggers_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
     }
+
+    // Print progress information
+    printProgress(i + 1, num_steps, local_constraints);
   }
+  PetscPrintf(PETSC_COMM_WORLD, "\n");
 }
 
 void ParticleManager::validateParticleIDs() const {
@@ -157,6 +164,30 @@ void ParticleManager::validateParticleIDs() const {
       }
     }
   }
+}
+
+void ParticleManager::printProgress(int current_iteration, int total_iterations, const std::vector<Constraint>& local_constraints) const {
+  PetscInt global_constraint_count;
+
+  PetscInt local_constraint_count = local_constraints.size();
+  MPI_Allreduce(&local_constraint_count, &global_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+
+  PetscInt local_violated_constraint_count = std::count_if(local_constraints.begin(), local_constraints.end(), [](const Constraint& constraint) { return constraint.violated; });
+  PetscInt global_violated_constraint_count;
+  MPI_Allreduce(&local_violated_constraint_count, &global_violated_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+
+  double current_time = current_iteration * physics_engine->solver_config.dt / 60;
+  double total_time = total_iterations * physics_engine->solver_config.dt / 60;
+
+  PetscPrintf(PETSC_COMM_WORLD,
+              "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d |    ",
+              current_iteration, total_iterations,
+              ((double)(current_iteration) / total_iterations) * 100.0,
+              current_time, total_time,
+              global_particle_count, global_constraint_count, global_violated_constraint_count);
+
+  // Flush output to ensure immediate display
+  fflush(stdout);
 }
 
 std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationState(

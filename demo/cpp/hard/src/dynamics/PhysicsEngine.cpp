@@ -65,7 +65,7 @@ VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, doub
   // Check if all constraints are already satisfied (zero residual case)
   PetscReal phi_norm;
   VecNorm(matrices.phi.get(), NORM_2, &phi_norm);
-  if (phi_norm < 1e-16) {
+  if (phi_norm < solver_config.tolerance) {
     PetscPrintf(PETSC_COMM_WORLD, "INFO: All constraints satisfied (phi_norm=%g) - returning zero forces\n", phi_norm);
     VecWrapper zero_solution;
     VecDuplicate(matrices.phi.get(), zero_solution.get_ref());

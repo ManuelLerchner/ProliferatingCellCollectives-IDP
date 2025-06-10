@@ -22,6 +22,7 @@ class ParticleManager {
  private:
   void updateLocalParticlesFromSolution(const VecWrapper& solution);
   void validateParticleIDs() const;
+  void printProgress(int current_iteration, int total_iterations, const std::vector<Constraint>& local_constraints) const;
 
   std::vector<Particle> local_particles;
   std::vector<Particle> new_particle_buffer;

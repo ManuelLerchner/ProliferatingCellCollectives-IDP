@@ -5,13 +5,15 @@
 class Constraint {
  public:
   // Constructor with local IDs and ownership
-  Constraint(double delta0, int gidI, int gidJ, int localI, int localJ,
+  Constraint(double delta0, bool violated, int gidI, int gidJ, int localI, int localJ,
              bool particleI_isLocal, bool particleJ_isLocal,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint);
 
  public:
   // current overlap of the constraint
   double delta0;
+  // whether the constraint is violated
+  bool violated;
   // unique global ID of particle I
   int gidI;
   // unique global ID of particle J
