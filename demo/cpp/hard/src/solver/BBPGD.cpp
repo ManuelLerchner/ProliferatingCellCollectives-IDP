@@ -78,7 +78,15 @@ VecWrapper BBPGD(
     VecDot(delta_gamma.get(), delta_gamma.get(), &numerator);  // ||δγ||²
     VecDot(delta_gamma.get(), delta_g.get(), &denominator);    // δγ^T δg
 
-    alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
+    // Safeguard against division by zero or very small denominator
+    if (PetscAbsReal(PetscRealPart(denominator)) < 1e-12) {
+      alpha = 1.0;  // Fallback to unit step size
+    } else {
+      alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
+      // Bound the step size to prevent overshooting
+      alpha = std::min(alpha, 10.0);
+      alpha = std::max(alpha, 1e-6);
+    }
   }
 
   if (i == config.max_iterations) {

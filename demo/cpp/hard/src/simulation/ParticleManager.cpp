@@ -59,27 +59,33 @@ void ParticleManager::commitNewParticles() {
   this->global_particle_count += total_added_this_step;
 }
 
-void ParticleManager::updateLocalParticlesFromSolution(const VecWrapper& dC) {
+void ParticleManager::updateLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution) {
   // Get local portion of dC vector to update particles
   const PetscScalar* dC_array;
-  VecGetArrayRead(dC.get(), &dC_array);
+  const PetscScalar* df_array;
+  const PetscScalar* dU_array;
 
+  VecGetArrayRead(solution.deltaC.get(), &dC_array);
+  VecGetArrayRead(solution.df.get(), &df_array);
+  VecGetArrayRead(solution.dU.get(), &dU_array);
+
+  const PetscScalar* gamma_array;
   PetscInt local_size;
-  VecGetLocalSize(dC.get(), &local_size);
+  VecGetLocalSize(solution.deltaC.get(), &local_size);
 
   for (int i = 0; i < local_particles.size(); i++) {
     int base_offset = i * Particle::getStateSize();
     if (base_offset + Particle::getStateSize() <= local_size) {
       // Update particle state using helper function
 
-      local_particles[i].updateState(dC_array, i, physics_engine->solver_config.dt);
+      double dt = physics_engine->solver_config.dt;
+      local_particles[i].eulerStep(dC_array, i, dt);
 
-      // Normalize quaternion to maintain unit length
-      local_particles[i].normalizeQuaternion();
+      local_particles[i].setForceAndTorque(df_array, dU_array, i);
     }
   }
 
-  VecRestoreArrayRead(dC.get(), &dC_array);
+  VecRestoreArrayRead(solution.deltaC.get(), &dC_array);
 }
 
 void ParticleManager::run(int num_steps) {
@@ -104,9 +110,9 @@ void ParticleManager::run(int num_steps) {
     auto mappings = createMappings(local_particles, local_constraints);
     auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));
 
-    auto deltaC = physics_engine->solveConstraints(matrices, physics_engine->solver_config.dt);
+    auto solution = physics_engine->solveConstraints(matrices, physics_engine->solver_config.dt);
 
-    updateLocalParticlesFromSolution(deltaC);
+    updateLocalParticlesFromSolution(solution);
 
     if (vtk_logger_) {
       auto sim_state = createSimulationState(local_constraints);
@@ -199,9 +205,13 @@ std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationS
   state->constraints = constraints;
 
   // Initialize empty force/torque vectors (would be populated by physics engine in full implementation)
-  state->forces.resize(local_particles.size(), {0.0, 0.0, 0.0});
-  state->torques.resize(local_particles.size(), {0.0, 0.0, 0.0});
-  state->impedance.resize(local_particles.size(), 1.0);
+  state->forces.resize(local_particles.size());
+  state->torques.resize(local_particles.size());
+
+  for (int i = 0; i < local_particles.size(); i++) {
+    state->forces[i] = local_particles[i].getForce();
+    state->torques[i] = local_particles[i].getTorque();
+  }
 
   // Calculate max overlap from constraints
   state->max_overlap = 0.0;

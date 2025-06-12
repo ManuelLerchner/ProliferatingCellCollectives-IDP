@@ -6,23 +6,45 @@
 
 Particle::Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter) : gID(gID), position(position), quaternion(quaternion), length(length), diameter(diameter) {}
 
-void Particle::updatePosition(const PetscScalar* data, int offset, double dt) {
-  position[0] += dt * PetscRealPart(data[offset + 0]);
-  position[1] += dt * PetscRealPart(data[offset + 1]);
-  position[2] += dt * PetscRealPart(data[offset + 2]);
+void Particle::updatePosition(const PetscScalar* dC, int offset, double dt) {
+  position[0] += dt * PetscRealPart(dC[offset + 0]);
+  position[1] += dt * PetscRealPart(dC[offset + 1]);
+  position[2] += dt * PetscRealPart(dC[offset + 2]);
 }
 
-void Particle::updateQuaternion(const PetscScalar* data, int offset, double dt) {
-  quaternion[0] += dt * PetscRealPart(data[offset + 0]);
-  quaternion[1] += dt * PetscRealPart(data[offset + 1]);
-  quaternion[2] += dt * PetscRealPart(data[offset + 2]);
-  quaternion[3] += dt * PetscRealPart(data[offset + 3]);
+void Particle::updateQuaternion(const PetscScalar* dC, int offset, double dt) {
+  quaternion[0] += dt * PetscRealPart(dC[offset + 0]);
+  quaternion[1] += dt * PetscRealPart(dC[offset + 1]);
+  quaternion[2] += dt * PetscRealPart(dC[offset + 2]);
+  quaternion[3] += dt * PetscRealPart(dC[offset + 3]);
+  normalizeQuaternion();
 }
 
-void Particle::updateState(const PetscScalar* data, int particle_index, double dt) {
+void Particle::setForce(const PetscScalar* df, int offset) {
+  force[0] = PetscRealPart(df[offset + 0]);
+  force[1] = PetscRealPart(df[offset + 1]);
+  force[2] = PetscRealPart(df[offset + 2]);
+}
+
+void Particle::setTorque(const PetscScalar* df, int offset) {
+  torque[0] = PetscRealPart(df[offset + 0]);
+  torque[1] = PetscRealPart(df[offset + 1]);
+  torque[2] = PetscRealPart(df[offset + 2]);
+}
+
+void Particle::eulerStep(const PetscScalar* dC, int particle_index, double dt) {
   int base_offset = particle_index * STATE_SIZE;
-  updatePosition(data, base_offset, dt);
-  updateQuaternion(data, base_offset + POSITION_SIZE, dt);
+  updatePosition(dC, base_offset, dt);
+  updateQuaternion(dC, base_offset + POSITION_SIZE, dt);
+
+  // Final validation after complete state update
+  validateAndWarn();
+}
+
+void Particle::setForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index) {
+  int base_offset = particle_index * STATE_SIZE;
+  setForce(f, base_offset + POSITION_SIZE + QUATERNION_SIZE);
+  setTorque(f, base_offset + POSITION_SIZE + QUATERNION_SIZE + 3);
 
   // Final validation after complete state update
   validateAndWarn();
@@ -125,6 +147,14 @@ void Particle::setGID(PetscInt gID) {
 
 const std::array<double, POSITION_SIZE>& Particle::getPosition() const {
   return position;
+}
+
+const std::array<double, 3>& Particle::getForce() const {
+  return force;
+}
+
+const std::array<double, 3>& Particle::getTorque() const {
+  return torque;
 }
 
 double Particle::getLength() const {

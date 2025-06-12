@@ -17,9 +17,16 @@ class PhysicsEngine {
     VecWrapper phi;
   };
 
+  struct PhysicsSolution {
+    VecWrapper deltaC;
+    VecWrapper df;
+    VecWrapper dU;
+    VecWrapper gamma;
+  };
+
   PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints, Mappings mappings);
 
-  VecWrapper solveConstraints(const PhysicsMatrices& matrices, double dt);
+  PhysicsSolution solveConstraints(const PhysicsMatrices& matrices, double dt);
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;

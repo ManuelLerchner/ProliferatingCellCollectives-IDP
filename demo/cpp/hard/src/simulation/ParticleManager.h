@@ -20,7 +20,7 @@ class ParticleManager {
   void run(int num_steps);
 
  private:
-  void updateLocalParticlesFromSolution(const VecWrapper& solution);
+  void updateLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution);
   void validateParticleIDs() const;
   void printProgress(int current_iteration, int total_iterations, const std::vector<Constraint>& local_constraints) const;
 

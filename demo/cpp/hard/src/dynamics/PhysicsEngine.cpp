@@ -58,7 +58,7 @@ VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecW
   return std::move(phi_dot);
 }
 
-VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, double dt) {
+PhysicsEngine::PhysicsSolution PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, double dt) {
   PetscInt phi_size;
   VecGetLocalSize(matrices.phi.get(), &phi_size);
 
@@ -70,7 +70,7 @@ VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, doub
     VecWrapper zero_solution;
     VecDuplicate(matrices.phi.get(), zero_solution.get_ref());
     VecZeroEntries(zero_solution.get());
-    return zero_solution;
+    return {.deltaC = std::move(zero_solution), .df = std::move(zero_solution), .dU = std::move(zero_solution), .gamma = std::move(zero_solution)};
   }
 
   auto gradient = [&](const VecWrapper& gamma) -> VecWrapper {
@@ -138,5 +138,5 @@ VecWrapper PhysicsEngine::solveConstraints(const PhysicsMatrices& matrices, doub
   MatCreateVecs(matrices.G.get(), NULL, deltaC.get_ref());
   MatMult(matrices.G.get(), dU.get(), deltaC.get());
 
-  return std::move(deltaC);
+  return {.deltaC = std::move(deltaC), .df = std::move(df), .dU = std::move(dU), .gamma = std::move(gamma)};
 }
