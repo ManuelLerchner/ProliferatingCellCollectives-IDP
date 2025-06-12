@@ -19,18 +19,22 @@ class ParticleManager {
   void commitNewParticles();
   void run(int num_steps);
 
- private:
-  void updateLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution);
-  void validateParticleIDs() const;
-  void printProgress(int current_iteration, int total_iterations, const std::vector<Constraint>& local_constraints) const;
+  std::unique_ptr<PhysicsEngine> physics_engine;
+  std::unique_ptr<ConstraintGenerator> constraint_generator;
 
   std::vector<Particle> local_particles;
+  void eulerStepfromSolution(const VecWrapper& dC);
+  void moveLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution);
+  void resetLocalParticles();
+
+ private:
+  void validateParticleIDs() const;
+  void printProgress(int current_iteration, int total_iterations, const PhysicsEngine::SolverSolution& solver_solution) const;
+
   std::vector<Particle> new_particle_buffer;
   PetscInt global_particle_count = 0;
 
   // Composition instead of doing everything inline
-  std::unique_ptr<PhysicsEngine> physics_engine;
-  std::unique_ptr<ConstraintGenerator> constraint_generator;
   PhysicsConfig config;
 
   // Reusable vectors for configuration updates
@@ -43,5 +47,5 @@ class ParticleManager {
 
   // Helper method to create simulation state for VTK logging
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
-      const std::vector<class Constraint>& constraints) const;
+      const PhysicsEngine::SolverSolution& solver_solution) const;
 };

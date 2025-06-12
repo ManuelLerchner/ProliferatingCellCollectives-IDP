@@ -7,7 +7,13 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
-VecWrapper BBPGD(
+struct BBPGDResult {
+  VecWrapper gamma;
+  long long bbpgd_iterations;
+  double residual;
+};
+
+BBPGDResult BBPGD(
     std::function<VecWrapper(const VecWrapper&)> gradient,
     std::function<double(const VecWrapper&, const VecWrapper&)> residual,
     const VecWrapper& gamma0,

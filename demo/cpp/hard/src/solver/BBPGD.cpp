@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-VecWrapper BBPGD(
+BBPGDResult BBPGD(
     std::function<VecWrapper(const VecWrapper&)> gradient,
     std::function<double(const VecWrapper&, const VecWrapper&)> residual,
     const VecWrapper& gamma0,
@@ -18,7 +18,7 @@ VecWrapper BBPGD(
   double res = residual(g, gamma);
 
   if (res <= config.tolerance) {
-    return gamma;
+    return {.gamma = std::move(gamma), .bbpgd_iterations = 0, .residual = res};
   }
 
   // Initial step size
@@ -90,8 +90,8 @@ VecWrapper BBPGD(
   }
 
   if (i == config.max_iterations) {
-    PetscPrintf(PETSC_COMM_WORLD, "BBPGD did not converge after %d iterations, residual: %e\n", i, res);
+    PetscPrintf(PETSC_COMM_WORLD, "BBPGD did not converge after %d iterations\n", i);
   }
 
-  return std::move(gamma);
+  return {.gamma = std::move(gamma), .bbpgd_iterations = i, .residual = res};
 }

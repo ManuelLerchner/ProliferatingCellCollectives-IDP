@@ -59,15 +59,47 @@ void ParticleManager::commitNewParticles() {
   this->global_particle_count += total_added_this_step;
 }
 
-void ParticleManager::updateLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution) {
+void ParticleManager::eulerStepfromSolution(const VecWrapper& dC) {
+  // Get local portion of dC vector to update particles
+  const PetscScalar* dC_array;
+
+  VecGetArrayRead(dC.get(), &dC_array);
+
+  const PetscScalar* gamma_array;
+  PetscInt local_size;
+  VecGetLocalSize(dC.get(), &local_size);
+
+  for (int i = 0; i < local_particles.size(); i++) {
+    int base_offset = i * Particle::getStateSize();
+    if (base_offset + Particle::getStateSize() <= local_size) {
+      // Update particle state using helper function
+
+      double dt = physics_engine->solver_config.dt;
+      local_particles[i].eulerStep(dC_array, i, dt);
+    }
+  }
+
+  VecRestoreArrayRead(dC.get(), &dC_array);
+}
+
+void ParticleManager::resetLocalParticles() {
+  const PetscScalar* gamma_array;
+  PetscInt local_size;
+
+  for (int i = 0; i < local_particles.size(); i++) {
+    local_particles[i].clearForceAndTorque();
+  }
+}
+
+void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution) {
   // Get local portion of dC vector to update particles
   const PetscScalar* dC_array;
   const PetscScalar* df_array;
   const PetscScalar* dU_array;
 
   VecGetArrayRead(solution.deltaC.get(), &dC_array);
-  VecGetArrayRead(solution.df.get(), &df_array);
-  VecGetArrayRead(solution.dU.get(), &dU_array);
+  VecGetArrayRead(solution.f.get(), &df_array);
+  VecGetArrayRead(solution.u.get(), &dU_array);
 
   const PetscScalar* gamma_array;
   PetscInt local_size;
@@ -81,47 +113,45 @@ void ParticleManager::updateLocalParticlesFromSolution(const PhysicsEngine::Phys
       double dt = physics_engine->solver_config.dt;
       local_particles[i].eulerStep(dC_array, i, dt);
 
-      local_particles[i].setForceAndTorque(df_array, dU_array, i);
+      local_particles[i].addForceAndTorque(df_array, dU_array, i);
     }
   }
 
   VecRestoreArrayRead(solution.deltaC.get(), &dC_array);
+  VecRestoreArrayRead(solution.f.get(), &df_array);
+  VecRestoreArrayRead(solution.u.get(), &dU_array);
 }
 
 void ParticleManager::run(int num_steps) {
   // Print progress information
-  printProgress(0, num_steps, {});
 
   for (int i = 0; i < num_steps; i++) {
     commitNewParticles();
+    resetLocalParticles();
 
     // Validate particle IDs after committing new particles
     validateParticleIDs();
 
     // VTK logging if enabled (initial state with no constraints)
     if (vtk_logger_ && i == 0) {
-      auto sim_state = createSimulationState({});
+      PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .max_overlap = 0.0};
+      auto sim_state = createSimulationState(solver_solution);
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
+      printProgress(i, num_steps, {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .max_overlap = 0.0});
     }
 
-    // Generate real collision constraints using the collision detection system
-    std::vector<Constraint> local_constraints = constraint_generator->generateConstraints(local_particles);
-
-    auto mappings = createMappings(local_particles, local_constraints);
-    auto matrices = physics_engine->calculateMatrices(local_particles, local_constraints, std::move(mappings));
-
-    auto solution = physics_engine->solveConstraints(matrices, physics_engine->solver_config.dt);
-
-    updateLocalParticlesFromSolution(solution);
+    auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
+    // physics_engine->solveConstraintsRecursiveConstraints(*this, physics_engine->solver_config.dt);
 
     if (vtk_logger_) {
-      auto sim_state = createSimulationState(local_constraints);
+      auto sim_state = createSimulationState(solver_solution);
+
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
       constraint_loggers_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
+      printProgress(i + 1, num_steps, solver_solution);
     }
 
     // Print progress information
-    printProgress(i + 1, num_steps, local_constraints);
   }
   PetscPrintf(PETSC_COMM_WORLD, "\n");
 }
@@ -172,13 +202,13 @@ void ParticleManager::validateParticleIDs() const {
   }
 }
 
-void ParticleManager::printProgress(int current_iteration, int total_iterations, const std::vector<Constraint>& local_constraints) const {
+void ParticleManager::printProgress(int current_iteration, int total_iterations, const PhysicsEngine::SolverSolution& solver_solution) const {
   PetscInt global_constraint_count;
 
-  PetscInt local_constraint_count = local_constraints.size();
+  PetscInt local_constraint_count = solver_solution.constraints.size();
   MPI_Allreduce(&local_constraint_count, &global_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
 
-  PetscInt local_violated_constraint_count = std::count_if(local_constraints.begin(), local_constraints.end(), [](const Constraint& constraint) { return constraint.violated; });
+  PetscInt local_violated_constraint_count = std::count_if(solver_solution.constraints.begin(), solver_solution.constraints.end(), [](const Constraint& constraint) { return constraint.violated; });
   PetscInt global_violated_constraint_count;
   MPI_Allreduce(&local_violated_constraint_count, &global_violated_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
 
@@ -186,23 +216,23 @@ void ParticleManager::printProgress(int current_iteration, int total_iterations,
   double total_time = total_iterations * physics_engine->solver_config.dt / 60;
 
   PetscPrintf(PETSC_COMM_WORLD,
-              "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d |    ",
+              "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d | Overlap: %4f |    ",
               current_iteration, total_iterations,
               ((double)(current_iteration) / total_iterations) * 100.0,
               current_time, total_time,
-              global_particle_count, global_constraint_count, global_violated_constraint_count);
+              global_particle_count, global_constraint_count, global_violated_constraint_count, solver_solution.max_overlap);
 
   // Flush output to ensure immediate display
   fflush(stdout);
 }
 
 std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationState(
-    const std::vector<Constraint>& constraints) const {
+    const PhysicsEngine::SolverSolution& solver_solution) const {
   auto state = std::make_unique<vtk::ParticleSimulationState>();
 
   // Copy particles
   state->particles = local_particles;
-  state->constraints = constraints;
+  state->constraints = std::move(solver_solution.constraints);
 
   // Initialize empty force/torque vectors (would be populated by physics engine in full implementation)
   state->forces.resize(local_particles.size());
@@ -214,15 +244,12 @@ std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationS
   }
 
   // Calculate max overlap from constraints
-  state->max_overlap = 0.0;
-  for (const auto& constraint : constraints) {
-    state->max_overlap = std::max(state->max_overlap, std::abs(constraint.delta0));
-  }
+  state->max_overlap = solver_solution.max_overlap;
 
   // Set other state values
-  state->constraint_iterations = constraints.size();
-  state->avg_bbpgd_iterations = 1;  // Would be set by solver in full implementation
-  state->l0 = 1.0;                  // Default particle length
+  state->constraint_iterations = solver_solution.constraint_iterations;
+  state->avg_bbpgd_iterations = static_cast<double>(solver_solution.bbpgd_iterations) / solver_solution.constraint_iterations;
+  state->l0 = 1.0;
 
   return state;
 }

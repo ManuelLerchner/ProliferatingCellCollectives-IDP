@@ -3,6 +3,7 @@
 #include <petsc.h>
 
 #include <cmath>
+#include <iostream>
 
 Particle::Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter) : gID(gID), position(position), quaternion(quaternion), length(length), diameter(diameter) {}
 
@@ -20,16 +21,16 @@ void Particle::updateQuaternion(const PetscScalar* dC, int offset, double dt) {
   normalizeQuaternion();
 }
 
-void Particle::setForce(const PetscScalar* df, int offset) {
-  force[0] = PetscRealPart(df[offset + 0]);
-  force[1] = PetscRealPart(df[offset + 1]);
-  force[2] = PetscRealPart(df[offset + 2]);
+void Particle::addForce(const PetscScalar* df, int offset) {
+  force[0] += PetscRealPart(df[offset + 0]);
+  force[1] += PetscRealPart(df[offset + 1]);
+  force[2] += PetscRealPart(df[offset + 2]);
 }
 
-void Particle::setTorque(const PetscScalar* df, int offset) {
-  torque[0] = PetscRealPart(df[offset + 0]);
-  torque[1] = PetscRealPart(df[offset + 1]);
-  torque[2] = PetscRealPart(df[offset + 2]);
+void Particle::addTorque(const PetscScalar* df, int offset) {
+  torque[0] += PetscRealPart(df[offset + 0]);
+  torque[1] += PetscRealPart(df[offset + 1]);
+  torque[2] += PetscRealPart(df[offset + 2]);
 }
 
 void Particle::eulerStep(const PetscScalar* dC, int particle_index, double dt) {
@@ -41,10 +42,19 @@ void Particle::eulerStep(const PetscScalar* dC, int particle_index, double dt) {
   validateAndWarn();
 }
 
-void Particle::setForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index) {
-  int base_offset = particle_index * STATE_SIZE;
-  setForce(f, base_offset + POSITION_SIZE + QUATERNION_SIZE);
-  setTorque(f, base_offset + POSITION_SIZE + QUATERNION_SIZE + 3);
+void Particle::clearForceAndTorque() {
+  force[0] = 0.0;
+  force[1] = 0.0;
+  force[2] = 0.0;
+  torque[0] = 0.0;
+  torque[1] = 0.0;
+  torque[2] = 0.0;
+}
+
+void Particle::addForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index) {
+  int base_offset = particle_index * 6;
+  addForce(f, base_offset);
+  addTorque(f, base_offset + 3);
 
   // Final validation after complete state update
   validateAndWarn();

@@ -8,6 +8,9 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
+// Forward declaration
+class ParticleManager;
+
 class PhysicsEngine {
  public:
   PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config);
@@ -18,15 +21,23 @@ class PhysicsEngine {
   };
 
   struct PhysicsSolution {
-    VecWrapper deltaC;
-    VecWrapper df;
-    VecWrapper dU;
-    VecWrapper gamma;
+    const VecWrapper& deltaC;
+    const VecWrapper& f;
+    const VecWrapper& u;
+    const VecWrapper& gamma;
   };
 
-  PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints, Mappings mappings);
+  struct SolverSolution {
+    std::vector<Constraint> constraints;
+    const long long constraint_iterations;
+    const long long bbpgd_iterations;
+    const double max_overlap;
+  };
 
-  PhysicsSolution solveConstraints(const PhysicsMatrices& matrices, double dt);
+  PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints);
+
+  SolverSolution solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt);
+  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt);
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;
