@@ -9,7 +9,7 @@
 class ConstraintGenerator {
  public:
   ConstraintGenerator(double collision_tolerance, double ghost_cutoff_distance);
-  std::vector<Constraint> generateConstraints(const std::vector<Particle>& particles);
+  std::vector<Constraint> generateConstraints(const std::vector<Particle>& particles, int constraint_iterations);
 
  private:
   CollisionDetector collision_detector_;

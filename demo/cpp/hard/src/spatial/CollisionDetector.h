@@ -28,7 +28,8 @@ class CollisionDetector {
 
   std::vector<Constraint> detectCollisions(
       const std::vector<Particle>& local_particles,
-      const std::vector<Particle>& ghost_particles);
+      const std::vector<Particle>& ghost_particles,
+      int constraint_iterations);
 
   static std::vector<Particle> gatherAllParticles(const std::vector<Particle>& local_particles);
   static std::vector<Particle> filterGhostParticles(
@@ -55,12 +56,14 @@ class CollisionDetector {
       const std::vector<Particle>& particles1,
       const std::vector<Particle>& particles2,
       std::vector<Constraint>& constraints,
-      bool same_array);
+      bool same_array,
+      int constraint_iterations);
 
   void checkSpatialGridPairs(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles,
-      std::vector<Constraint>& constraints);
+      std::vector<Constraint>& constraints,
+      int constraint_iterations);
 
   const Particle* getParticle(
       int local_idx, int global_id,
@@ -69,5 +72,5 @@ class CollisionDetector {
 
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,
-      int local_i, int local_j, bool p1_local, bool p2_local, double tolerance);
+      int local_i, int local_j, bool p1_local, bool p2_local, double tolerance, int constraint_iterations);
 };

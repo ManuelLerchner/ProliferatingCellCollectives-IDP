@@ -448,7 +448,7 @@ VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int time
   field_data.addField("simulation_time", dt * timestep);
   field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
-  field_data.addField("max_overlap", sim_state->max_overlap);
+  field_data.addField("residum", sim_state->residum);
   field_data.addField("num_particles", static_cast<int>(sim_state->particles.size()));
 
   // Add MPI information
@@ -498,6 +498,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<int> ranks;
   std::vector<double> overlap_magnitudes;
   std::vector<int> violated;
+  std::vector<int> constraint_iterations;
 
   // Reserve space for all vectors (one value per constraint)
   normals.reserve(n_constraints);
@@ -505,6 +506,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   ranks.reserve(n_constraints);
   overlap_magnitudes.reserve(n_constraints);
   violated.reserve(n_constraints);
+  constraint_iterations.reserve(n_constraints);
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
@@ -512,6 +514,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
     normals.push_back(constraint.normI);
     overlap_magnitudes.push_back(-constraint.delta0);  // Positive overlap value
     violated.push_back(constraint.violated ? 1 : 0);
+    constraint_iterations.push_back(constraint.constraint_iterations);
 
     // Contact positions - sanitize for VTK output
     auto sanitized_contact = constraint.contactPoint;
@@ -534,6 +537,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   fields.emplace_back("violated", violated, DataType::Int32);
   fields.emplace_back("rank", ranks, DataType::Int32);
   fields.emplace_back("contact_positions", contact_positions);
+  fields.emplace_back("constraint_iterations", constraint_iterations, DataType::Int32);
 
   return fields;
 }
@@ -561,7 +565,7 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   // Solver information
   field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
-  field_data.addField("max_overlap", sim_state->max_overlap);
+  field_data.addField("residum", sim_state->residum);
 
   // MPI information
   field_data.addField("mpi_rank", rank);

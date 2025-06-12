@@ -134,14 +134,14 @@ void ParticleManager::run(int num_steps) {
 
     // VTK logging if enabled (initial state with no constraints)
     if (vtk_logger_ && i == 0) {
-      PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .max_overlap = 0.0};
+      PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residum = 0.0};
       auto sim_state = createSimulationState(solver_solution);
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
-      printProgress(i, num_steps, {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .max_overlap = 0.0});
+      printProgress(i, num_steps, {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residum = 0.0});
     }
 
-    auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
-    // physics_engine->solveConstraintsRecursiveConstraints(*this, physics_engine->solver_config.dt);
+    // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
+    auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, physics_engine->solver_config.dt);
 
     if (vtk_logger_) {
       auto sim_state = createSimulationState(solver_solution);
@@ -220,7 +220,7 @@ void ParticleManager::printProgress(int current_iteration, int total_iterations,
               current_iteration, total_iterations,
               ((double)(current_iteration) / total_iterations) * 100.0,
               current_time, total_time,
-              global_particle_count, global_constraint_count, global_violated_constraint_count, solver_solution.max_overlap);
+              global_particle_count, global_constraint_count, global_violated_constraint_count, solver_solution.residum);
 
   // Flush output to ensure immediate display
   fflush(stdout);
@@ -244,7 +244,7 @@ std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationS
   }
 
   // Calculate max overlap from constraints
-  state->max_overlap = solver_solution.max_overlap;
+  state->residum = solver_solution.residum;
 
   // Set other state values
   state->constraint_iterations = solver_solution.constraint_iterations;

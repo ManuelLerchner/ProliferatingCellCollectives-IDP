@@ -85,16 +85,17 @@ std::array<double, 3> CollisionDetector::getParticleDirection(const Particle& p)
 
 std::vector<Constraint> CollisionDetector::detectCollisions(
     const std::vector<Particle>& local_particles,
-    const std::vector<Particle>& ghost_particles) {
+    const std::vector<Particle>& ghost_particles,
+    int constraint_iterations) {
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairs(local_particles, local_particles, constraints, true);
+  checkParticlePairs(local_particles, local_particles, constraints, true, constraint_iterations);
 
   // Check local-ghost pairs using spatial grid
   if (!ghost_particles.empty()) {
     updateSpatialGrid(local_particles, ghost_particles);
-    checkSpatialGridPairs(local_particles, ghost_particles, constraints);
+    checkSpatialGridPairs(local_particles, ghost_particles, constraints, constraint_iterations);
   }
 
   return constraints;
@@ -137,7 +138,8 @@ void CollisionDetector::checkParticlePairs(
     const std::vector<Particle>& particles1,
     const std::vector<Particle>& particles2,
     std::vector<Constraint>& constraints,
-    bool same_array) {
+    bool same_array,
+    int constraint_iterations) {
   int start_j = same_array ? 1 : 0;
 
   for (int i = 0; i < particles1.size(); ++i) {
@@ -148,7 +150,8 @@ void CollisionDetector::checkParticlePairs(
           particles1[i], particles2[j],
           i, same_array ? j : -1,  // local indices
           true, same_array,
-          collision_tolerance_);  // locality flags
+          collision_tolerance_,
+          constraint_iterations);  // locality flags
 
       if (constraint.has_value()) {
         constraints.push_back(constraint.value());
@@ -160,7 +163,8 @@ void CollisionDetector::checkParticlePairs(
 void CollisionDetector::checkSpatialGridPairs(
     const std::vector<Particle>& local_particles,
     const std::vector<Particle>& ghost_particles,
-    std::vector<Constraint>& constraints) {
+    std::vector<Constraint>& constraints,
+    int constraint_iterations) {
   // Create ghost lookup map for efficiency
   std::unordered_map<int, const Particle*> ghost_map;
   for (const auto& ghost : ghost_particles) {
@@ -183,7 +187,8 @@ void CollisionDetector::checkSpatialGridPairs(
         *p1, *p2,
         pair.local_idx_i, pair.local_idx_j,
         pair.local_idx_i >= 0, pair.local_idx_j >= 0,
-        collision_tolerance_);
+        collision_tolerance_,
+        constraint_iterations);
 
     if (constraint.has_value()) {
       constraints.push_back(constraint.value());
@@ -205,7 +210,7 @@ const Particle* CollisionDetector::getParticle(
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     const Particle& p1, const Particle& p2,
-    int local_i, int local_j, bool p1_local, bool p2_local, double tolerance) {
+    int local_i, int local_j, bool p1_local, bool p2_local, double tolerance, int constraint_iterations) {
   CollisionDetails details = checkSpherocylinderCollision(p1, p2);
 
   if (!details.collision_detected && !details.potential_collision) {
@@ -227,7 +232,8 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       p1_local, p2_local,
       details.normal,
       rPos1, rPos2,
-      details.contact_point);
+      details.contact_point,
+      constraint_iterations);
 }
 
 std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Particle>& local_particles) {

@@ -7,7 +7,8 @@ class Constraint {
   // Constructor with local IDs and ownership
   Constraint(double delta0, bool violated, int gidI, int gidJ, int localI, int localJ,
              bool particleI_isLocal, bool particleJ_isLocal,
-             std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint);
+             std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
+             int constraint_iterations);
 
  public:
   // current overlap of the constraint
@@ -34,6 +35,8 @@ class Constraint {
   std::array<double, 3> rPosJ;
   // contact point on particle I
   std::array<double, 3> contactPoint;
+  // number of constraint iterations since the constraint was created
+  int constraint_iterations;
 
   void print() const;
 };

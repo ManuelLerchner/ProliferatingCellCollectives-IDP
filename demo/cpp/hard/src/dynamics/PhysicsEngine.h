@@ -8,6 +8,8 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
+#define MAX_CONSTRAINT_ITERATIONS 3
+
 // Forward declaration
 class ParticleManager;
 
@@ -24,14 +26,13 @@ class PhysicsEngine {
     const VecWrapper& deltaC;
     const VecWrapper& f;
     const VecWrapper& u;
-    const VecWrapper& gamma;
   };
 
   struct SolverSolution {
     std::vector<Constraint> constraints;
     const long long constraint_iterations;
     const long long bbpgd_iterations;
-    const double max_overlap;
+    const double residum;
   };
 
   PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints);

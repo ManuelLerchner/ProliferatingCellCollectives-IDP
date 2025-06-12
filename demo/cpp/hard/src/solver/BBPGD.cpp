@@ -90,7 +90,7 @@ BBPGDResult BBPGD(
   }
 
   if (i == config.max_iterations) {
-    PetscPrintf(PETSC_COMM_WORLD, "BBPGD did not converge after %d iterations\n", i);
+    PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %d iterations", i);
   }
 
   return {.gamma = std::move(gamma), .bbpgd_iterations = i, .residual = res};
