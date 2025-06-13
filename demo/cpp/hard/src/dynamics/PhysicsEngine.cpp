@@ -40,30 +40,6 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   return {.D = std::move(D), .M = std::move(M), .G = std::move(G), .phi = std::move(phi)};
 }
 
-#include <petscerror.h>
-
-// VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma) {
-//   // phi_dot = D^T @ G @ M @ D @ gamma
-
-//   // t1 = D @ gamma
-//   VecWrapper t1;
-//   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, t1.get_ref()));
-//   PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma.get(), t1.get()));
-
-//   // t2 = M @ t1
-//   VecWrapper t2;
-//   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, t2.get_ref()));
-//   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, t1.get(), t2.get()));
-
-//   // t3 = D^T @ t2
-
-//   VecWrapper phi_dot;
-//   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), phi_dot.get_ref(), NULL));
-//   PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, t2.get(), phi_dot.get()));
-
-//   return std::move(phi_dot);
-// }
-
 void estimate_phi_dot_inplace(
     const MatWrapper& D,
     const MatWrapper& M,
@@ -105,36 +81,33 @@ std::tuple<VecWrapper, VecWrapper, VecWrapper> calculate_forces(const MatWrapper
 }
 
 double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
-  // projected_gradient = gamma > 0 ? gradient_val : min(0, gradient_val)
-  // residual = norm_inf(projected_gradient)
-
-  const PetscScalar *gamma_array, *grad_array;
-
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma.get(), &gamma_array));
+  // Get raw arrays (no copies, just access)
+  const PetscScalar *grad_array, *gamma_array;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val.get(), &grad_array));
-
-  VecWrapper projected;
-  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(gradient_val.get(), projected.get_ref()));
-
-  PetscScalar* proj_array;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(projected.get(), &proj_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma.get(), &gamma_array));
 
   PetscInt n;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gamma.get(), &n));
-  for (PetscInt i = 0; i < n; i++) {
-    proj_array[i] = (PetscRealPart(gamma_array[i]) > 0)
-                        ? grad_array[i]
-                        : std::min(0.0, PetscRealPart(grad_array[i]));
-  }
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(projected.get(), &proj_array));
 
+  // Compute local residual (no temporary Vec needed)
+  double local_max = 0.0;
+  for (PetscInt i = 0; i < n; i++) {
+    const double g_i = PetscRealPart(grad_array[i]);
+    const double proj_g_i = (PetscRealPart(gamma_array[i]) > 0)
+                                ? g_i
+                                : std::min(0.0, g_i);
+    local_max = std::max(local_max, std::abs(proj_g_i));
+  }
+
+  // Restore arrays (critical for PETSc consistency)
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val.get(), &grad_array));
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma.get(), &gamma_array));
 
-  double norm;
-  PetscCallAbort(PETSC_COMM_WORLD, VecNorm(projected.get(), NORM_INFINITY, &norm));
-  return norm;
-};
+  // Global reduction (MPI_MAX for NORM_INFINITY)
+  double global_max;
+  MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, PETSC_COMM_WORLD);
+  return global_max;
+}
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt) {
   auto local_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, 0);
