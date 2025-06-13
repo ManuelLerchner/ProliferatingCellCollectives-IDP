@@ -30,7 +30,7 @@ class PhysicsEngine {
     std::vector<Constraint> constraints;
     const long long constraint_iterations;
     const long long bbpgd_iterations;
-    const double residum;
+    const double residual;
   };
 
   PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints);

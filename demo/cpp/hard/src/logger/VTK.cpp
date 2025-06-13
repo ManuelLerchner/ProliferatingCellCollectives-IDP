@@ -448,7 +448,7 @@ VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int time
   field_data.addField("simulation_time", dt * timestep);
   field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
-  field_data.addField("residum", sim_state->residum);
+  field_data.addField("residual", sim_state->residual);
   field_data.addField("num_particles", static_cast<int>(sim_state->particles.size()));
 
   // Add MPI information
@@ -565,7 +565,7 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   // Solver information
   field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
-  field_data.addField("residum", sim_state->residum);
+  field_data.addField("residual", sim_state->residual);
 
   // MPI information
   field_data.addField("mpi_rank", rank);

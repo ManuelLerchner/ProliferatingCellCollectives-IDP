@@ -14,7 +14,7 @@ struct BBPGDResult {
 };
 
 BBPGDResult BBPGD(
-    std::function<VecWrapper(const VecWrapper&)> gradient,
+    std::function<void(const VecWrapper& input, VecWrapper& output)>,
     std::function<double(const VecWrapper&, const VecWrapper&)> residual,
     const VecWrapper& gamma0,
     const SolverConfig& solver_config);

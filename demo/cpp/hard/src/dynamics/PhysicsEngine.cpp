@@ -42,26 +42,47 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
 
 #include <petscerror.h>
 
-VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma) {
-  // phi_dot = D^T @ G @ M @ D @ gamma
+// VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma) {
+//   // phi_dot = D^T @ G @ M @ D @ gamma
 
-  // t1 = D @ gamma
-  VecWrapper t1;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, t1.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma.get(), t1.get()));
+//   // t1 = D @ gamma
+//   VecWrapper t1;
+//   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, t1.get_ref()));
+//   PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma.get(), t1.get()));
 
-  // t2 = M @ t1
-  VecWrapper t2;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, t2.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, t1.get(), t2.get()));
+//   // t2 = M @ t1
+//   VecWrapper t2;
+//   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, t2.get_ref()));
+//   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, t1.get(), t2.get()));
 
-  // t3 = D^T @ t2
+//   // t3 = D^T @ t2
 
-  VecWrapper phi_dot;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), phi_dot.get_ref(), NULL));
-  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, t2.get(), phi_dot.get()));
+//   VecWrapper phi_dot;
+//   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), phi_dot.get_ref(), NULL));
+//   PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, t2.get(), phi_dot.get()));
 
-  return std::move(phi_dot);
+//   return std::move(phi_dot);
+// }
+
+void estimate_phi_dot_inplace(
+    const MatWrapper& D,
+    const MatWrapper& M,
+    const VecWrapper& gamma,
+    VecWrapper& t1_workspace,
+    VecWrapper& t2_workspace,
+    VecWrapper& phi_dot_out) {
+  // This function assumes all workspace and output vectors are correctly pre-allocated.
+
+  // Step 1: t1_workspace = D * gamma
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D.get(), gamma.get(), t1_workspace.get()));
+
+  // Step 2: t2_workspace = M * t1_workspace
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M.get(), t1_workspace.get(), t2_workspace.get()));
+
+  // Step 3: phi_dot_out = D^T * t2_workspace
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D.get(), t2_workspace.get(), phi_dot_out.get()));
+
+  // No return, the result is in phi_dot_out.
 }
 
 std::tuple<VecWrapper, VecWrapper, VecWrapper> calculate_forces(const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& gamma) {
@@ -85,7 +106,7 @@ std::tuple<VecWrapper, VecWrapper, VecWrapper> calculate_forces(const MatWrapper
 
 double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
   // projected_gradient = gamma > 0 ? gradient_val : min(0, gradient_val)
-  // residum = norm_inf(projected_gradient)
+  // residual = norm_inf(projected_gradient)
 
   const PetscScalar *gamma_array, *grad_array;
 
@@ -122,25 +143,29 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
   PetscInt phi_size;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(matrices.phi.get(), &phi_size));
 
-  // Check if all constraints are already satisfied (zero residum case)
+  // Check if all constraints are already satisfied (zero residual case)
   double min_seperation;
   PetscCallAbort(PETSC_COMM_WORLD, VecMin(matrices.phi.get(), NULL, &min_seperation));
   double max_overlap = -min_seperation;
 
   if (max_overlap < solver_config.tolerance) {
-    return {.constraints = local_constraints, .constraint_iterations = 0, .bbpgd_iterations = 0, .residum = max_overlap};
+    return {.constraints = local_constraints, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = max_overlap};
   }
 
-  auto gradient = [&](const VecWrapper& gamma) -> VecWrapper {
-    auto phi_dot = estimate_phi_dot(matrices.D, matrices.M, gamma);
+  // create a workspace for phi_dot and t1 and t2
+  VecWrapper phi_dot;
+  VecWrapper t1_workspace;
+  VecWrapper t2_workspace;
+  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi.get(), phi_dot.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.D.get(), NULL, t1_workspace.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, t2_workspace.get_ref()));
+
+  auto gradient = [&](const VecWrapper& gamma, VecWrapper& phi_next_out) {
+    estimate_phi_dot_inplace(matrices.D, matrices.M, gamma, t1_workspace, t2_workspace, phi_dot);
 
     // phi_next = phi + dt * phi_dot
-    VecWrapper phi_next;
-    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi.get(), phi_next.get_ref()));
-    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(matrices.phi.get(), phi_next.get()));
-    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next.get(), dt, phi_dot.get()));
-
-    return phi_next;
+    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(matrices.phi.get(), phi_next_out.get()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot.get()));
   };
 
   VecWrapper gamma0;
@@ -154,7 +179,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
   PhysicsEngine::PhysicsSolution solution = {.deltaC = std::move(deltaC), .f = std::move(F), .u = std::move(U)};
   particle_manager.moveLocalParticlesFromSolution(solution);
 
-  return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_iterations, .residum = res};
+  return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt) {
@@ -178,11 +203,16 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY));
   PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY));
 
+  VecWrapper gamma_diff_workspace;
+  VecWrapper phi_dot_workspace;
+  VecWrapper t1_workspace;
+  VecWrapper t2_workspace;
+
   std::vector<Constraint> all_constraints;
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
 
-  double max_overlap = std::numeric_limits<double>::infinity();
+  double res = std::numeric_limits<double>::infinity();
 
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     std::vector<Constraint> current_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, constraint_iterations);
@@ -207,7 +237,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // get maximal overlap
     double min_seperation;
     PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
-    max_overlap = -min_seperation;
+    double max_overlap = -min_seperation;
     if (max_overlap < solver_config.tolerance) {
       break;
     }
@@ -221,26 +251,43 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // stack D with matrices.D
     D_PREV = horizontallyStackMatrices(D_PREV, matrices.D);
 
-    auto gradient = [&](const VecWrapper& gamma_curr) -> VecWrapper {
-      // print shape of gamma_curr and GAMMA_PREV
-      VecWrapper gamma_diff;
-      PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(gamma_curr.get(), gamma_diff.get_ref()));
-      PetscCallAbort(PETSC_COMM_WORLD, VecCopy(gamma_curr.get(), gamma_diff.get()));
-      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get()));
+    if (constraint_iterations == 0) {
+      VecDuplicate(GAMMA_PREV.get(), gamma_diff_workspace.get_ref());
+      VecDuplicate(PHI_PREV.get(), phi_dot_workspace.get_ref());
+      MatCreateVecs(D_PREV.get(), NULL, t1_workspace.get_ref());
+      MatCreateVecs(matrices.M.get(), NULL, t2_workspace.get_ref());
+    } else {
+      // A simple check. If sizes changed, we must recreate.
+      PetscInt prev_size, curr_size;
+      VecGetSize(gamma_diff_workspace, &prev_size);
+      VecGetSize(GAMMA_PREV, &curr_size);
+      if (prev_size != curr_size) {
+        VecDestroy(gamma_diff_workspace.get_ref());
+        VecDestroy(phi_dot_workspace.get_ref());
+        VecDestroy(t1_workspace.get_ref());
+        VecDestroy(t2_workspace.get_ref());
+        VecDuplicate(GAMMA_PREV.get(), gamma_diff_workspace.get_ref());
+        VecDuplicate(PHI_PREV.get(), phi_dot_workspace.get_ref());
+        MatCreateVecs(D_PREV.get(), NULL, t1_workspace.get_ref());
+        MatCreateVecs(matrices.M.get(), NULL, t2_workspace.get_ref());
+      }
+    }
 
-      auto phi_dot = estimate_phi_dot(D_PREV, matrices.M, gamma_diff);
+    auto gradient = [&](const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
+      VecCopy(gamma_curr.get(), gamma_diff_workspace.get());
+      VecAXPY(gamma_diff_workspace.get(), -1.0, GAMMA_PREV.get());
 
-      // phi_next = phi + dt * phi_dot
-      VecWrapper phi_next;
-      PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(PHI_PREV.get(), phi_next.get_ref()));
-      PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_PREV.get(), phi_next.get()));
-      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next.get(), dt, phi_dot.get()));
+      estimate_phi_dot_inplace(D_PREV, matrices.M, gamma_diff_workspace,
+                               t1_workspace, t2_workspace, phi_dot_workspace);
 
-      return std::move(phi_next);
+      // phi_next_out = PHI_PREV + dt * phi_dot_workspace
+      PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_PREV.get(), phi_next_out.get()));
+      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_workspace.get()));
     };
 
     // solve for gamma
-    auto [GAMMA_NEXT, bbpgd_iterations_temp, res] = BBPGD(gradient, residual, GAMMA_PREV, solver_config);
+    auto [GAMMA_NEXT, bbpgd_iterations_temp, res_temp] = BBPGD(gradient, residual, GAMMA_PREV, solver_config);
+    res = res_temp;
     bbpgd_iterations += bbpgd_iterations_temp;
 
     VecWrapper gamma_diff;
@@ -253,12 +300,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     // prepare for next iteration
     particle_manager.moveLocalParticlesFromSolution({.deltaC = deltaC, .f = df, .u = dU});
-    PHI_PREV = gradient(GAMMA_NEXT);
+    gradient(GAMMA_NEXT, PHI_PREV);
     GAMMA_PREV = std::move(GAMMA_NEXT);
     D_PREV = std::move(D_PREV);
 
     constraint_iterations++;
   }
 
-  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residum = max_overlap};
+  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }

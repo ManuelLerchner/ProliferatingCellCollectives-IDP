@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
   double END_TIME = 1;  // 5 hours
 
   int num_steps = END_TIME / solver_config.dt;
-  num_steps = 10000;
+  num_steps = 100;
   system.run(num_steps);
 
   PetscFinalize();

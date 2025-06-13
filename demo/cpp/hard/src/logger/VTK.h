@@ -140,7 +140,7 @@ struct ParticleSimulationState {
   std::vector<std::array<double, 3>> forces;
   std::vector<std::array<double, 3>> torques;
   std::vector<double> impedance;
-  double residum;
+  double residual;
   int constraint_iterations;
   int avg_bbpgd_iterations;
   double l0;

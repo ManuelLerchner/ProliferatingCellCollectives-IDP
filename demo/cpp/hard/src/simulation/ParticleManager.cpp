@@ -134,10 +134,10 @@ void ParticleManager::run(int num_steps) {
 
     // VTK logging if enabled (initial state with no constraints)
     if (vtk_logger_ && i == 0) {
-      PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residum = 0.0};
+      PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0.0};
       auto sim_state = createSimulationState(solver_solution);
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
-      printProgress(i, num_steps, {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residum = 0.0});
+      printProgress(i, num_steps, {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0.0});
     }
 
     // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
@@ -216,11 +216,11 @@ void ParticleManager::printProgress(int current_iteration, int total_iterations,
   double total_time = total_iterations * physics_engine->solver_config.dt / 60;
 
   PetscPrintf(PETSC_COMM_WORLD,
-              "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d | Overlap: %4f |    ",
+              "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d | Residual: %4f |    ",
               current_iteration, total_iterations,
               ((double)(current_iteration) / total_iterations) * 100.0,
               current_time, total_time,
-              global_particle_count, global_constraint_count, global_violated_constraint_count, solver_solution.residum);
+              global_particle_count, global_constraint_count, global_violated_constraint_count, solver_solution.residual);
 
   // Flush output to ensure immediate display
   fflush(stdout);
@@ -244,7 +244,7 @@ std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationS
   }
 
   // Calculate max overlap from constraints
-  state->residum = solver_solution.residum;
+  state->residual = solver_solution.residual;
 
   // Set other state values
   state->constraint_iterations = solver_solution.constraint_iterations;

@@ -2,7 +2,7 @@
 
 #include "PetscRaii.h"
 
-VecWrapper concatenateVectors(VecWrapper& vec1, VecWrapper& vec2) {
+VecWrapper concatenateVectors(const VecWrapper& vec1, const VecWrapper& vec2) {
   PetscInt vec1_size, vec2_size;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(vec1, &vec1_size));
   PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(vec2, &vec2_size));
@@ -55,8 +55,7 @@ VecWrapper concatenateVectors(VecWrapper& vec1, VecWrapper& vec2) {
   return result;
 }
 
-MatWrapper horizontallyStackMatrices(MatWrapper& matLeft, MatWrapper& matRight) {
-  // Get matrix dimensions
+MatWrapper horizontallyStackMatrices(const MatWrapper& matLeft, const MatWrapper& matRight) {
   PetscInt m1, m2, n_left, n_right;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(matLeft, &m1, NULL));
   PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(matRight, &m2, NULL));
