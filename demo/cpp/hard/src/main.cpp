@@ -9,6 +9,11 @@
 int main(int argc, char** argv) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
 
+  int total_ranks;
+  MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
+
+  PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
+
   double DT = 180;  // seconds
 
   PhysicsConfig physic_config = {
@@ -17,14 +22,15 @@ int main(int argc, char** argv) {
       .l0 = 1.0,
       .LAMBDA = 2.44e-1,
   };
-  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e4, .max_iterations = 30000};
+  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e4, .max_bbpgd_iterations = 10000, .max_recursive_iterations = 3};
 
   ParticleManager system(physic_config, solver_config);
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
-  for (int i = 0; i < 10; i++) {
+  int number_of_particles = 2000.0 / (2 * total_ranks);
+  for (int i = 0; i < number_of_particles; i++) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<> d(0, 1);

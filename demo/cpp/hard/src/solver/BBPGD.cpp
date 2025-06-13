@@ -38,7 +38,7 @@ BBPGDResult BBPGD(
 
   int i = 0;
 
-  for (i = 0; i < config.max_iterations; i++) {
+  for (i = 0; i < config.max_bbpgd_iterations; i++) {
     // Store previous values
     VecCopy(gamma.get(), gamma_prev.get());
     VecCopy(g.get(), g_prev.get());
@@ -89,8 +89,8 @@ BBPGDResult BBPGD(
     }
   }
 
-  if (i == config.max_iterations) {
-    PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %d iterations", i);
+  if (i == config.max_bbpgd_iterations) {
+    PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %d iterations. Residual: %f", i, res);
   }
 
   return {.gamma = std::move(gamma), .bbpgd_iterations = i, .residual = res};

@@ -14,5 +14,6 @@ struct PhysicsConfig {
 struct SolverConfig {
   double dt;
   double tolerance;
-  int max_iterations;
+  int max_bbpgd_iterations;
+  int max_recursive_iterations;
 };

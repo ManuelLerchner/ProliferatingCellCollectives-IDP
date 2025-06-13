@@ -8,8 +8,6 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
-#define MAX_CONSTRAINT_ITERATIONS 3
-
 // Forward declaration
 class ParticleManager;
 

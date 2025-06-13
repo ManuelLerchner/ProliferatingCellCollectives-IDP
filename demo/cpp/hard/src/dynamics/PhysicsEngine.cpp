@@ -11,6 +11,7 @@
 #include "simulation/ParticleManager.h"
 #include "solver/BBPGD.h"
 #include "util/PetscRaii.h"
+#include "util/PetscUtil.h"
 
 PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config) {}
 
@@ -67,6 +68,7 @@ std::tuple<VecWrapper, VecWrapper, VecWrapper> calculate_forces(const MatWrapper
   // f = D @ gamma
   VecWrapper F;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, F.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma.get(), F.get()));
 
   // U = M @ f
   VecWrapper U;
@@ -171,56 +173,53 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   MatWrapper D_PREV;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, D_PREV.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(D_PREV, particle_manager.local_particles.size() * 6, 0, PETSC_DETERMINE, PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(D_PREV, MATAIJ));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(D_PREV, MATMPIAIJ));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(D_PREV));
+  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY));
+  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY));
 
   std::vector<Constraint> all_constraints;
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
-  double res = 0;
 
-  while (constraint_iterations < MAX_CONSTRAINT_ITERATIONS) {
+  double max_overlap = std::numeric_limits<double>::infinity();
+
+  while (constraint_iterations < solver_config.max_recursive_iterations) {
     std::vector<Constraint> current_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, constraint_iterations);
     all_constraints.insert(all_constraints.end(), current_constraints.begin(), current_constraints.end());
+
+    if (constraint_iterations > 0) {
+      PetscInt total_constraints = all_constraints.size();
+
+      // calculate total memory usage
+      PetscLogDouble total_memory;
+      PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&total_memory));
+
+      MPI_Allreduce(&total_constraints, &total_constraints, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4d | Memory: %4.2f MB", constraint_iterations, total_constraints, total_memory / 1024 / 1024);
+    }
 
     auto matrices = calculateMatrices(particle_manager.local_particles, current_constraints);
 
     // stack PHI with matrices.phi
-    Vec arr_p[2] = {PHI_PREV.get(), matrices.phi.get()};
-    VecWrapper PHI_TEMP;
-    PetscCallAbort(PETSC_COMM_WORLD, VecConcatenate(2, arr_p, PHI_TEMP.get_ref(), NULL));
-    PHI_PREV = std::move(PHI_TEMP);
+    PHI_PREV = concatenateVectors(PHI_PREV, matrices.phi);
 
     // get maximal overlap
     double min_seperation;
     PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
-    double max_overlap = -min_seperation;
+    max_overlap = -min_seperation;
     if (max_overlap < solver_config.tolerance) {
       break;
     }
 
-    if (constraint_iterations > 0) {
-      PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4ld | Overlap: %f | Res: %f", constraint_iterations, all_constraints.size(), max_overlap, res);
-    }
-
     // pad gamma with 0
     VecWrapper zero_pad;
-    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi.get(), zero_pad.get_ref()));
-    PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(zero_pad.get()));
-    Vec arr_g[2] = {GAMMA_PREV.get(), zero_pad.get()};
-    VecWrapper GAMMA_TEMP;
-    PetscCallAbort(PETSC_COMM_WORLD, VecConcatenate(2, arr_g, GAMMA_TEMP.get_ref(), NULL));
-    GAMMA_PREV = std::move(GAMMA_TEMP);
+    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi, zero_pad.get_ref()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSet(zero_pad, 0.0));
+    GAMMA_PREV = concatenateVectors(GAMMA_PREV, zero_pad);
 
     // stack D with matrices.D
-    MatWrapper D_TEMP1;
-    Mat mats[2] = {D_PREV.get(), matrices.D.get()};
-    PetscCallAbort(PETSC_COMM_WORLD, MatCreateNest(PETSC_COMM_WORLD, 1, NULL, 2, NULL, mats, D_TEMP1.get_ref()));
-    PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(D_TEMP1.get(), MAT_FINAL_ASSEMBLY));
-    PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(D_TEMP1.get(), MAT_FINAL_ASSEMBLY));
-    MatWrapper D_TEMP2;
-    PetscCallAbort(PETSC_COMM_WORLD, MatConvert(D_TEMP1.get(), MATAIJ, MAT_INITIAL_MATRIX, D_TEMP2.get_ref()));
-    D_PREV = std::move(D_TEMP2);
+    D_PREV = horizontallyStackMatrices(D_PREV, matrices.D);
 
     auto gradient = [&](const VecWrapper& gamma_curr) -> VecWrapper {
       // print shape of gamma_curr and GAMMA_PREV
@@ -241,9 +240,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     };
 
     // solve for gamma
-    auto [GAMMA_NEXT, bbpgd_iterations_temp, res_temp] = BBPGD(gradient, residual, GAMMA_PREV, solver_config);
+    auto [GAMMA_NEXT, bbpgd_iterations_temp, res] = BBPGD(gradient, residual, GAMMA_PREV, solver_config);
     bbpgd_iterations += bbpgd_iterations_temp;
-    res = res_temp;
 
     VecWrapper gamma_diff;
     PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(GAMMA_NEXT.get(), gamma_diff.get_ref()));
@@ -257,9 +255,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     particle_manager.moveLocalParticlesFromSolution({.deltaC = deltaC, .f = df, .u = dU});
     PHI_PREV = gradient(GAMMA_NEXT);
     GAMMA_PREV = std::move(GAMMA_NEXT);
+    D_PREV = std::move(D_PREV);
 
     constraint_iterations++;
   }
 
-  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residum = res};
+  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residum = max_overlap};
 }
