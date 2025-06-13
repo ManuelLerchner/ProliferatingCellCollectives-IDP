@@ -39,24 +39,26 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   return {.D = std::move(D), .M = std::move(M), .G = std::move(G), .phi = std::move(phi)};
 }
 
+#include <petscerror.h>
+
 VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecWrapper& gamma) {
   // phi_dot = D^T @ G @ M @ D @ gamma
 
   // t1 = D @ gamma
   VecWrapper t1;
-  MatCreateVecs(D.get(), NULL, t1.get_ref());
-  MatMult(D, gamma.get(), t1.get());
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, t1.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma.get(), t1.get()));
 
   // t2 = M @ t1
   VecWrapper t2;
-  MatCreateVecs(M.get(), NULL, t2.get_ref());
-  MatMult(M, t1.get(), t2.get());
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, t2.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, t1.get(), t2.get()));
 
   // t3 = D^T @ t2
 
   VecWrapper phi_dot;
-  MatCreateVecs(D.get(), phi_dot.get_ref(), NULL);
-  MatMultTranspose(D, t2.get(), phi_dot.get());
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), phi_dot.get_ref(), NULL));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, t2.get(), phi_dot.get()));
 
   return std::move(phi_dot);
 }
@@ -64,18 +66,17 @@ VecWrapper estimate_phi_dot(const MatWrapper& D, const MatWrapper& M, const VecW
 std::tuple<VecWrapper, VecWrapper, VecWrapper> calculate_forces(const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& gamma) {
   // f = D @ gamma
   VecWrapper F;
-  MatCreateVecs(D.get(), NULL, F.get_ref());
-  MatMult(D, gamma.get(), F.get());
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, F.get_ref()));
 
   // U = M @ f
   VecWrapper U;
-  MatCreateVecs(M.get(), NULL, U.get_ref());
-  MatMult(M, F.get(), U.get());
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, U.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F.get(), U.get()));
 
   // deltaC = G @ U
   VecWrapper deltaC;
-  MatCreateVecs(G.get(), NULL, deltaC.get_ref());
-  MatMult(G, U.get(), deltaC.get());
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(G.get(), NULL, deltaC.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U.get(), deltaC.get()));
 
   return {std::move(F), std::move(U), std::move(deltaC)};
 }
@@ -86,29 +87,29 @@ double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
 
   const PetscScalar *gamma_array, *grad_array;
 
-  VecGetArrayRead(gamma.get(), &gamma_array);
-  VecGetArrayRead(gradient_val.get(), &grad_array);
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma.get(), &gamma_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val.get(), &grad_array));
 
   VecWrapper projected;
-  VecDuplicate(gradient_val.get(), projected.get_ref());
+  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(gradient_val.get(), projected.get_ref()));
 
   PetscScalar* proj_array;
-  VecGetArray(projected.get(), &proj_array);
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(projected.get(), &proj_array));
 
   PetscInt n;
-  VecGetLocalSize(gamma.get(), &n);
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gamma.get(), &n));
   for (PetscInt i = 0; i < n; i++) {
     proj_array[i] = (PetscRealPart(gamma_array[i]) > 0)
                         ? grad_array[i]
                         : std::min(0.0, PetscRealPart(grad_array[i]));
   }
-  VecRestoreArray(projected.get(), &proj_array);
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(projected.get(), &proj_array));
 
-  VecRestoreArrayRead(gradient_val.get(), &grad_array);
-  VecRestoreArrayRead(gamma.get(), &gamma_array);
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val.get(), &grad_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma.get(), &gamma_array));
 
   double norm;
-  VecNorm(projected.get(), NORM_INFINITY, &norm);
+  PetscCallAbort(PETSC_COMM_WORLD, VecNorm(projected.get(), NORM_INFINITY, &norm));
   return norm;
 };
 
@@ -117,11 +118,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
   auto matrices = calculateMatrices(particle_manager.local_particles, local_constraints);
 
   PetscInt phi_size;
-  VecGetLocalSize(matrices.phi.get(), &phi_size);
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(matrices.phi.get(), &phi_size));
 
   // Check if all constraints are already satisfied (zero residum case)
   double min_seperation;
-  VecMin(matrices.phi.get(), NULL, &min_seperation);
+  PetscCallAbort(PETSC_COMM_WORLD, VecMin(matrices.phi.get(), NULL, &min_seperation));
   double max_overlap = -min_seperation;
 
   if (max_overlap < solver_config.tolerance) {
@@ -133,16 +134,16 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
 
     // phi_next = phi + dt * phi_dot
     VecWrapper phi_next;
-    VecDuplicate(matrices.phi.get(), phi_next.get_ref());
-    VecCopy(matrices.phi.get(), phi_next.get());
-    VecAXPY(phi_next.get(), dt, phi_dot.get());
+    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi.get(), phi_next.get_ref()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(matrices.phi.get(), phi_next.get()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next.get(), dt, phi_dot.get()));
 
     return phi_next;
   };
 
   VecWrapper gamma0;
-  VecDuplicate(matrices.phi.get(), gamma0.get_ref());
-  VecZeroEntries(gamma0.get());
+  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi.get(), gamma0.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(gamma0.get()));
 
   auto [gamma, bbpgd_iterations, res] = BBPGD(gradient, residual, gamma0, solver_config);
 
@@ -156,22 +157,22 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt) {
   VecWrapper GAMMA_PREV;
-  VecCreate(PETSC_COMM_WORLD, GAMMA_PREV.get_ref());
-  VecSetSizes(GAMMA_PREV, 0, PETSC_DETERMINE);
-  VecSetType(GAMMA_PREV, VECSTANDARD);
-  VecSetFromOptions(GAMMA_PREV);
+  PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, GAMMA_PREV.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(GAMMA_PREV, 0, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetType(GAMMA_PREV, VECSTANDARD));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(GAMMA_PREV));
 
   VecWrapper PHI_PREV;
-  VecCreate(PETSC_COMM_WORLD, PHI_PREV.get_ref());
-  VecSetSizes(PHI_PREV, 0, PETSC_DETERMINE);
-  VecSetType(PHI_PREV, VECSTANDARD);
-  VecSetFromOptions(PHI_PREV);
+  PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, PHI_PREV.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(PHI_PREV, 0, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetType(PHI_PREV, VECSTANDARD));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(PHI_PREV));
 
   MatWrapper D_PREV;
-  MatCreate(PETSC_COMM_WORLD, D_PREV.get_ref());
-  MatSetSizes(D_PREV, particle_manager.local_particles.size() * 6, 0, PETSC_DETERMINE, PETSC_DETERMINE);
-  MatSetType(D_PREV, MATAIJ);
-  MatSetFromOptions(D_PREV);
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, D_PREV.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(D_PREV, particle_manager.local_particles.size() * 6, 0, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(D_PREV, MATAIJ));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(D_PREV));
 
   std::vector<Constraint> all_constraints;
   int constraint_iterations = 0;
@@ -187,54 +188,54 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // stack PHI with matrices.phi
     Vec arr_p[2] = {PHI_PREV.get(), matrices.phi.get()};
     VecWrapper PHI_TEMP;
-    VecConcatenate(2, arr_p, PHI_TEMP.get_ref(), NULL);
+    PetscCallAbort(PETSC_COMM_WORLD, VecConcatenate(2, arr_p, PHI_TEMP.get_ref(), NULL));
     PHI_PREV = std::move(PHI_TEMP);
 
     // get maximal overlap
     double min_seperation;
-    VecMin(PHI_PREV.get(), NULL, &min_seperation);
+    PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
     double max_overlap = -min_seperation;
     if (max_overlap < solver_config.tolerance) {
       break;
     }
 
     if (constraint_iterations > 0) {
-      PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4d | Overlap: %f | Res: %f", constraint_iterations, all_constraints.size(), max_overlap, res);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4ld | Overlap: %f | Res: %f", constraint_iterations, all_constraints.size(), max_overlap, res);
     }
 
     // pad gamma with 0
     VecWrapper zero_pad;
-    VecDuplicate(matrices.phi.get(), zero_pad.get_ref());
-    VecZeroEntries(zero_pad.get());
+    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi.get(), zero_pad.get_ref()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(zero_pad.get()));
     Vec arr_g[2] = {GAMMA_PREV.get(), zero_pad.get()};
     VecWrapper GAMMA_TEMP;
-    VecConcatenate(2, arr_g, GAMMA_TEMP.get_ref(), NULL);
+    PetscCallAbort(PETSC_COMM_WORLD, VecConcatenate(2, arr_g, GAMMA_TEMP.get_ref(), NULL));
     GAMMA_PREV = std::move(GAMMA_TEMP);
 
     // stack D with matrices.D
     MatWrapper D_TEMP1;
     Mat mats[2] = {D_PREV.get(), matrices.D.get()};
-    MatCreateNest(PETSC_COMM_WORLD, 1, NULL, 2, NULL, mats, D_TEMP1.get_ref());
-    MatAssemblyBegin(D_TEMP1.get(), MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(D_TEMP1.get(), MAT_FINAL_ASSEMBLY);
+    PetscCallAbort(PETSC_COMM_WORLD, MatCreateNest(PETSC_COMM_WORLD, 1, NULL, 2, NULL, mats, D_TEMP1.get_ref()));
+    PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(D_TEMP1.get(), MAT_FINAL_ASSEMBLY));
+    PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(D_TEMP1.get(), MAT_FINAL_ASSEMBLY));
     MatWrapper D_TEMP2;
-    MatConvert(D_TEMP1.get(), MATAIJ, MAT_INITIAL_MATRIX, D_TEMP2.get_ref());
+    PetscCallAbort(PETSC_COMM_WORLD, MatConvert(D_TEMP1.get(), MATAIJ, MAT_INITIAL_MATRIX, D_TEMP2.get_ref()));
     D_PREV = std::move(D_TEMP2);
 
     auto gradient = [&](const VecWrapper& gamma_curr) -> VecWrapper {
       // print shape of gamma_curr and GAMMA_PREV
       VecWrapper gamma_diff;
-      VecDuplicate(gamma_curr.get(), gamma_diff.get_ref());
-      VecCopy(gamma_curr.get(), gamma_diff.get());
-      VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get());
+      PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(gamma_curr.get(), gamma_diff.get_ref()));
+      PetscCallAbort(PETSC_COMM_WORLD, VecCopy(gamma_curr.get(), gamma_diff.get()));
+      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get()));
 
       auto phi_dot = estimate_phi_dot(D_PREV, matrices.M, gamma_diff);
 
       // phi_next = phi + dt * phi_dot
       VecWrapper phi_next;
-      VecDuplicate(PHI_PREV.get(), phi_next.get_ref());
-      VecCopy(PHI_PREV.get(), phi_next.get());
-      VecAXPY(phi_next.get(), dt, phi_dot.get());
+      PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(PHI_PREV.get(), phi_next.get_ref()));
+      PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_PREV.get(), phi_next.get()));
+      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next.get(), dt, phi_dot.get()));
 
       return std::move(phi_next);
     };
@@ -245,9 +246,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     res = res_temp;
 
     VecWrapper gamma_diff;
-    VecDuplicate(GAMMA_NEXT.get(), gamma_diff.get_ref());
-    VecCopy(GAMMA_NEXT.get(), gamma_diff.get());
-    VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get());
+    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(GAMMA_NEXT.get(), gamma_diff.get_ref()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(GAMMA_NEXT.get(), gamma_diff.get()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get()));
 
     // calculate forces
     auto [df, dU, deltaC] = calculate_forces(D_PREV, matrices.M, matrices.G, gamma_diff);

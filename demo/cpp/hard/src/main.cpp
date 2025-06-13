@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
-  for (int i = 0; i < 500; i++) {
+  for (int i = 0; i < 10; i++) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<> d(0, 1);

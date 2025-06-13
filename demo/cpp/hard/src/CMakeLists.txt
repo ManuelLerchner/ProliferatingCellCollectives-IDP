@@ -15,6 +15,9 @@ add_executable(cellcollectives main.cpp ${MY_SRC})
 include(petsc)
 find_package(MPI REQUIRED)
 
+# Add dependency on petsc target
+add_dependencies(cellcollectives petsc)
+
 target_include_directories(
     cellcollectives
     PUBLIC

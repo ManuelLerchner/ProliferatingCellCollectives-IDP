@@ -60,7 +60,13 @@
     "thread": "cpp",
     "cinttypes": "cpp",
     "typeinfo": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "csetjmp": "cpp",
+    "csignal": "cpp",
+    "codecvt": "cpp",
+    "set": "cpp",
+    "iomanip": "cpp",
+    "cfenv": "cpp"
   },
   "cmake.sourceDirectory": "/home/manuel/MicrobeGrowthSim-IDP/demo/cpp/hard"
 }
