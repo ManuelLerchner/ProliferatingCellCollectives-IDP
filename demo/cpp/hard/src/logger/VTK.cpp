@@ -380,7 +380,13 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   std::vector<int> ids;
   ids.reserve(n_particles);
   for (const auto& particle : sim_state->particles) {
-    ids.push_back(particle.setGID());
+    ids.push_back(particle.getLocalID());
+  }
+
+  std::vector<int> gIDs;
+  gIDs.reserve(n_particles);
+  for (const auto& particle : sim_state->particles) {
+    gIDs.push_back(particle.getGID());
   }
 
   // Extract type IDs (all zeros for now)
@@ -421,6 +427,7 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   fields.emplace_back("lengths", lengths);
   fields.emplace_back("typeIds", type_ids, DataType::Int32);
   fields.emplace_back("ids", ids, DataType::Int32);
+  fields.emplace_back("gIDs", gIDs, DataType::Int32);
 
   // Add rank information as point data
   fields.emplace_back("rank", ranks, DataType::Int32);

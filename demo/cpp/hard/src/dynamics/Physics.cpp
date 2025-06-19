@@ -221,26 +221,25 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles,
   return G;
 }
 
-MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constraints, const std::vector<Particle>& local_particles, ISLocalToGlobalMappingWrapper& configL2GMap, ISLocalToGlobalMappingWrapper& velocityL2GMap, ISLocalToGlobalMappingWrapper& lengthL2GMap, ISLocalToGlobalMappingWrapper& constraintL2GMap) {
+MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constraints, const std::vector<Particle>& local_particles, ISLocalToGlobalMappingWrapper& length_map, ISLocalToGlobalMappingWrapper& constraintL2GMap) {
   using namespace utils::ArrayMath;
 
   PetscInt local_num_particles = local_particles.size();
   PetscInt local_num_constraints = local_constraints.size();
-  PetscInt local_num_bodies = local_num_particles;
 
-  // S is a (num_bodies, num_constraints) matrix
+  // S is a (num_particles, num_constraints) matrix
   MatWrapper S;
   MatCreate(PETSC_COMM_WORLD, S.get_ref());
   MatSetType(S, MATMPIAIJ);
-  MatSetSizes(S, local_num_bodies, local_num_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
+  MatSetSizes(S, local_num_particles, local_num_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
 
-  MatSetLocalToGlobalMapping(S, NULL, constraintL2GMap);
+  MatSetLocalToGlobalMapping(S, length_map, constraintL2GMap);
 
   for (PetscInt c_idx = 0; c_idx < local_num_constraints; ++c_idx) {
     const auto& constraint = local_constraints[c_idx];
 
-    PetscInt body_i = constraint.gidI;
-    PetscInt body_j = constraint.gidJ;
+    PetscInt body_i = constraint.localI;
+    PetscInt body_j = constraint.localJ;
 
     auto n_alpha = constraint.normI;
 

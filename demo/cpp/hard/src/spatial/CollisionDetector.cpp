@@ -22,7 +22,7 @@ std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getPa
   using namespace utils::ArrayMath;
   const auto& pos = p.getPosition();
   auto dir = utils::Quaternion::getDirectionVector(p.getQuaternion());
-  double diameter = 0.5;
+  double diameter = p.getDiameter();
   double length = p.getLength();
 
   // Calculate endpoints of the rod using ArrayMath operations

@@ -37,27 +37,33 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   // PetscPrintf(PETSC_COMM_WORLD, "Phi Vector:\n");
   // VecView(phi.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  MatWrapper S = calculate_stress_matrix(local_constraints, local_particles, mappings.configL2GMap, mappings.velocityL2GMap, mappings.lengthL2GMap, mappings.constraintL2GMap);
+  auto length_map = create_length_map(local_particles);
+  MatWrapper S = calculate_stress_matrix(local_constraints, local_particles, length_map, mappings.constraintL2GMap);
   // PetscPrintf(PETSC_COMM_WORLD, "Stress Matrix S:\n");
   // MatView(S.get(), PETSC_VIEWER_STDOUT_WORLD);
 
   return {.D = std::move(D), .M = std::move(M), .G = std::move(G), .S = std::move(S), .phi = std::move(phi)};
 }
 
-VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
-  VecWrapper L;
-  PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, L.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(L, local_particles.size(), PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetType(L, VECSTANDARD));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(L));
+VecWrapper getLengthVector(const std::vector<Particle>& local_particles, ISLocalToGlobalMapping length_map) {
+  // l is a (global_num_particles, 1) vector
+  VecWrapper l;
+  VecCreate(PETSC_COMM_WORLD, l.get_ref());
+  VecSetSizes(l, local_particles.size(), PETSC_DETERMINE);
+  VecSetFromOptions(l);
 
+  // Set the local-to-global mapping to ensure consistency with other vectors
+  VecSetLocalToGlobalMapping(l, length_map);
+
+  // Set values using local indices - PETSc will handle the global mapping
   for (int i = 0; i < local_particles.size(); i++) {
-    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(L, local_particles[i].getGID(), local_particles[i].getLength(), INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValueLocal(l, i, local_particles[i].getLength(), INSERT_VALUES));
   }
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(L));
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(L));
 
-  return L;
+  VecAssemblyBegin(l);
+  VecAssemblyEnd(l);
+
+  return l;
 }
 
 void estimate_phi_dot_movement_inplace(
@@ -103,12 +109,20 @@ void calculate_growth_rate_vector(const VecWrapper& l, const VecWrapper& sigma, 
   VecScale(growth_rates_out, 1 / tau);
 }
 
-void calculate_ldot(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out) {
+void calculate_ldot(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out, bool use_zero_length = false) {
   VecWrapper sigma;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(L.get(), NULL, sigma.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(L.get(), gamma.get(), sigma.get()));
 
-  calculate_growth_rate_vector(l, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
+  if (use_zero_length) {
+    // For first constraint iteration, use zero length vector as in Python implementation
+    VecWrapper l_zero;
+    VecDuplicate(l.get(), l_zero.get_ref());
+    VecZeroEntries(l_zero.get());
+    calculate_growth_rate_vector(l_zero, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
+  } else {
+    calculate_growth_rate_vector(l, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
+  }
 };
 
 void estimate_phi_dot_growth_inplace(
@@ -255,7 +269,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   VecWrapper impedance_curr_workspace;
 
-  VecWrapper l = getLengthVector(particle_manager.local_particles);
+  // Create length mapping for consistent indexing
+  auto length_map = create_length_map(particle_manager.local_particles);
+  VecWrapper l = getLengthVector(particle_manager.local_particles, length_map.get());
+  VecWrapper l_current;
+
+  VecDuplicate(l.get(), l_current.get_ref());
   VecDuplicate(l.get(), ldot_curr_workspace.get_ref());
   VecDuplicate(l.get(), ldot_diff_workspace.get_ref());
   VecDuplicate(l.get(), ldot_prev.get_ref());
@@ -294,7 +313,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     double min_seperation;
     PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
     double max_overlap = -min_seperation;
-    converged = (max_overlap <= solver_config.tolerance) && (constraint_iterations > 0);
+    converged = (max_overlap <= solver_config.tolerance) && (constraint_iterations > 1);
 
     // pad gamma with 0
     VecWrapper zero_pad;
@@ -341,17 +360,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       estimate_phi_dot_movement_inplace(D_PREV, matrices.M, gamma_diff_workspace,
                                         t1_workspace, t2_workspace, phi_dot_movement_workspace);
 
-      // growth
-      VecWrapper l_current;
-      if (constraint_iterations == 0) {
-        // Use zero lengths for first iteration (matching Python)
-        VecDuplicate(l.get(), l_current.get_ref());
-        VecZeroEntries(l_current.get());
-      } else {
-        VecDuplicate(l.get(), l_current.get_ref());
-        VecCopy(l.get(), l_current.get());
-      }
-      calculate_ldot(L_PREV, l_current, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
+      calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace, constraint_iterations == 0);
 
       // growth
       VecCopy(ldot_curr_workspace.get(), ldot_diff_workspace.get());
@@ -359,14 +368,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
       estimate_phi_dot_growth_inplace(L_PREV, ldot_diff_workspace, phi_dot_growth_result);
 
-      // combine
-
-      // phi_dot_movement = phi_dot_movement + phi_dot_growth
-      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_dot_movement_workspace.get(), 1.0, phi_dot_growth_result.get()));
-
       // phi_next_out = PHI_PREV + dt * phi_dot_movement_workspace
       PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_PREV.get(), phi_next_out.get()));
       PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_movement_workspace.get()));
+
+      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_growth_result.get()));
     };
 
     // solve for gamma
@@ -381,12 +387,16 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get()));
 
     // calculate forces
-    auto [f, u, dC] = calculate_forces(D_PREV, matrices.M, matrices.G, gamma_diff);
+    auto [df, du, dC] = calculate_forces(D_PREV, matrices.M, matrices.G, gamma_diff);
 
-    calculate_ldot(L_PREV, l, GAMMA_NEXT, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
+    // shape of dc
+    int rows;
+
+    calculate_ldot(L_PREV, l, GAMMA_NEXT, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace, false);
 
     // prepare for next iteration
-    particle_manager.moveLocalParticlesFromSolution({.dC = dC, .f = f, .u = u});
+    particle_manager.moveLocalParticlesFromSolution({.dC = dC, .f = df, .u = du});
+
     gradient(GAMMA_NEXT, PHI_PREV);
     GAMMA_PREV = std::move(GAMMA_NEXT);
     VecCopy(ldot_curr_workspace.get(), ldot_prev.get());
@@ -400,7 +410,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     PetscPrintf(PETSC_COMM_WORLD, "\n  Did not converge in %d iterations | Residual: %4.2e\n", constraint_iterations, res);
   }
 
-  particle_manager.growLocalParticlesFromSolution({.dL = ldot_prev, .impedance = impedance_curr_workspace});
+  particle_manager.growLocalParticlesFromSolution({.dL = ldot_curr_workspace, .impedance = impedance_curr_workspace});
 
   return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }

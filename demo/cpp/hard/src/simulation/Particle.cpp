@@ -207,6 +207,14 @@ PetscInt Particle::getGID() const {
   return gID;
 }
 
+PetscInt Particle::getLocalID() const {
+  return localID;
+}
+
+void Particle::setLocalID(PetscInt localID) {
+  this->localID = localID;
+}
+
 const std::array<double, POSITION_SIZE>& Particle::getPosition() const {
   return position;
 }

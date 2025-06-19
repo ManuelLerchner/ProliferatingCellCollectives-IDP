@@ -49,6 +49,10 @@ void ParticleManager::commitNewParticles() {
   if (new_particle_buffer.size() > 0) {
     std::sort(local_particles.begin(), local_particles.end(),
               [](const Particle& a, const Particle& b) { return a.setGID() < b.setGID(); });
+
+    for (int i = 0; i < local_particles.size(); i++) {
+      local_particles[i].setLocalID(i);
+    }
   }
 
   new_particle_buffer.clear();
@@ -132,6 +136,8 @@ void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::Growth
 
   for (int i = 0; i < local_particles.size(); i++) {
     double dt = physics_engine->solver_config.dt;
+    // Use local array index since PETSc vectors are accessed with local indices
+    // The local-to-global mapping is handled internally by PETSc during vector creation
     local_particles[i].eulerStepLength(dL_array, i, dt);
 
     local_particles[i].setImpedance(impedance_array[i]);

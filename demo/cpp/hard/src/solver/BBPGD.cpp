@@ -91,6 +91,7 @@ BBPGDResult BBPGD(
     VecDot(delta_gamma.get(), delta_g.get(), &denominator);    // δγ^T δg
 
     // Safeguard against division by zero or very small denominator
+
     alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
   }
 

@@ -50,6 +50,10 @@ class Particle {
 
   void setGID(PetscInt gID);
 
+  PetscInt getLocalID() const;
+
+  void setLocalID(PetscInt localID);
+
   PetscInt getGID() const;
 
   double getImpedance() const;
@@ -67,6 +71,7 @@ class Particle {
   void normalizeQuaternion();
 
   PetscInt gID;
+  PetscInt localID;
   std::array<double, POSITION_SIZE> position;
   std::array<double, QUATERNION_SIZE> quaternion;
 
