@@ -142,7 +142,7 @@ struct ParticleSimulationState {
   std::vector<double> impedance;
   double residual;
   int constraint_iterations;
-  int avg_bbpgd_iterations;
+  int bbpgd_iterations;
   double l0;
 };
 

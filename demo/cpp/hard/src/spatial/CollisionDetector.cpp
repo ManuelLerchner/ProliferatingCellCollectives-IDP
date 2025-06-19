@@ -224,6 +224,9 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   std::array<double, 3> rPos1 = details.contact_point - pos1;
   std::array<double, 3> rPos2 = details.contact_point - pos2;
 
+  auto orientation1 = utils::Quaternion::getDirectionVector(p1.getQuaternion());
+  auto orientation2 = utils::Quaternion::getDirectionVector(p2.getQuaternion());
+
   return Constraint(
       -details.overlap,
       details.overlap > tolerance,
@@ -233,6 +236,7 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       details.normal,
       rPos1, rPos2,
       details.contact_point,
+      orientation1, orientation2,
       constraint_iterations);
 }
 

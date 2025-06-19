@@ -413,10 +413,8 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
 
   // Impedance field - use sim_state impedance if available, otherwise create empty
   std::vector<double> impedance;
-  if (!sim_state->impedance.empty() && sim_state->impedance.size() == n_particles) {
-    impedance = sim_state->impedance;
-  } else {
-    impedance.resize(n_particles, 1.0);
+  for (const auto& particle : sim_state->particles) {
+    impedance.push_back(particle.getImpedance());
   }
   fields.emplace_back("impedance", impedance);
 
@@ -446,7 +444,7 @@ VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int time
   VTKFieldData field_data;
   field_data.addField("elapsed_time", elapsed_time);
   field_data.addField("simulation_time", dt * timestep);
-  field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
+  field_data.addField("bbpgd_iterations", sim_state->bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
   field_data.addField("residual", sim_state->residual);
   field_data.addField("num_particles", static_cast<int>(sim_state->particles.size()));
@@ -563,7 +561,7 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   field_data.addField("simulation_time", dt * timestep);
 
   // Solver information
-  field_data.addField("avg_bbpgd_iterations", sim_state->avg_bbpgd_iterations);
+  field_data.addField("bbpgd_iterations", sim_state->bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
   field_data.addField("residual", sim_state->residual);
 

@@ -7,9 +7,10 @@
 #include "util/PetscRaii.h"
 
 struct Mappings {
-  ISLocalToGlobalMappingWrapper col_map_6d;
-  ISLocalToGlobalMappingWrapper row_map_7d;
-  ISLocalToGlobalMappingWrapper constraint_map;
+  ISLocalToGlobalMappingWrapper velocityL2GMap;
+  ISLocalToGlobalMappingWrapper configL2GMap;
+  ISLocalToGlobalMappingWrapper constraintL2GMap;
+  ISLocalToGlobalMappingWrapper lengthL2GMap;
 };
 
 Mappings createMappings(const std::vector<Particle>& particles,

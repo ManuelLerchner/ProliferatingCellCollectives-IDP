@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-  double DT = 180;  // seconds
+  double DT = 120;  // seconds
 
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
@@ -22,22 +22,22 @@ int main(int argc, char** argv) {
       .l0 = 1.0,
       .LAMBDA = 2.44e-1,
   };
-  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e4, .max_bbpgd_iterations = 10000, .max_recursive_iterations = 3};
+  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e4, .max_bbpgd_iterations = 20000, .max_recursive_iterations = 10};
 
   ParticleManager system(physic_config, solver_config);
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
-  int number_of_particles = 2000.0 / (2 * total_ranks);
+  int number_of_particles = 20.0 / (2 * total_ranks);
   for (int i = 0; i < number_of_particles; i++) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<> d(0, 1);
     double angle = d(gen) * 2 * M_PI;
 
-    double x = d(gen) * 5;
-    double y = d(gen) * 5;
+    double x = d(gen) * 2;
+    double y = d(gen) * 2;
     double z = 0;
 
     Particle p1 = Particle(0, {x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0 / 2);
@@ -47,10 +47,9 @@ int main(int argc, char** argv) {
     system.queueNewParticle(p2);
   }
 
-  double END_TIME = 1;  // 5 hours
+  double END_TIME = 5 * 60 * 60;  // 5 hours
 
   int num_steps = END_TIME / solver_config.dt;
-  num_steps = 100;
   system.run(num_steps);
 
   PetscFinalize();

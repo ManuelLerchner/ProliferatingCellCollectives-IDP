@@ -24,12 +24,13 @@ class ParticleManager {
 
   std::vector<Particle> local_particles;
   void eulerStepfromSolution(const VecWrapper& dC);
-  void moveLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution);
+  void moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution);
+  void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
   void resetLocalParticles();
 
  private:
   void validateParticleIDs() const;
-  void printProgress(int current_iteration, int total_iterations, const PhysicsEngine::SolverSolution& solver_solution) const;
+  void printProgress(int current_iteration, int total_iterations, const std::optional<PhysicsEngine::SolverSolution>& solver_solution) const;
 
   std::vector<Particle> new_particle_buffer;
   PetscInt global_particle_count = 0;

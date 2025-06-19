@@ -75,7 +75,7 @@ void ParticleManager::eulerStepfromSolution(const VecWrapper& dC) {
       // Update particle state using helper function
 
       double dt = physics_engine->solver_config.dt;
-      local_particles[i].eulerStep(dC_array, i, dt);
+      local_particles[i].eulerStepPosition(dC_array, i, dt);
     }
   }
 
@@ -91,19 +91,20 @@ void ParticleManager::resetLocalParticles() {
   }
 }
 
-void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::PhysicsSolution& solution) {
+void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
   // Get local portion of dC vector to update particles
   const PetscScalar* dC_array;
+  const PetscScalar* dL_array;
   const PetscScalar* df_array;
   const PetscScalar* dU_array;
 
-  VecGetArrayRead(solution.deltaC.get(), &dC_array);
+  VecGetArrayRead(solution.dC.get(), &dC_array);
   VecGetArrayRead(solution.f.get(), &df_array);
   VecGetArrayRead(solution.u.get(), &dU_array);
 
   const PetscScalar* gamma_array;
   PetscInt local_size;
-  VecGetLocalSize(solution.deltaC.get(), &local_size);
+  VecGetLocalSize(solution.dC.get(), &local_size);
 
   for (int i = 0; i < local_particles.size(); i++) {
     int base_offset = i * Particle::getStateSize();
@@ -111,15 +112,33 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Physic
       // Update particle state using helper function
 
       double dt = physics_engine->solver_config.dt;
-      local_particles[i].eulerStep(dC_array, i, dt);
+      local_particles[i].eulerStepPosition(dC_array, i, dt);
 
       local_particles[i].addForceAndTorque(df_array, dU_array, i);
     }
   }
 
-  VecRestoreArrayRead(solution.deltaC.get(), &dC_array);
+  VecRestoreArrayRead(solution.dC.get(), &dC_array);
   VecRestoreArrayRead(solution.f.get(), &df_array);
   VecRestoreArrayRead(solution.u.get(), &dU_array);
+}
+
+void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
+  const PetscScalar* dL_array;
+  const PetscScalar* impedance_array;
+
+  VecGetArrayRead(solution.dL.get(), &dL_array);
+  VecGetArrayRead(solution.impedance.get(), &impedance_array);
+
+  for (int i = 0; i < local_particles.size(); i++) {
+    double dt = physics_engine->solver_config.dt;
+    local_particles[i].eulerStepLength(dL_array, i, dt);
+
+    local_particles[i].setImpedance(impedance_array[i]);
+  }
+
+  VecRestoreArrayRead(solution.dL.get(), &dL_array);
+  VecRestoreArrayRead(solution.impedance.get(), &impedance_array);
 }
 
 void ParticleManager::run(int num_steps) {
@@ -137,7 +156,7 @@ void ParticleManager::run(int num_steps) {
       PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0.0};
       auto sim_state = createSimulationState(solver_solution);
       vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
-      printProgress(i, num_steps, {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0.0});
+      printProgress(i, num_steps, std::nullopt);
     }
 
     // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
@@ -202,25 +221,35 @@ void ParticleManager::validateParticleIDs() const {
   }
 }
 
-void ParticleManager::printProgress(int current_iteration, int total_iterations, const PhysicsEngine::SolverSolution& solver_solution) const {
+void ParticleManager::printProgress(int current_iteration, int total_iterations, const std::optional<PhysicsEngine::SolverSolution>& solver_solution) const {
   PetscInt global_constraint_count;
-
-  PetscInt local_constraint_count = solver_solution.constraints.size();
-  MPI_Allreduce(&local_constraint_count, &global_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
-
-  PetscInt local_violated_constraint_count = std::count_if(solver_solution.constraints.begin(), solver_solution.constraints.end(), [](const Constraint& constraint) { return constraint.violated; });
-  PetscInt global_violated_constraint_count;
-  MPI_Allreduce(&local_violated_constraint_count, &global_violated_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
 
   double current_time = current_iteration * physics_engine->solver_config.dt / 60;
   double total_time = total_iterations * physics_engine->solver_config.dt / 60;
 
-  PetscPrintf(PETSC_COMM_WORLD,
-              "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d | Residual: %4f |    ",
-              current_iteration, total_iterations,
-              ((double)(current_iteration) / total_iterations) * 100.0,
-              current_time, total_time,
-              global_particle_count, global_constraint_count, global_violated_constraint_count, solver_solution.residual);
+  if (solver_solution) {
+    PetscInt local_constraint_count = solver_solution.value().constraints.size();
+    MPI_Allreduce(&local_constraint_count, &global_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+
+    PetscInt local_violated_constraint_count = std::count_if(solver_solution.value().constraints.begin(), solver_solution.value().constraints.end(), [](const Constraint& constraint) { return constraint.violated; });
+    PetscInt global_violated_constraint_count;
+    MPI_Allreduce(&local_violated_constraint_count, &global_violated_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+
+    PetscPrintf(PETSC_COMM_WORLD,
+                "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d | Constraints: %4d | Violated: %4d |    ",
+                current_iteration, total_iterations,
+                ((double)(current_iteration) / total_iterations) * 100.0,
+                current_time, total_time,
+                global_particle_count, global_constraint_count, global_violated_constraint_count);
+
+  } else {
+    PetscPrintf(PETSC_COMM_WORLD,
+                "\rProgress: %4d /%4d (%5.1f%%) | Time: %5.1f min / %5.1f min | Particles: %4d |    ",
+                current_iteration, total_iterations,
+                ((double)(current_iteration) / total_iterations) * 100.0,
+                current_time, total_time,
+                global_particle_count);
+  }
 
   // Flush output to ensure immediate display
   fflush(stdout);
@@ -248,8 +277,8 @@ std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationS
 
   // Set other state values
   state->constraint_iterations = solver_solution.constraint_iterations;
-  state->avg_bbpgd_iterations = static_cast<double>(solver_solution.bbpgd_iterations) / solver_solution.constraint_iterations;
-  state->l0 = 1.0;
+  state->bbpgd_iterations = solver_solution.bbpgd_iterations;
+  state->l0 = physics_engine->physics_config.l0;
 
   return state;
 }

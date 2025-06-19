@@ -8,6 +8,7 @@ class Constraint {
   Constraint(double delta0, bool violated, int gidI, int gidJ, int localI, int localJ,
              bool particleI_isLocal, bool particleJ_isLocal,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
+             std::array<double, 3> orientationI, std::array<double, 3> orientationJ,
              int constraint_iterations);
 
  public:
@@ -35,6 +36,10 @@ class Constraint {
   std::array<double, 3> rPosJ;
   // contact point on particle I
   std::array<double, 3> contactPoint;
+  // orientation of particle I
+  std::array<double, 3> orientationI;
+  // orientation of particle J
+  std::array<double, 3> orientationJ;
   // number of constraint iterations since the constraint was created
   int constraint_iterations;
 

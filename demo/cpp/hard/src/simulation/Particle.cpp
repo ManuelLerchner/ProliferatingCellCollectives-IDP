@@ -21,6 +21,10 @@ void Particle::updateQuaternion(const PetscScalar* dC, int offset, double dt) {
   normalizeQuaternion();
 }
 
+void Particle::updateLength(const PetscScalar* dL, int particle_index, double dt) {
+  length += dt * PetscRealPart(dL[particle_index]);
+}
+
 void Particle::addForce(const PetscScalar* df, int offset) {
   force[0] += PetscRealPart(df[offset + 0]);
   force[1] += PetscRealPart(df[offset + 1]);
@@ -33,13 +37,17 @@ void Particle::addTorque(const PetscScalar* df, int offset) {
   torque[2] += PetscRealPart(df[offset + 2]);
 }
 
-void Particle::eulerStep(const PetscScalar* dC, int particle_index, double dt) {
+void Particle::eulerStepPosition(const PetscScalar* dC, int particle_index, double dt) {
   int base_offset = particle_index * STATE_SIZE;
   updatePosition(dC, base_offset, dt);
   updateQuaternion(dC, base_offset + POSITION_SIZE, dt);
 
   // Final validation after complete state update
   validateAndWarn();
+}
+
+void Particle::eulerStepLength(const PetscScalar* dL, int particle_index, double dt) {
+  updateLength(dL, particle_index, dt);
 }
 
 void Particle::clearForceAndTorque() {
@@ -155,8 +163,20 @@ void Particle::setGID(PetscInt gID) {
   this->gID = gID;
 }
 
+PetscInt Particle::getGID() const {
+  return gID;
+}
+
 const std::array<double, POSITION_SIZE>& Particle::getPosition() const {
   return position;
+}
+
+double Particle::getImpedance() const {
+  return impedance;
+}
+
+void Particle::setImpedance(double impedance) {
+  this->impedance = impedance;
 }
 
 const std::array<double, 3>& Particle::getForce() const {

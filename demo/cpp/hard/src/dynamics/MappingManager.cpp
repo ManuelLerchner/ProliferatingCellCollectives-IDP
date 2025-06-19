@@ -58,9 +58,10 @@ ISLocalToGlobalMappingWrapper create_constraint_map(const std::vector<Constraint
 }
 
 Mappings createMappings(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints) {
-  auto col_map_6d = createLocalToGlobalMapping(local_particles, 6);
-  auto row_map_7d = createLocalToGlobalMapping(local_particles, 7);
-  auto constraint_map = create_constraint_map(local_constraints);
+  auto velocityL2GMap = createLocalToGlobalMapping(local_particles, 7);
+  auto configL2GMap = createLocalToGlobalMapping(local_particles, 8);
+  auto constraintL2GMap = create_constraint_map(local_constraints);
+  auto lengthL2GMap = createLocalToGlobalMapping(local_particles, 1);
 
-  return {.col_map_6d = std::move(col_map_6d), .row_map_7d = std::move(row_map_7d), .constraint_map = std::move(constraint_map)};
+  return {.velocityL2GMap = std::move(velocityL2GMap), .configL2GMap = std::move(configL2GMap), .constraintL2GMap = std::move(constraintL2GMap), .lengthL2GMap = std::move(lengthL2GMap)};
 }

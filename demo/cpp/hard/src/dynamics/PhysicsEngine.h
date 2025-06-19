@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include "Constraint.h"
@@ -16,14 +17,19 @@ class PhysicsEngine {
   PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config);
 
   struct PhysicsMatrices {
-    MatWrapper D, M, G;
+    MatWrapper D, M, G, S;
     VecWrapper phi;
   };
 
-  struct PhysicsSolution {
-    const VecWrapper& deltaC;
+  struct MovementSolution {
+    const VecWrapper& dC;
     const VecWrapper& f;
     const VecWrapper& u;
+  };
+
+  struct GrowthSolution {
+    const VecWrapper& dL;
+    const VecWrapper& impedance;
   };
 
   struct SolverSolution {

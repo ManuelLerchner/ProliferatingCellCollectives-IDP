@@ -16,11 +16,15 @@ class Particle {
 
   void updateQuaternion(const PetscScalar* data, int offset, double dt);
 
+  void updateLength(const PetscScalar* dL, int particle_index, double dt);
+
   void addForce(const PetscScalar* df, int offset);
 
   void addTorque(const PetscScalar* df, int offset);
 
-  void eulerStep(const PetscScalar* dC, int particle_index, double dt);
+  void eulerStepPosition(const PetscScalar* dC, int particle_index, double dt);
+
+  void eulerStepLength(const PetscScalar* dL, int particle_index, double dt);
 
   void clearForceAndTorque();
 
@@ -42,6 +46,12 @@ class Particle {
   PetscInt setGID() const;
 
   void setGID(PetscInt gID);
+
+  PetscInt getGID() const;
+
+  double getImpedance() const;
+
+  void setImpedance(double impedance);
 
   const std::array<double, 3>& getForce() const;
   const std::array<double, 3>& getTorque() const;
