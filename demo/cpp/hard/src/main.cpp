@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-  double DT = 120;  // seconds
+  double DT = 60;  // seconds
 
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
     double y = d(gen) * 2;
     double z = 0;
 
-    Particle p1 = Particle(0, {x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0 / 2);
-    Particle p2 = Particle(1, {-x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0 / 2);
+    Particle p1 = Particle(0, {x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
+    Particle p2 = Particle(1, {-x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
     system.queueNewParticle(p1);
     system.queueNewParticle(p2);

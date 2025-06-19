@@ -17,6 +17,7 @@ class ParticleManager {
 
   void queueNewParticle(Particle p);
   void commitNewParticles();
+  void divideParticles();
   void run(int num_steps);
 
   std::unique_ptr<PhysicsEngine> physics_engine;

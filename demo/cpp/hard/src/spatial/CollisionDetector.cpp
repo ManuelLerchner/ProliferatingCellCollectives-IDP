@@ -270,10 +270,11 @@ std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Pa
     local_data.insert(local_data.end(), quat.begin(), quat.end());
     local_data.push_back(p.getLength());
     local_data.push_back(p.getDiameter());
+    local_data.push_back(p.getLength());  // Use current length as l0 since we don't store it
   }
 
   // Gather all particle data
-  int data_per_particle = 10;  // id + 3 pos + 4 quat + length + diameter
+  int data_per_particle = 11;  // id + 3 pos + 4 quat + length + diameter + l0
   std::vector<int> data_counts(size);
   std::vector<int> data_displacements(size);
   for (int i = 0; i < size; ++i) {
@@ -295,8 +296,9 @@ std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Pa
     std::array<double, 4> quat = {all_data[offset + 4], all_data[offset + 5], all_data[offset + 6], all_data[offset + 7]};
     double length = all_data[offset + 8];
     double diameter = all_data[offset + 9];
+    double l0 = all_data[offset + 10];
 
-    all_particles.emplace_back(id, pos, quat, length, diameter);
+    all_particles.emplace_back(id, pos, quat, length, l0, diameter);
   }
 
   return all_particles;

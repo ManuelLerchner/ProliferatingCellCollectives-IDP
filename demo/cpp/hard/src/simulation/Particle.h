@@ -2,6 +2,7 @@
 #include <petsc.h>
 
 #include <array>
+#include <optional>
 
 // Constants for vector operations
 static constexpr int POSITION_SIZE = 3;
@@ -10,7 +11,7 @@ static constexpr int STATE_SIZE = POSITION_SIZE + QUATERNION_SIZE;
 
 class Particle {
  public:
-  Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double diameter);
+  Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double l0, double diameter);
 
   void updatePosition(const PetscScalar* data, int offset, double dt);
 
@@ -31,6 +32,8 @@ class Particle {
   void addForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index);
 
   void printState() const;
+
+  std::optional<Particle> divide();
 
   // Validation methods
   bool isValid() const;
@@ -72,5 +75,6 @@ class Particle {
   double impedance;
 
   double length;
+  double l0;
   double diameter;
 };

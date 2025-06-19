@@ -35,4 +35,11 @@ std::array<double, 3> getDirectionVector(const std::array<double, 4>& q) {
   return rotateVectorOfPositions(q, {1.0, 0.0, 0.0});
 }
 
+std::array<double, 4> qmul(const std::array<double, 4>& q1, const std::array<double, 4>& q2) {
+  return {q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
+          q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
+          q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
+          q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]};
+}
+
 }  // namespace utils::Quaternion
