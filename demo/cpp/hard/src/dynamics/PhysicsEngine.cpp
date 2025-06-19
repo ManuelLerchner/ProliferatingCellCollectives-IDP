@@ -242,19 +242,24 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY));
   PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY));
 
-  VecWrapper l = getLengthVector(particle_manager.local_particles);
-
   VecWrapper gamma_diff_workspace;
   VecWrapper phi_dot_movement_workspace;
   VecWrapper phi_dot_growth_result;
 
-  VecWrapper ldot_curr_workspace;
-  VecWrapper ldot_prev;
-  VecWrapper ldot_diff_workspace;
-  VecWrapper impedance_curr_workspace;
-
   VecWrapper t1_workspace;
   VecWrapper t2_workspace;
+
+  VecWrapper ldot_curr_workspace;
+  VecWrapper ldot_diff_workspace;
+  VecWrapper ldot_prev;
+
+  VecWrapper impedance_curr_workspace;
+
+  VecWrapper l = getLengthVector(particle_manager.local_particles);
+  VecDuplicate(l.get(), ldot_curr_workspace.get_ref());
+  VecDuplicate(l.get(), ldot_diff_workspace.get_ref());
+  VecDuplicate(l.get(), ldot_prev.get_ref());
+  VecDuplicate(l.get(), impedance_curr_workspace.get_ref());
 
   std::vector<Constraint> all_constraints;
   int constraint_iterations = 0;
@@ -303,56 +308,29 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // stack L with matrices.S
     L_PREV = horizontallyStackMatrices(L_PREV, matrices.S);
 
-    if (constraint_iterations == 0) {
-      VecDuplicate(GAMMA_PREV.get(), gamma_diff_workspace.get_ref());
-      VecDuplicate(PHI_PREV.get(), phi_dot_movement_workspace.get_ref());
-      VecDuplicate(l.get(), ldot_curr_workspace.get_ref());
-      VecDuplicate(l.get(), ldot_prev.get_ref());
-      VecDuplicate(l.get(), ldot_diff_workspace.get_ref());
-      VecDuplicate(l.get(), impedance_curr_workspace.get_ref());
-
-      MatCreateVecs(D_PREV.get(), NULL, t1_workspace.get_ref());
-      MatCreateVecs(L_PREV.get(), NULL, t2_workspace.get_ref());
-      MatCreateVecs(matrices.M.get(), NULL, t2_workspace.get_ref());
-      // Allocate phi_dot_growth_result to match number of columns of L_PREV
-      PetscInt ncols;
-      MatGetSize(L_PREV.get(), NULL, &ncols);
-      VecCreate(PETSC_COMM_WORLD, phi_dot_growth_result.get_ref());
-      VecSetSizes(phi_dot_growth_result.get(), ncols, PETSC_DETERMINE);
-      VecSetFromOptions(phi_dot_growth_result.get());
-    } else {
-      // A simple check. If sizes changed, we must recreate.
+    bool recreate_workspace = constraint_iterations == 0;
+    if (not recreate_workspace) {
       PetscInt prev_size, curr_size;
       VecGetSize(gamma_diff_workspace, &prev_size);
       VecGetSize(GAMMA_PREV, &curr_size);
-      if (prev_size != curr_size) {
-        VecDestroy(gamma_diff_workspace.get_ref());
-        VecDestroy(phi_dot_movement_workspace.get_ref());
-        VecDestroy(t1_workspace.get_ref());
-        VecDestroy(t2_workspace.get_ref());
-        VecDestroy(phi_dot_growth_result.get_ref());
-        VecDuplicate(GAMMA_PREV.get(), gamma_diff_workspace.get_ref());
-        VecDuplicate(PHI_PREV.get(), phi_dot_movement_workspace.get_ref());
-        MatCreateVecs(D_PREV.get(), NULL, t1_workspace.get_ref());
-        MatCreateVecs(L_PREV.get(), NULL, t2_workspace.get_ref());
-        MatCreateVecs(matrices.M.get(), NULL, t2_workspace.get_ref());
-        // Allocate phi_dot_growth_result to match number of columns of L_PREV
-        PetscInt ncols;
-        MatGetSize(L_PREV.get(), NULL, &ncols);
-        VecCreate(PETSC_COMM_WORLD, phi_dot_growth_result.get_ref());
-        VecSetSizes(phi_dot_growth_result.get(), ncols, PETSC_DETERMINE);
-        VecSetFromOptions(phi_dot_growth_result.get());
-      }
-      // Reallocate phi_dot_growth_result if number of columns of L_PREV changed
-      PetscInt ncols, phi_dot_size;
-      MatGetSize(L_PREV.get(), NULL, &ncols);
-      VecGetSize(phi_dot_growth_result.get(), &phi_dot_size);
-      if (phi_dot_size != ncols) {
-        VecDestroy(phi_dot_growth_result.get_ref());
-        VecCreate(PETSC_COMM_WORLD, phi_dot_growth_result.get_ref());
-        VecSetSizes(phi_dot_growth_result.get(), ncols, PETSC_DETERMINE);
-        VecSetFromOptions(phi_dot_growth_result.get());
-      }
+      recreate_workspace = prev_size != curr_size;
+    }
+
+    if (recreate_workspace) {
+      VecDestroy(gamma_diff_workspace.get_ref());
+      VecDestroy(phi_dot_movement_workspace.get_ref());
+      VecDestroy(t1_workspace.get_ref());
+      VecDestroy(t2_workspace.get_ref());
+      VecDestroy(phi_dot_growth_result.get_ref());
+
+      // movement
+      VecDuplicate(GAMMA_PREV.get(), gamma_diff_workspace.get_ref());
+      VecDuplicate(PHI_PREV.get(), phi_dot_movement_workspace.get_ref());
+      MatCreateVecs(D_PREV.get(), NULL, t1_workspace.get_ref());
+      MatCreateVecs(matrices.M.get(), NULL, t2_workspace.get_ref());
+
+      // growth
+      MatCreateVecs(L_PREV.get(), phi_dot_growth_result.get_ref(), NULL);
     }
 
     auto gradient = [&](const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
@@ -364,12 +342,16 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
                                         t1_workspace, t2_workspace, phi_dot_movement_workspace);
 
       // growth
+      VecWrapper l_current;
       if (constraint_iterations == 0) {
-        // no growth in first iteration
-        VecZeroEntries(ldot_curr_workspace.get());
+        // Use zero lengths for first iteration (matching Python)
+        VecDuplicate(l.get(), l_current.get_ref());
+        VecZeroEntries(l_current.get());
       } else {
-        calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
+        VecDuplicate(l.get(), l_current.get_ref());
+        VecCopy(l.get(), l_current.get());
       }
+      calculate_ldot(L_PREV, l_current, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
 
       // growth
       VecCopy(ldot_curr_workspace.get(), ldot_diff_workspace.get());
@@ -407,7 +389,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     particle_manager.moveLocalParticlesFromSolution({.dC = dC, .f = f, .u = u});
     gradient(GAMMA_NEXT, PHI_PREV);
     GAMMA_PREV = std::move(GAMMA_NEXT);
-    D_PREV = std::move(D_PREV);
     VecCopy(ldot_curr_workspace.get(), ldot_prev.get());
 
     constraint_iterations++;

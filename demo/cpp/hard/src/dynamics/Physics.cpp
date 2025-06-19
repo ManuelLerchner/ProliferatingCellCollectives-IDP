@@ -53,6 +53,7 @@ MatWrapper calculate_Jacobian(
   MatSeqAIJSetPreallocation(D, 0, d_nnz.data());
 
   MatSetLocalToGlobalMapping(D, velocityL2GMap, constraintL2GMap_N);
+  MatSetOption(D, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
   for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
     const auto& constraint = local_constraints[c_local_idx];
@@ -233,7 +234,7 @@ MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constrai
   MatSetType(S, MATMPIAIJ);
   MatSetSizes(S, local_num_bodies, local_num_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
 
-  MatSetLocalToGlobalMapping(S, lengthL2GMap, constraintL2GMap);
+  MatSetLocalToGlobalMapping(S, NULL, constraintL2GMap);
 
   for (PetscInt c_idx = 0; c_idx < local_num_constraints; ++c_idx) {
     const auto& constraint = local_constraints[c_idx];

@@ -91,14 +91,7 @@ BBPGDResult BBPGD(
     VecDot(delta_gamma.get(), delta_g.get(), &denominator);    // δγ^T δg
 
     // Safeguard against division by zero or very small denominator
-    if (PetscAbsReal(PetscRealPart(denominator)) < 1e-12) {
-      alpha = 1.0;  // Fallback to unit step size
-    } else {
-      alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
-      // Bound the step size to prevent overshooting
-      alpha = std::min(alpha, 100.0);
-      alpha = std::max(alpha, 1e-6);
-    }
+    alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
   }
 
   if (iteration == config.max_bbpgd_iterations) {

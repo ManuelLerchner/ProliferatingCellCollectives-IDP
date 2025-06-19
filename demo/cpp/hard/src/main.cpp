@@ -22,14 +22,14 @@ int main(int argc, char** argv) {
       .l0 = 1.0,
       .LAMBDA = 2.44e-1,
   };
-  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e4, .max_bbpgd_iterations = 20000, .max_recursive_iterations = 10};
+  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e4, .max_bbpgd_iterations = 20000, .max_recursive_iterations = 5};
 
   ParticleManager system(physic_config, solver_config);
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
-  int number_of_particles = 20.0 / (2 * total_ranks);
+  int number_of_particles = 4.0 / (2 * total_ranks);
   for (int i = 0; i < number_of_particles; i++) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     Particle p2 = Particle(1, {-x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
     system.queueNewParticle(p1);
-    system.queueNewParticle(p2);
+    // system.queueNewParticle(p2);
   }
 
   double END_TIME = 5 * 60 * 60;  // 5 hours

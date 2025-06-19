@@ -27,6 +27,10 @@ void Particle::updateQuaternion(const PetscScalar* dC, int offset, double dt) {
 
 void Particle::updateLength(const PetscScalar* dL, int particle_index, double dt) {
   length += dt * PetscRealPart(dL[particle_index]);
+
+  if (length > 2 * l0) {
+    length = 2 * l0;
+  }
 }
 
 void Particle::addForce(const PetscScalar* df, int offset) {
@@ -151,40 +155,6 @@ void Particle::validateAndWarn() const {
   }
 }
 
-// def divideCells(C, l, L, l0):
-//     for i in range(len(l)):
-//         if l[i] >= 2 * l0:
-//             xi = C[7*i:7*i+3]
-//             q = C[7*i+3:7*i+7]
-
-//             dir = getDirectionVector(q)
-
-//             newCenterLeft = xi - dir * (0.25 * l[i])
-//             newCenterRight = xi + dir * (0.25 * l[i])
-
-//             angle = np.random.uniform(-np.pi / 32.0,
-//                                       np.pi / 32.0)
-
-//             dqLeft = np.array([np.cos(angle), 0.0, 0.0, np.sin(angle)])
-//             dqRight = np.array([np.cos(-angle), 0.0, 0.0, np.sin(-angle)])
-
-//             newOrientationLeft = qMul(q, dqLeft)
-//             newOrientationRight = qMul(q, dqRight)
-
-//             # Create new particles
-//             newParticleLeft = np.concatenate(
-//                 (newCenterLeft, newOrientationLeft))
-//             newParticleRight = np.concatenate(
-//                 (newCenterRight, newOrientationRight))
-
-//             C[7*i:7*i+7] = newParticleLeft
-//             l[i] = l0
-
-//             C = np.concatenate((C, newParticleRight))
-//             l = np.concatenate((l, [l0]))
-
-//     return C, l, L
-
 std::optional<Particle> Particle::divide() {
   using namespace utils::ArrayMath;
   if (length < 2 * l0) {
@@ -195,7 +165,7 @@ std::optional<Particle> Particle::divide() {
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(-M_PI / 32.0, M_PI / 32.0);
 
-  double angle = dis(gen);
+  double angle = 0;
 
   std::array<double, QUATERNION_SIZE> dqLeft = {cos(angle), 0.0, 0.0, sin(angle)};
   std::array<double, QUATERNION_SIZE> dqRight = {cos(-angle), 0.0, 0.0, sin(-angle)};
