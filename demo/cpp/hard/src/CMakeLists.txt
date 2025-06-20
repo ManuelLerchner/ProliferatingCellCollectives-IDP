@@ -6,9 +6,6 @@ file(
     "*.h"
 )
 
-# Remove main.cpp from the list if you want to specify it separately
-list(REMOVE_ITEM MY_SRC ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-
 # Create executable with main.cpp and all other sources
 add_executable(cellcollectives main.cpp ${MY_SRC})
 

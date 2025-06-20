@@ -5,6 +5,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -128,7 +129,7 @@ class VTKDataExtractor {
   virtual VTKGeometry extractGeometry(const void* state) = 0;
   virtual std::vector<VTKField> extractPointData(const void* state) = 0;
   virtual std::vector<VTKField> extractCellData(const void* state) = 0;
-  virtual VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time) = 0;
+  virtual VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) = 0;
 };
 
 /**
@@ -154,7 +155,7 @@ class ParticleDataExtractor : public VTKDataExtractor {
   VTKGeometry extractGeometry(const void* state) override;
   std::vector<VTKField> extractPointData(const void* state) override;
   std::vector<VTKField> extractCellData(const void* state) override;
-  VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time) override;
+  VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) override;
 };
 
 /**
@@ -165,67 +166,64 @@ class ConstraintDataExtractor : public VTKDataExtractor {
   VTKGeometry extractGeometry(const void* state) override;
   std::vector<VTKField> extractPointData(const void* state) override;
   std::vector<VTKField> extractCellData(const void* state) override;
-  VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time) override;
+  VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) override;
 };
 
 /**
  * @brief Generic logger for writing PVTU (parallel VTK Unstructured Grid) files
  */
 class VTKLogger {
- private:
-  std::string output_dir_;
-  std::string prefix_;
-  std::string data_dir_;
-  std::unique_ptr<VTKDataExtractor> data_extractor_;
-  std::chrono::high_resolution_clock::time_point start_time_;
-
  public:
-  VTKLogger(const std::string& output_dir, const std::string& prefix = "simulation_",
-            std::unique_ptr<VTKDataExtractor> extractor = nullptr);
-
+  VTKLogger(const std::string& output_dir, const std::string& prefix,
+            std::unique_ptr<VTKDataExtractor> extractor);
   ~VTKLogger();
 
   void setDataExtractor(std::unique_ptr<VTKDataExtractor> extractor);
-
-  std::string getVTUFilename(int timestep) const;
-  std::string getPVTUFilename(int timestep) const;
-
-  void writeTimestepPVTU(int timestep, const std::vector<VTKField>& point_fields,
-                         const std::vector<VTKField>& cell_fields, const VTKFieldData& field_data);
-
-  void addVTUFile(int timestep, double dt, const VTKGeometry& geometry,
-                  const std::vector<VTKField>& point_fields,
-                  const std::vector<VTKField>& cell_fields,
-                  const VTKFieldData& field_data);
-
-  void logTimestep(int timestep, double dt, const void* state);
-
+  void logTimestep(int frame_number, double dt, const void* state, bool is_substep);
   void clearDataFolder();
 
  private:
   void setupDirectories();
-  void writeDataArray(std::ofstream& file, const VTKField& field, const std::string& indent);
+  std::string getVTUFilename(int frame_number) const;
+  std::string getPVTUFilename(int frame_number) const;
   std::string dataTypeToString(DataType type) const;
+
+  void addVTUFile(int frame_number, double dt, const VTKGeometry& geometry,
+                  const std::vector<VTKField>& point_fields,
+                  const std::vector<VTKField>& cell_fields,
+                  const VTKFieldData& field_data);
+  void writeTimestepPVTU(int frame_number, const std::vector<VTKField>& point_fields,
+                         const std::vector<VTKField>& cell_fields, const VTKFieldData& field_data);
+
+  void writeDataArray(std::ofstream& file, const VTKField& field, const std::string& indent);
+
+  std::string output_dir_;
+  std::string data_dir_;
+  std::string prefix_;
+  std::unique_ptr<VTKDataExtractor> data_extractor_;
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
 };
 
 /**
  * @brief Generic simulation logger using VTK output
  */
 class SimulationLogger {
- private:
-  std::unique_ptr<VTKLogger> vtk_logger_;
-  int log_every_n_iterations_;
-  int current_timestep_ = 0;
-
  public:
   SimulationLogger(std::unique_ptr<VTKLogger> vtk_logger, int log_every_n_iterations = 1);
 
   bool shouldLog(int iteration) const;
   void logTimestepComplete(double dt, const void* state);
+  void logSubstep(double dt, const void* state);
+
+ private:
+  std::unique_ptr<VTKLogger> vtk_logger_;
+  int current_timestep_ = 0;
+  int frame_counter_ = 0;
+  int log_every_n_iterations_;
 };
 
 // Factory functions
-std::unique_ptr<SimulationLogger> createParticleLogger(const std::string& output_dir);
-std::unique_ptr<SimulationLogger> createConstraintLogger(const std::string& output_dir);
+std::unique_ptr<SimulationLogger> createParticleLogger(const std::string& output_dir, int log_every_n_iterations = 1);
+std::unique_ptr<SimulationLogger> createConstraintLogger(const std::string& output_dir, int log_every_n_iterations = 1);
 
 }  // namespace vtk

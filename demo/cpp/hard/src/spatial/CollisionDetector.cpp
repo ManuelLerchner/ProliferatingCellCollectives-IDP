@@ -262,9 +262,21 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     bool p1_local, bool p2_local, double tolerance,
     const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
+  // Do not create a constraint between a particle and itself
+  if (p1.getGID() == p2.getGID()) {
+    return std::nullopt;
+  }
+
   // Ensure canonical ordering of particles by GID
   if (p1.getGID() > p2.getGID()) {
     return tryCreateConstraint(p2, p1, p2_local, p1_local, tolerance, existing_constraints, constraint_iterations);
+  }
+
+  // For cross-rank constraints, ensure only one rank creates the constraint.
+  // The rank owning the particle with the lower GID (p1) is responsible.
+  // If p1 is not local to this rank, this rank should not create the constraint.
+  if (!p1_local && p2_local) {
+    return std::nullopt;
   }
 
   CollisionDetails details = checkSpherocylinderCollision(p1, p2);

@@ -356,29 +356,45 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       MatCreateVecs(L_PREV.get(), phi_dot_growth_result.get_ref(), NULL);
     }
 
+    const double epsilon_movement = 1e-4;  // For the D*M*D^T part
+    const double epsilon_growth = 1e-4;    // For the growth coupling part
     auto gradient = [&](const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
-      // movement
+      // --- MOVEMENT PART ---
+      // gamma_diff = gamma_curr - GAMMA_PREV
       VecCopy(gamma_curr.get(), gamma_diff_workspace.get());
       VecAXPY(gamma_diff_workspace.get(), -1.0, GAMMA_PREV.get());
 
+      // phi_dot_movement = D * M * D^T * gamma_diff
       estimate_phi_dot_movement_inplace(D_PREV, matrices.M, gamma_diff_workspace,
                                         t1_workspace, t2_workspace, phi_dot_movement_workspace);
 
+      // --- GROWTH PART ---
+      // ldot_curr = growth_rate(gamma_curr)
       calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
 
-      // growth
+      // ldot_diff = ldot_curr - ldot_prev
       VecCopy(ldot_curr_workspace.get(), ldot_diff_workspace.get());
       VecAXPY(ldot_diff_workspace.get(), -1.0, ldot_prev.get());
 
+      // phi_dot_growth = -L^T * ldot_diff
       estimate_phi_dot_growth_inplace(L_PREV, ldot_diff_workspace, phi_dot_growth_result);
 
-      // phi_next_out = PHI_PREV + dt * phi_dot_movement_workspace
+      // --- COMBINE AND REGULARIZE ---
+      // Start with the base violation: phi_next_out = PHI_PREV
       PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_PREV.get(), phi_next_out.get()));
+
+      // Add movement term: phi_next_out += dt * phi_dot_movement
       PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_movement_workspace.get()));
 
+      // Add growth term: phi_next_out += dt * phi_dot_growth
       PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_growth_result.get()));
-    };
 
+      // Add the combined regularization term.
+      // This is mathematically equivalent to regularizing both parts separately.
+      // It adds dt * (epsilon_movement + epsilon_growth) * gamma_diff to phi_next_out
+      const double total_epsilon = epsilon_movement + epsilon_growth;
+      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt * total_epsilon, gamma_diff_workspace.get()));
+    };
     // solve for gamma
     auto [GAMMA_NEXT, bbpgd_iterations_temp, res_temp] = BBPGD(gradient, residual, GAMMA_PREV, solver_config);
 

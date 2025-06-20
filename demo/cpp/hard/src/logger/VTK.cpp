@@ -53,19 +53,19 @@ void VTKLogger::setupDirectories() {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-std::string VTKLogger::getVTUFilename(int timestep) const {
+std::string VTKLogger::getVTUFilename(int frame_number) const {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   std::stringstream ss;
-  ss << prefix_ << std::setfill('0') << std::setw(7) << timestep
+  ss << prefix_ << std::setfill('0') << std::setw(7) << frame_number
      << "_rank_" << std::setfill('0') << std::setw(4) << rank << ".vtu";
   return ss.str();
 }
 
-std::string VTKLogger::getPVTUFilename(int timestep) const {
+std::string VTKLogger::getPVTUFilename(int frame_number) const {
   std::stringstream ss;
-  ss << prefix_ << std::setfill('0') << std::setw(7) << timestep << ".pvtu";
+  ss << prefix_ << std::setfill('0') << std::setw(7) << frame_number << ".pvtu";
   return ss.str();
 }
 
@@ -86,7 +86,7 @@ std::string VTKLogger::dataTypeToString(DataType type) const {
   }
 }
 
-void VTKLogger::writeTimestepPVTU(int timestep, const std::vector<VTKField>& point_fields,
+void VTKLogger::writeTimestepPVTU(int frame_number, const std::vector<VTKField>& point_fields,
                                   const std::vector<VTKField>& cell_fields, const VTKFieldData& field_data) {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -95,7 +95,7 @@ void VTKLogger::writeTimestepPVTU(int timestep, const std::vector<VTKField>& poi
   // Only rank 0 writes PVTU files
   if (rank != 0) return;
 
-  std::string pvtu_filename = getPVTUFilename(timestep);
+  std::string pvtu_filename = getPVTUFilename(frame_number);
   std::string pvtu_path = output_dir_ + "/" + pvtu_filename;
 
   std::ofstream file(pvtu_path);
@@ -156,7 +156,7 @@ void VTKLogger::writeTimestepPVTU(int timestep, const std::vector<VTKField>& poi
   // Add piece references for all ranks
   for (int r = 0; r < size; ++r) {
     std::stringstream rank_vtu_name;
-    rank_vtu_name << prefix_ << std::setfill('0') << std::setw(7) << timestep
+    rank_vtu_name << prefix_ << std::setfill('0') << std::setw(7) << frame_number
                   << "_rank_" << std::setfill('0') << std::setw(4) << r << ".vtu";
     file << "    <Piece Source=\"./data/" << rank_vtu_name.str() << "\"/>\n";
   }
@@ -165,11 +165,11 @@ void VTKLogger::writeTimestepPVTU(int timestep, const std::vector<VTKField>& poi
   file << "</VTKFile>\n";
 }
 
-void VTKLogger::addVTUFile(int timestep, double dt, const VTKGeometry& geometry,
+void VTKLogger::addVTUFile(int frame_number, double dt, const VTKGeometry& geometry,
                            const std::vector<VTKField>& point_fields,
                            const std::vector<VTKField>& cell_fields,
                            const VTKFieldData& field_data) {
-  std::string vtu_filename = getVTUFilename(timestep);
+  std::string vtu_filename = getVTUFilename(frame_number);
   std::string vtu_path = data_dir_ + "/" + vtu_filename;
 
   int n_points = geometry.positions.size();
@@ -298,7 +298,7 @@ void VTKLogger::writeDataArray(std::ofstream& file, const VTKField& field, const
   file << indent << "</DataArray>\n";
 }
 
-void VTKLogger::logTimestep(int timestep, double dt, const void* state) {
+void VTKLogger::logTimestep(int frame_number, double dt, const void* state, bool is_substep) {
   if (!data_extractor_) {
     throw std::runtime_error("No data extractor provided");
   }
@@ -310,10 +310,10 @@ void VTKLogger::logTimestep(int timestep, double dt, const void* state) {
   auto geometry = data_extractor_->extractGeometry(state);
   auto point_fields = data_extractor_->extractPointData(state);
   auto cell_fields = data_extractor_->extractCellData(state);
-  auto field_data = data_extractor_->extractFieldData(state, timestep, dt, elapsed_time);
+  auto field_data = data_extractor_->extractFieldData(state, frame_number, dt, elapsed_time, is_substep);
 
-  addVTUFile(timestep, dt, geometry, point_fields, cell_fields, field_data);
-  writeTimestepPVTU(timestep, point_fields, cell_fields, field_data);
+  addVTUFile(frame_number, dt, geometry, point_fields, cell_fields, field_data);
+  writeTimestepPVTU(frame_number, point_fields, cell_fields, field_data);
 }
 
 void VTKLogger::clearDataFolder() {
@@ -440,7 +440,7 @@ std::vector<VTKField> ParticleDataExtractor::extractCellData(const void* state) 
   return {};
 }
 
-VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time) {
+VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) {
   const auto* sim_state = static_cast<const ParticleSimulationState*>(state);
 
   // Get MPI rank and size information
@@ -455,6 +455,7 @@ VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int time
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
   field_data.addField("residual", sim_state->residual);
   field_data.addField("num_particles", static_cast<int>(sim_state->particles.size()));
+  field_data.addField("is_substep", is_substep ? 1 : 0);
 
   // Add MPI information
   field_data.addField("mpi_rank", rank);
@@ -560,7 +561,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractCellData(const void* state
   return {};
 }
 
-VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time) {
+VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) {
   const auto* sim_state = static_cast<const ParticleSimulationState*>(state);
 
   // Get MPI rank and size information
@@ -579,6 +580,7 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   field_data.addField("bbpgd_iterations", sim_state->bbpgd_iterations);
   field_data.addField("constraint_iterations", sim_state->constraint_iterations);
   field_data.addField("residual", sim_state->residual);
+  field_data.addField("is_substep", is_substep ? 1 : 0);
 
   // MPI information
   field_data.addField("mpi_rank", rank);
@@ -611,22 +613,30 @@ bool SimulationLogger::shouldLog(int iteration) const {
 
 void SimulationLogger::logTimestepComplete(double dt, const void* state) {
   if (shouldLog(current_timestep_)) {
-    vtk_logger_->logTimestep(current_timestep_, dt, state);
-    current_timestep_++;
+    vtk_logger_->logTimestep(frame_counter_, dt, state, false);
+    frame_counter_++;
+  }
+  current_timestep_++;
+}
+
+void SimulationLogger::logSubstep(double dt, const void* state) {
+  if (shouldLog(current_timestep_)) {
+    vtk_logger_->logTimestep(frame_counter_, dt, state, true);
+    frame_counter_++;
   }
 }
 
 // Factory functions
-std::unique_ptr<SimulationLogger> createParticleLogger(const std::string& output_dir) {
+std::unique_ptr<SimulationLogger> createParticleLogger(const std::string& output_dir, int log_every_n_iterations) {
   auto extractor = std::make_unique<ParticleDataExtractor>();
   auto vtk_logger = std::make_unique<VTKLogger>(output_dir, "Particles_", std::move(extractor));
-  return std::make_unique<SimulationLogger>(std::move(vtk_logger));
+  return std::make_unique<SimulationLogger>(std::move(vtk_logger), log_every_n_iterations);
 }
 
-std::unique_ptr<SimulationLogger> createConstraintLogger(const std::string& output_dir) {
+std::unique_ptr<SimulationLogger> createConstraintLogger(const std::string& output_dir, int log_every_n_iterations) {
   auto extractor = std::make_unique<ConstraintDataExtractor>();
   auto vtk_logger = std::make_unique<VTKLogger>(output_dir, "Constraints_", std::move(extractor));
-  return std::make_unique<SimulationLogger>(std::move(vtk_logger));
+  return std::make_unique<SimulationLogger>(std::move(vtk_logger), log_every_n_iterations);
 }
 
 }  // namespace vtk

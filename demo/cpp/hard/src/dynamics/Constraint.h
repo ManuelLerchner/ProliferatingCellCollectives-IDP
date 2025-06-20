@@ -60,13 +60,14 @@ struct ConstraintHash {
     std::size_t h3 = std::hash<int>()(c.delta0);
     std::size_t h4 = std::hash<int>()(c.stressI);
     std::size_t h5 = std::hash<int>()(c.stressJ);
-    return h1 ^ h2 ^ h3 ^ h4 ^ h5;
+    std::size_t h6 = std::hash<int>()(c.constraint_iterations);
+    return h1 ^ h2 ^ h3 ^ h4 ^ h5 ^ h6;
   }
 };
 
 // Custom equality for Constraint based on particle GIDs
 struct ConstraintEqual {
   bool operator()(const Constraint& a, const Constraint& b) const {
-    return a.gidI == b.gidI && a.gidJ == b.gidJ && a.delta0 == b.delta0 && a.stressI == b.stressI && a.stressJ == b.stressJ;
+    return a.gidI == b.gidI && a.gidJ == b.gidJ && a.delta0 == b.delta0 && a.stressI == b.stressI && a.stressJ == b.stressJ && a.constraint_iterations == b.constraint_iterations;
   }
 };

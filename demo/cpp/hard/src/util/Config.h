@@ -1,9 +1,15 @@
 #pragma once
 
+struct SimulationConfig {
+  double dt;
+  double end_time;
+  double log_frequency_seconds = 0;
+};
+
 struct PhysicsConfig {
-  double xi;
-  double TAU;
-  double l0;
+  double xi;   // Drag coefficient
+  double TAU;  // Growth time constant
+  double l0;   // Initial length
   double LAMBDA;
 
   double getLambdaDimensionless() const {
@@ -12,8 +18,7 @@ struct PhysicsConfig {
 };
 
 struct SolverConfig {
-  double dt;
   double tolerance;
-  int max_bbpgd_iterations;
+  long long max_bbpgd_iterations;
   int max_recursive_iterations;
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -34,9 +35,9 @@ class PhysicsEngine {
 
   struct SolverSolution {
     std::vector<Constraint> constraints;
-    const long long constraint_iterations;
-    const long long bbpgd_iterations;
-    const double residual;
+    int constraint_iterations;
+    long long bbpgd_iterations;
+    double residual;
   };
 
   PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints);

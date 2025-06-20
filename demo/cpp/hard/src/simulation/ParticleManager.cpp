@@ -1,10 +1,16 @@
 #include "ParticleManager.h"
 
 #include <petsc.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
 #include <iostream>
 #include <numeric>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -14,12 +20,19 @@
 #include "logger/VTK.h"
 #include "spatial/ConstraintGenerator.h"
 
-ParticleManager::ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config) {
+ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config)
+    : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config) {
   constraint_generator = std::make_unique<ConstraintGenerator>(solver_config.tolerance, 2.5 * physics_config.l0);
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 
-  vtk_logger_ = vtk::createParticleLogger("./vtk_output");
-  constraint_loggers_ = vtk::createConstraintLogger("./vtk_output");
+  int log_every_n_steps = 1;
+  if (sim_config.log_frequency_seconds > 0) {
+    log_every_n_steps = std::max(1, static_cast<int>(sim_config.log_frequency_seconds / sim_config.dt));
+  }
+
+  vtk_logger_ = vtk::createParticleLogger("./vtk_output", log_every_n_steps);
+  constraint_loggers_ = vtk::createConstraintLogger("./vtk_output", log_every_n_steps);
+
 }
 
 void ParticleManager::queueNewParticle(Particle p) {
@@ -91,7 +104,7 @@ static void cleanupScatteredResources(Vec& local_vec, VecScatter& scatter, IS& i
 
 // Updated move function using helpers
 void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
-  double dt = physics_engine->solver_config.dt;
+  double dt = sim_config_.dt;
 
   // Collect all needed global indices (7 per particle)
   std::vector<PetscInt> indicesConfig;
@@ -140,7 +153,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
 }
 
 void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
-  double dt = physics_engine->solver_config.dt;
+  double dt = sim_config_.dt;
 
   // Collect needed global indices and maintain mapping
   std::vector<PetscInt> indices;
@@ -209,18 +222,18 @@ void ParticleManager::run(int num_steps) {
     if (vtk_logger_ && i == 0) {
       PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0.0};
       auto sim_state = createSimulationState(solver_solution);
-      vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
+      vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
       printProgress(i, num_steps, std::nullopt);
     }
 
     // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
-    auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, physics_engine->solver_config.dt);
+    auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt);
 
     if (vtk_logger_) {
       auto sim_state = createSimulationState(solver_solution);
 
-      vtk_logger_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
-      constraint_loggers_->logTimestepComplete(physics_engine->solver_config.dt, sim_state.get());
+      vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
+      constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
       printProgress(i + 1, num_steps, solver_solution);
     }
 
@@ -278,8 +291,8 @@ void ParticleManager::validateParticleIDs() const {
 void ParticleManager::printProgress(int current_iteration, int total_iterations, const std::optional<PhysicsEngine::SolverSolution>& solver_solution) const {
   PetscInt global_constraint_count;
 
-  double current_time = current_iteration * physics_engine->solver_config.dt / 60;
-  double total_time = total_iterations * physics_engine->solver_config.dt / 60;
+  double current_time = current_iteration * sim_config_.dt / 60;
+  double total_time = total_iterations * sim_config_.dt / 60;
 
   if (solver_solution) {
     PetscInt local_constraint_count = solver_solution.value().constraints.size();
@@ -332,7 +345,7 @@ std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationS
   // Set other state values
   state->constraint_iterations = solver_solution.constraint_iterations;
   state->bbpgd_iterations = solver_solution.bbpgd_iterations;
-  state->l0 = physics_engine->physics_config.l0;
+  state->l0 = physics_config_.l0;
 
   return state;
 }

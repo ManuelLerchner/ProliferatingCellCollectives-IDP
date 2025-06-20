@@ -2,6 +2,8 @@
 #include <petsc.h>
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "dynamics/PhysicsEngine.h"
@@ -9,44 +11,43 @@
 #include "simulation/Particle.h"
 #include "spatial/ConstraintGenerator.h"
 #include "util/Config.h"
-#include "util/PetscRaii.h"
 
 class ParticleManager {
  public:
-  ParticleManager(PhysicsConfig physics_config, SolverConfig solver_config);
+  ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config);
 
   void queueNewParticle(Particle p);
   void commitNewParticles();
-  void divideParticles();
-  void run(int num_steps);
-
-  std::unique_ptr<PhysicsEngine> physics_engine;
-  std::unique_ptr<ConstraintGenerator> constraint_generator;
-
-  std::vector<Particle> local_particles;
-  void moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution);
-  void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
   void resetLocalParticles();
 
- private:
-  void validateParticleIDs() const;
-  void printProgress(int current_iteration, int total_iterations, const std::optional<PhysicsEngine::SolverSolution>& solver_solution) const;
+  void divideParticles();
 
-  std::vector<Particle> new_particle_buffer;
+  void moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution);
+  void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
+
+  void run(int num_steps);
+  void validateParticleIDs() const;
+
+  std::vector<Particle> local_particles;
   PetscInt global_particle_count = 0;
 
-  // Composition instead of doing everything inline
-  PhysicsConfig config;
+  std::unique_ptr<ConstraintGenerator> constraint_generator;
+  std::unique_ptr<PhysicsEngine> physics_engine;
 
-  // Reusable vectors for configuration updates
-  std::vector<PetscInt> indices;
-  std::vector<PetscScalar> values;
+  SimulationConfig sim_config_;
+  PhysicsConfig physics_config_;
+  SolverConfig solver_config_;
 
-  // VTK logging
+  vtk::SimulationLogger& getVTKLogger() const { return *vtk_logger_; }
+  vtk::SimulationLogger& getConstraintLogger() const { return *constraint_loggers_; }
+
+ private:
+  std::vector<Particle> new_particle_buffer;
+
   std::unique_ptr<vtk::SimulationLogger> vtk_logger_;
   std::unique_ptr<vtk::SimulationLogger> constraint_loggers_;
 
-  // Helper method to create simulation state for VTK logging
-  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
-      const PhysicsEngine::SolverSolution& solver_solution) const;
+  void printProgress(int current_iteration, int total_iterations, const std::optional<PhysicsEngine::SolverSolution>& solver_solution) const;
+
+  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(const PhysicsEngine::SolverSolution& solver_solution) const;
 };
