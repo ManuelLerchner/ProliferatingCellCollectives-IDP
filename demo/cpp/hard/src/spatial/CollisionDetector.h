@@ -52,14 +52,13 @@ class CollisionDetector {
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles);
 
-  void checkParticlePairs(
+  void checkParticlePairsLocal(
       const std::vector<Particle>& particles1,
       const std::vector<Particle>& particles2,
       std::vector<Constraint>& constraints,
-      bool same_array,
       int constraint_iterations);
 
-  void checkSpatialGridPairs(
+  void checkParticlePairsCrossRank(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles,
       std::vector<Constraint>& constraints,
@@ -72,5 +71,5 @@ class CollisionDetector {
 
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,
-      int local_i, int local_j, bool p1_local, bool p2_local, double tolerance, int constraint_iterations);
+      bool p1_local, bool p2_local, double tolerance, int constraint_iterations);
 };

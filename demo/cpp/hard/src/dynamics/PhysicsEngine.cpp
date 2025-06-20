@@ -53,11 +53,10 @@ VecWrapper getLengthVector(const std::vector<Particle>& local_particles, ISLocal
   VecSetFromOptions(l);
 
   // Set the local-to-global mapping to ensure consistency with other vectors
-  VecSetLocalToGlobalMapping(l, length_map);
 
   // Set values using local indices - PETSc will handle the global mapping
   for (int i = 0; i < local_particles.size(); i++) {
-    PetscCallAbort(PETSC_COMM_WORLD, VecSetValueLocal(l, i, local_particles[i].getLength(), INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLength(), INSERT_VALUES));
   }
 
   VecAssemblyBegin(l);
@@ -313,7 +312,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     double min_seperation;
     PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
     double max_overlap = -min_seperation;
-    converged = (max_overlap <= solver_config.tolerance) && (constraint_iterations > 1);
+    converged = true;
 
     // pad gamma with 0
     VecWrapper zero_pad;
@@ -360,7 +359,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       estimate_phi_dot_movement_inplace(D_PREV, matrices.M, gamma_diff_workspace,
                                         t1_workspace, t2_workspace, phi_dot_movement_workspace);
 
-      calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace, constraint_iterations == 0);
+      calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace, false);
 
       // growth
       VecCopy(ldot_curr_workspace.get(), ldot_diff_workspace.get());

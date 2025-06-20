@@ -9,7 +9,7 @@ class Constraint {
              bool particleI_isLocal, bool particleJ_isLocal,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
              std::array<double, 3> orientationI, std::array<double, 3> orientationJ,
-             int constraint_iterations);
+             int constraint_iterations, int gid);
 
  public:
   // current overlap of the constraint
@@ -42,6 +42,8 @@ class Constraint {
   std::array<double, 3> orientationJ;
   // number of constraint iterations since the constraint was created
   int constraint_iterations;
+  // global index of the constraint
+  int gid;
 
   void print() const;
 };

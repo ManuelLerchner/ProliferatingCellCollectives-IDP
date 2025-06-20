@@ -7,9 +7,27 @@
 #include <random>
 
 #include "util/ArrayMath.h"
+#include "util/ParticleMPI.h"
 #include "util/Quaternion.h"
 
 Particle::Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double l0, double diameter) : gID(gID), position(position), quaternion(quaternion), length(length), l0(l0), diameter(diameter) {}
+
+Particle::Particle(const ParticleData& data) : gID(data.gID), localID(data.localID), length(data.length), l0(data.l0), diameter(data.diameter) {
+  std::copy(std::begin(data.position), std::end(data.position), position.begin());
+  std::copy(std::begin(data.quaternion), std::end(data.quaternion), quaternion.begin());
+}
+
+ParticleData Particle::toStruct() const {
+  ParticleData data;
+  data.gID = gID;
+  data.localID = localID;
+  std::copy(position.begin(), position.end(), std::begin(data.position));
+  std::copy(quaternion.begin(), quaternion.end(), std::begin(data.quaternion));
+  data.length = length;
+  data.l0 = l0;
+  data.diameter = diameter;
+  return data;
+}
 
 void Particle::updatePosition(const PetscScalar* dC, int offset, double dt) {
   position[0] += dt * PetscRealPart(dC[offset + 0]);
@@ -46,9 +64,8 @@ void Particle::addTorque(const PetscScalar* df, int offset) {
 }
 
 void Particle::eulerStepPosition(const PetscScalar* dC, int particle_index, double dt) {
-  int base_offset = particle_index * STATE_SIZE;
-  updatePosition(dC, base_offset, dt);
-  updateQuaternion(dC, base_offset + POSITION_SIZE, dt);
+  updatePosition(dC, 0, dt);
+  updateQuaternion(dC, POSITION_SIZE, dt);
 
   // Final validation after complete state update
   validateAndWarn();
@@ -56,6 +73,7 @@ void Particle::eulerStepPosition(const PetscScalar* dC, int particle_index, doub
 
 void Particle::eulerStepLength(const PetscScalar* dL, int particle_index, double dt) {
   updateLength(dL, particle_index, dt);
+  torque[2] = 0.0;
 }
 
 void Particle::clearForceAndTorque() {
@@ -68,9 +86,8 @@ void Particle::clearForceAndTorque() {
 }
 
 void Particle::addForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index) {
-  int base_offset = particle_index * 6;
-  addForce(f, base_offset);
-  addTorque(f, base_offset + 3);
+  addForce(f, 0);
+  addTorque(f, 3);
 
   // Final validation after complete state update
   validateAndWarn();
@@ -82,19 +99,10 @@ void Particle::normalizeQuaternion() {
                           quaternion[2] * quaternion[2] +
                           quaternion[3] * quaternion[3]);
 
-  if (norm > 1e-12) {
-    quaternion[0] /= norm;
-    quaternion[1] /= norm;
-    quaternion[2] /= norm;
-    quaternion[3] /= norm;
-  } else {
-    // Fallback to unit quaternion if norm is too small
-    PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d quaternion norm too small (%g), resetting to unit quaternion\n", gID, norm);
-    quaternion[0] = 1.0;
-    quaternion[1] = 0.0;
-    quaternion[2] = 0.0;
-    quaternion[3] = 0.0;
-  }
+  quaternion[0] /= norm;
+  quaternion[1] /= norm;
+  quaternion[2] /= norm;
+  quaternion[3] /= norm;
 
   // Validate after normalization
   validateAndWarn();
@@ -188,11 +196,12 @@ std::optional<Particle> Particle::divide() {
 }
 
 void Particle::printState() const {
-  fprintf(stdout, "Particle %d: pos=[%f, %f, %f], quat=[%f, %f, %f, %f]\n",
+  fprintf(stdout, "Particle %d: pos=[%f, %f, %f], quat=[%f, %f, %f, %f], length=%f, diameter=%f \n",
           gID,
           position[0], position[1], position[2],
           quaternion[0], quaternion[1],
-          quaternion[2], quaternion[3]);
+          quaternion[2], quaternion[3],
+          length, diameter);
 }
 
 PetscInt Particle::setGID() const {
@@ -215,7 +224,7 @@ void Particle::setLocalID(PetscInt localID) {
   this->localID = localID;
 }
 
-const std::array<double, POSITION_SIZE>& Particle::getPosition() const {
+const std::array<double, Particle::POSITION_SIZE>& Particle::getPosition() const {
   return position;
 }
 
@@ -243,6 +252,6 @@ double Particle::getDiameter() const {
   return diameter;
 }
 
-const std::array<double, QUATERNION_SIZE>& Particle::getQuaternion() const {
+const std::array<double, Particle::QUATERNION_SIZE>& Particle::getQuaternion() const {
   return quaternion;
 }

@@ -8,8 +8,11 @@
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
+#include "simulation/Particle.h"
 #include "util/ArrayMath.h"
+#include "util/ParticleMPI.h"
 #include "util/Quaternion.h"
 #include "util/SpherocylinderCell.h"
 
@@ -90,12 +93,22 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairs(local_particles, local_particles, constraints, true, constraint_iterations);
+  checkParticlePairsLocal(local_particles, local_particles, constraints, constraint_iterations);
 
   // Check local-ghost pairs using spatial grid
   if (!ghost_particles.empty()) {
     updateSpatialGrid(local_particles, ghost_particles);
-    checkSpatialGridPairs(local_particles, ghost_particles, constraints, constraint_iterations);
+    checkParticlePairsCrossRank(local_particles, ghost_particles, constraints, constraint_iterations);
+  }
+
+  // Assign unique global IDs to constraints
+  int num_local_constraints = constraints.size();
+  int total_constraints_upto_rank;
+  MPI_Scan(&num_local_constraints, &total_constraints_upto_rank, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+  int starting_gid = total_constraints_upto_rank - num_local_constraints;
+
+  for (int i = 0; i < num_local_constraints; ++i) {
+    constraints[i].gid = starting_gid + i;
   }
 
   return constraints;
@@ -134,24 +147,20 @@ void CollisionDetector::updateSpatialGrid(
   spatial_grid_ = SpatialGrid(cell_size, min_pos, max_pos);
 }
 
-void CollisionDetector::checkParticlePairs(
+void CollisionDetector::checkParticlePairsLocal(
     const std::vector<Particle>& particles1,
     const std::vector<Particle>& particles2,
     std::vector<Constraint>& constraints,
-    bool same_array,
     int constraint_iterations) {
-  int start_j = same_array ? 1 : 0;
-
   for (int i = 0; i < particles1.size(); ++i) {
-    int j_start = same_array ? i + start_j : 0;
+    int j_start = i + 1;
 
     for (int j = j_start; j < particles2.size(); ++j) {
       auto constraint = tryCreateConstraint(
           particles1[i], particles2[j],
-          i, same_array ? j : -1,  // local indices
-          true, same_array,
+          true, true,
           collision_tolerance_,
-          constraint_iterations);  // locality flags
+          constraint_iterations);
 
       if (constraint.has_value()) {
         constraints.push_back(constraint.value());
@@ -160,13 +169,13 @@ void CollisionDetector::checkParticlePairs(
   }
 }
 
-void CollisionDetector::checkSpatialGridPairs(
+void CollisionDetector::checkParticlePairsCrossRank(
     const std::vector<Particle>& local_particles,
     const std::vector<Particle>& ghost_particles,
     std::vector<Constraint>& constraints,
     int constraint_iterations) {
   // Create ghost lookup map for efficiency
-  std::unordered_map<int, const Particle*> ghost_map;
+  std::unordered_map<PetscInt, const Particle*> ghost_map;
   for (const auto& ghost : ghost_particles) {
     ghost_map[ghost.setGID()] = &ghost;
   }
@@ -174,19 +183,49 @@ void CollisionDetector::checkSpatialGridPairs(
   auto collision_pairs = spatial_grid_.findPotentialCollisions(local_particles, ghost_particles);
 
   for (const auto& pair : collision_pairs) {
-    // Skip local-local pairs (already handled)
-    if (pair.local_idx_i >= 0 && pair.local_idx_j >= 0) continue;
+    // Skip local-local pairs (already handled by checkParticlePairsLocal)
+    if (pair.is_localI && pair.is_localJ) {
+      continue;
+    }
 
-    // Get particles
-    const Particle* p1 = getParticle(pair.local_idx_i, pair.global_id_i, local_particles, ghost_map);
-    const Particle* p2 = getParticle(pair.local_idx_j, pair.global_id_j, local_particles, ghost_map);
+    const Particle* p1 = nullptr;
+    if (pair.is_localI) {
+      // Find local particle by GID
+      for (const auto& p : local_particles) {
+        if (p.getGID() == pair.gidI) {
+          p1 = &p;
+          break;
+        }
+      }
+    } else {
+      auto it = ghost_map.find(pair.gidI);
+      if (it != ghost_map.end()) {
+        p1 = it->second;
+      }
+    }
+
+    const Particle* p2 = nullptr;
+    if (pair.is_localJ) {
+      // Find local particle by GID
+      for (const auto& p : local_particles) {
+        if (p.getGID() == pair.gidJ) {
+          p2 = &p;
+          break;
+        }
+      }
+    } else {
+      auto it = ghost_map.find(pair.gidJ);
+      if (it != ghost_map.end()) {
+        p2 = it->second;
+      }
+    }
 
     if (!p1 || !p2) continue;
 
     auto constraint = tryCreateConstraint(
         *p1, *p2,
-        pair.local_idx_i, pair.local_idx_j,
-        pair.local_idx_i >= 0, pair.local_idx_j >= 0,
+        pair.is_localI,
+        pair.is_localJ,
         collision_tolerance_,
         constraint_iterations);
 
@@ -210,11 +249,15 @@ const Particle* CollisionDetector::getParticle(
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     const Particle& p1, const Particle& p2,
-    int local_i, int local_j, bool p1_local, bool p2_local, double tolerance, int constraint_iterations) {
+    bool p1_local, bool p2_local, double tolerance, int constraint_iterations) {
   CollisionDetails details = checkSpherocylinderCollision(p1, p2);
 
   if (!details.collision_detected && !details.potential_collision) {
     return std::nullopt;
+  }
+
+  if (p1.getGID() > p2.getGID()) {
+    return tryCreateConstraint(p2, p1, p2_local, p1_local, tolerance, constraint_iterations);
   }
 
   using namespace utils::ArrayMath;
@@ -231,13 +274,14 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       -details.overlap,
       details.overlap > tolerance,
       p1.setGID(), p2.setGID(),
-      local_i, local_j,
+      p1.getLocalID(), p2.getLocalID(),
       p1_local, p2_local,
       details.normal,
       rPos1, rPos2,
       details.contact_point,
       orientation1, orientation2,
-      constraint_iterations);
+      constraint_iterations,
+      p1.setGID());
 }
 
 std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Particle>& local_particles) {
@@ -245,61 +289,45 @@ std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Pa
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
   MPI_Comm_size(PETSC_COMM_WORLD, &size);
 
+  // Create custom MPI type for ParticleData
+  MPI_Datatype particle_mpi_type;
+  createParticleMPIType(&particle_mpi_type);
+
   // Gather particle counts from all ranks
   int local_count = static_cast<int>(local_particles.size());
   std::vector<int> counts(size);
   MPI_Allgather(&local_count, 1, MPI_INT, counts.data(), 1, MPI_INT, PETSC_COMM_WORLD);
 
-  // Calculate displacements
+  // Calculate displacements for MPI_Allgatherv
   std::vector<int> displacements(size);
   displacements[0] = 0;
   for (int i = 1; i < size; ++i) {
     displacements[i] = displacements[i - 1] + counts[i - 1];
   }
-
   int total_particles = displacements[size - 1] + counts[size - 1];
 
-  // Serialize local particles
-  std::vector<double> local_data;
+  // Convert local particles to ParticleData structs
+  std::vector<ParticleData> local_particle_data;
+  local_particle_data.reserve(local_count);
   for (const auto& p : local_particles) {
-    const auto& pos = p.getPosition();
-    const auto& quat = p.getQuaternion();
-
-    local_data.push_back(static_cast<double>(p.setGID()));
-    local_data.insert(local_data.end(), pos.begin(), pos.end());
-    local_data.insert(local_data.end(), quat.begin(), quat.end());
-    local_data.push_back(p.getLength());
-    local_data.push_back(p.getDiameter());
-    local_data.push_back(p.getLength());  // Use current length as l0 since we don't store it
+    local_particle_data.push_back(p.toStruct());
   }
 
   // Gather all particle data
-  int data_per_particle = 11;  // id + 3 pos + 4 quat + length + diameter + l0
-  std::vector<int> data_counts(size);
-  std::vector<int> data_displacements(size);
-  for (int i = 0; i < size; ++i) {
-    data_counts[i] = counts[i] * data_per_particle;
-    data_displacements[i] = displacements[i] * data_per_particle;
-  }
+  std::vector<ParticleData> all_particle_data(total_particles);
+  MPI_Allgatherv(local_particle_data.data(), local_count, particle_mpi_type,
+                 all_particle_data.data(), counts.data(), displacements.data(),
+                 particle_mpi_type, PETSC_COMM_WORLD);
 
-  std::vector<double> all_data(total_particles * data_per_particle);
-  MPI_Allgatherv(local_data.data(), local_data.size(), MPI_DOUBLE,
-                 all_data.data(), data_counts.data(), data_displacements.data(), MPI_DOUBLE, PETSC_COMM_WORLD);
-
-  // Deserialize particles
+  // Convert ParticleData structs back to Particle objects
   std::vector<Particle> all_particles;
-  for (int i = 0; i < total_particles; ++i) {
-    int offset = i * data_per_particle;
-
-    PetscInt id = static_cast<PetscInt>(all_data[offset]);
-    std::array<double, 3> pos = {all_data[offset + 1], all_data[offset + 2], all_data[offset + 3]};
-    std::array<double, 4> quat = {all_data[offset + 4], all_data[offset + 5], all_data[offset + 6], all_data[offset + 7]};
-    double length = all_data[offset + 8];
-    double diameter = all_data[offset + 9];
-    double l0 = all_data[offset + 10];
-
-    all_particles.emplace_back(id, pos, quat, length, l0, diameter);
+  all_particles.reserve(total_particles);
+  for (const auto& pd : all_particle_data) {
+    all_particles.emplace_back(pd);
   }
+
+  // Free the custom MPI type
+  MPI_Type_free(&particle_mpi_type);
 
   return all_particles;
 }

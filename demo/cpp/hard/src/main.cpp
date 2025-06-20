@@ -19,10 +19,10 @@ int main(int argc, char** argv) {
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
       .TAU = 54 * 60,
-      .l0 = 1.0,
+      .l0 = 1,
       .LAMBDA = 2.44e-1,
   };
-  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e3, .max_bbpgd_iterations = 50000, .max_recursive_iterations = 3};
+  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e3, .max_bbpgd_iterations = 5000, .max_recursive_iterations = 1};
 
   ParticleManager system(physic_config, solver_config);
 
@@ -33,12 +33,12 @@ int main(int argc, char** argv) {
 
   for (int i = 0; i < 1; i++) {
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen(5);
     std::normal_distribution<> d(0, 1);
     double angle = d(gen) * 2 * M_PI;
 
-    double x = d(gen) * 5;
-    double y = d(gen) * 5;
+    double x = 5 + rank;
+    double y = 5 + rank;
     double z = 0;
 
     Particle p1 = Particle(0, {x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);

@@ -11,6 +11,7 @@ ConstraintGenerator::ConstraintGenerator(double collision_tolerance, double ghos
 std::vector<Constraint> ConstraintGenerator::generateConstraints(const std::vector<Particle>& local_particles, int constraint_iterations) {
   // Exchange ghost particles with neighboring ranks
   auto ghost_particles = CollisionDetector::gatherAllParticles(local_particles);
+
   auto filtered_ghosts = CollisionDetector::filterGhostParticles(ghost_particles, local_particles, ghost_cutoff_distance_);
 
   // Detect collisions between local and ghost particles

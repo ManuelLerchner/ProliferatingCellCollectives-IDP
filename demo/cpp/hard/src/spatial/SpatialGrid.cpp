@@ -97,17 +97,14 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
 
   for (int i = 0; i < local_particles.size(); ++i) {
     const auto& pos = local_particles[i].getPosition();
-    insertParticle(i, pos, local_particles[i].getLength(), local_particles[i].getDiameter());
+    insertParticle(local_particles[i].setGID(), pos, local_particles[i].getLength(), local_particles[i].getDiameter());
   }
 
   // Insert ghost particles with negative indices to distinguish them
   for (int i = 0; i < ghost_particles.size(); ++i) {
     const auto& pos = ghost_particles[i].getPosition();
-    insertParticle(-(i + 1), pos, ghost_particles[i].getLength(), ghost_particles[i].getDiameter());
+    insertParticle(ghost_particles[i].setGID(), pos, ghost_particles[i].getLength(), ghost_particles[i].getDiameter());
   }
-
-  // Find potential collision pairs
-  std::set<std::pair<int, int>> processed_pairs;
 
   for (int cell_idx = 0; cell_idx < grid_cells_.size(); ++cell_idx) {
     const auto& cell = grid_cells_[cell_idx];
@@ -116,52 +113,25 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
     // Check within cell
     for (int i = 0; i < cell.size(); ++i) {
       for (int j = i + 1; j < cell.size(); ++j) {
-        int idx1 = cell[i];
-        int idx2 = cell[j];
+        int gidI = cell[i];
+        int gidJ = cell[j];
 
-        // Only consider pairs involving at least one local particle
-        if (idx1 >= 0 || idx2 >= 0) {
-          auto pair_key = std::make_pair(std::min(idx1, idx2), std::max(idx1, idx2));
-          if (processed_pairs.find(pair_key) == processed_pairs.end()) {
-            processed_pairs.insert(pair_key);
+        CollisionPair pair = {gidI, gidJ, true, true};
 
-            CollisionPair pair;
-            pair.local_idx_i = idx1 >= 0 ? idx1 : -1;
-            pair.local_idx_j = idx2 >= 0 ? idx2 : -1;
-            pair.global_id_i = idx1 >= 0 ? local_particles[idx1].setGID() : ghost_particles[-(idx1 + 1)].setGID();
-            pair.global_id_j = idx2 >= 0 ? local_particles[idx2].setGID() : ghost_particles[-(idx2 + 1)].setGID();
-            pair.is_cross_rank = (idx1 < 0) || (idx2 < 0);
-
-            pairs.push_back(pair);
-          }
-        }
+        pairs.push_back(pair);
       }
-    }
 
-    // Check with neighbor cells
-    for (int neighbor_idx : neighbor_cells) {
-      if (neighbor_idx <= cell_idx) continue;  // Avoid duplicate checks
+      // Check with neighbor cells
+      for (int neighbor_idx : neighbor_cells) {
+        const auto& neighbor_cell = grid_cells_[neighbor_idx];
 
-      const auto& neighbor_cell = grid_cells_[neighbor_idx];
-
-      for (int p1_idx : cell) {
         for (int p2_idx : neighbor_cell) {
-          // Only consider pairs involving at least one local particle
-          if (p1_idx >= 0 || p2_idx >= 0) {
-            auto pair_key = std::make_pair(std::min(p1_idx, p2_idx), std::max(p1_idx, p2_idx));
-            if (processed_pairs.find(pair_key) == processed_pairs.end()) {
-              processed_pairs.insert(pair_key);
+          int gidI = cell[i];
+          int gidJ = p2_idx;
 
-              CollisionPair pair;
-              pair.local_idx_i = p1_idx >= 0 ? p1_idx : -1;
-              pair.local_idx_j = p2_idx >= 0 ? p2_idx : -1;
-              pair.global_id_i = p1_idx >= 0 ? local_particles[p1_idx].setGID() : ghost_particles[-(p1_idx + 1)].setGID();
-              pair.global_id_j = p2_idx >= 0 ? local_particles[p2_idx].setGID() : ghost_particles[-(p2_idx + 1)].setGID();
-              pair.is_cross_rank = (p1_idx < 0) || (p2_idx < 0);
+          CollisionPair pair = {gidI, gidJ, true, false};
 
-              pairs.push_back(pair);
-            }
-          }
+          pairs.push_back(pair);
         }
       }
     }

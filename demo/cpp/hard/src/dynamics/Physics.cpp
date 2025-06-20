@@ -35,24 +35,11 @@ MatWrapper calculate_Jacobian(
   std::vector<PetscInt> o_nnz(local_row_count, 0);
 
   // Count how many constraints each local particle is involved in
-  for (const auto& constraint : local_constraints) {
-    if (constraint.localI >= 0 && constraint.localI < local_num_bodies) {
-      for (int dof = 0; dof < 6; ++dof) {
-        d_nnz[constraint.localI * 6 + dof]++;
-      }
-    }
 
-    if (constraint.localJ >= 0 && constraint.localJ < local_num_bodies) {
-      for (int dof = 0; dof < 6; ++dof) {
-        d_nnz[constraint.localJ * 6 + dof]++;
-      }
-    }
-  }
+  MatMPIAIJSetPreallocation(D, 0, NULL, 0, NULL);
+  MatSeqAIJSetPreallocation(D, 0, NULL);
 
-  MatMPIAIJSetPreallocation(D, 0, d_nnz.data(), 0, o_nnz.data());
-  MatSeqAIJSetPreallocation(D, 0, d_nnz.data());
-
-  MatSetLocalToGlobalMapping(D, velocityL2GMap, constraintL2GMap_N);
+  // MatSetLocalToGlobalMapping(D, velocityL2GMap, constraintL2GMap_N);
   MatSetOption(D, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
   for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
@@ -75,22 +62,20 @@ MatWrapper calculate_Jacobian(
     double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
     // Check if body I is owned by this process
-    if (constraint.particleI_isLocal) {
-      PetscInt local_ids_i[6] = {constraint.localI * 6 + 0, constraint.localI * 6 + 1, constraint.localI * 6 + 2,
-                                 constraint.localI * 6 + 3, constraint.localI * 6 + 4, constraint.localI * 6 + 5};
-      MatSetValuesLocal(D, 6, local_ids_i, 1, &c_local_idx, F_i, INSERT_VALUES);
-    }
+    PetscInt local_ids_i[6] = {constraint.gidI * 6 + 0, constraint.gidI * 6 + 1, constraint.gidI * 6 + 2,
+                               constraint.gidI * 6 + 3, constraint.gidI * 6 + 4, constraint.gidI * 6 + 5};
+    MatSetValues(D, 6, local_ids_i, 1, &constraint.gid, F_i, ADD_VALUES);
 
     // Check if body J is owned by this process
-    if (constraint.particleJ_isLocal) {
-      PetscInt local_ids_j[6] = {constraint.localJ * 6 + 0, constraint.localJ * 6 + 1, constraint.localJ * 6 + 2,
-                                 constraint.localJ * 6 + 3, constraint.localJ * 6 + 4, constraint.localJ * 6 + 5};
-      MatSetValuesLocal(D, 6, local_ids_j, 1, &c_local_idx, F_j, INSERT_VALUES);
-    }
+    PetscInt local_ids_j[6] = {constraint.gidJ * 6 + 0, constraint.gidJ * 6 + 1, constraint.gidJ * 6 + 2,
+                               constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
+    MatSetValues(D, 6, local_ids_j, 1, &constraint.gid, F_j, ADD_VALUES);
   }
 
   MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY);
+
+  MatView(D, PETSC_VIEWER_STDOUT_WORLD);
 
   return D;
 }
@@ -103,11 +88,10 @@ VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints, I
   VecSetFromOptions(phi);
 
   // Set the local-to-global mapping (consistent with Jacobian)
-  VecSetLocalToGlobalMapping(phi, constraintL2GMap_N);
 
   // Set values using local indices (let PETSc handle the mapping)
   for (int i = 0; i < local_constraints.size(); ++i) {
-    VecSetValueLocal(phi, i, local_constraints[i].delta0, INSERT_VALUES);  // Using local indexing
+    VecSetValue(phi, local_constraints[i].gid, local_constraints[i].delta0, INSERT_VALUES);  // Using local indexing
   }
 
   VecAssemblyBegin(phi);
@@ -129,8 +113,6 @@ MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles
   MatMPIAIJSetPreallocation(M, 1, NULL, 0, NULL);
   MatSeqAIJSetPreallocation(M, 1, NULL);
 
-  MatSetLocalToGlobalMapping(M, velocityL2GMap, velocityL2GMap);
-
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
     double inv_len = 1.0 / particle.getLength();
@@ -141,10 +123,10 @@ MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles
     // inv_len3_x_12 = particle.id;
 
     for (int i = 0; i < 3; ++i) {
-      MatSetValueLocal(M, p_idx * 6 + i, p_idx * 6 + i, inv_len, INSERT_VALUES);
+      MatSetValue(M, particle.getGID() * 6 + i, particle.getGID() * 6 + i, inv_len, INSERT_VALUES);
     }
     for (int i = 3; i < 6; ++i) {
-      MatSetValueLocal(M, p_idx * 6 + i, p_idx * 6 + i, inv_len3_x_12, INSERT_VALUES);
+      MatSetValue(M, particle.getGID() * 6 + i, particle.getGID() * 6 + i, inv_len3_x_12, INSERT_VALUES);
     }
   }
 
@@ -186,17 +168,15 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles,
   MatMPIAIJSetPreallocation(G, 0, d_nnz.data(), 0, o_nnz.data());
   MatSeqAIJSetPreallocation(G, 0, d_nnz.data());
 
-  MatSetLocalToGlobalMapping(G, configL2GMap, velocityL2GMap);
-
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
     auto [s, wx, wy, wz] = particle.getQuaternion();
 
     // Identity block (here filled with 2 as we divide by 0.5 later)
     for (int i = 0; i < 3; ++i) {
-      PetscInt local_row = p_idx * 7 + i;
-      PetscInt local_col = p_idx * 6 + i;
-      MatSetValueLocal(G, local_row, local_col, 2, INSERT_VALUES);
+      PetscInt local_row = particle.getGID() * 7 + i;
+      PetscInt local_col = particle.getGID() * 6 + i;
+      MatSetValue(G, local_row, local_col, 2, INSERT_VALUES);
     }
 
     // Xi block
@@ -206,10 +186,10 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles,
         {wz, s, -wx},
         {-wy, wx, s}};
 
-    PetscInt lrows[4] = {p_idx * 7 + 3, p_idx * 7 + 4, p_idx * 7 + 5, p_idx * 7 + 6};
-    PetscInt lcols[3] = {p_idx * 6 + 3, p_idx * 6 + 4, p_idx * 6 + 5};
+    PetscInt lrows[4] = {particle.getGID() * 7 + 3, particle.getGID() * 7 + 4, particle.getGID() * 7 + 5, particle.getGID() * 7 + 6};
+    PetscInt lcols[3] = {particle.getGID() * 6 + 3, particle.getGID() * 6 + 4, particle.getGID() * 6 + 5};
 
-    MatSetValuesLocal(G, 4, lrows, 3, lcols, &xi_vals[0][0], INSERT_VALUES);
+    MatSetValues(G, 4, lrows, 3, lcols, &xi_vals[0][0], INSERT_VALUES);
   }
 
   MatAssemblyBegin(G, MAT_FINAL_ASSEMBLY);
@@ -233,25 +213,35 @@ MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constrai
   MatSetType(S, MATMPIAIJ);
   MatSetSizes(S, local_num_particles, local_num_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
 
-  MatSetLocalToGlobalMapping(S, length_map, constraintL2GMap);
+  std::vector<PetscInt> d_nnz(local_num_particles);
+  std::vector<PetscInt> o_nnz(local_num_particles, 0);
+  for (PetscInt i = 0; i < local_num_particles; ++i) {
+    d_nnz[i] = 1;
+  }
+  MatMPIAIJSetPreallocation(S, 0, NULL, 0, NULL);
+  MatSeqAIJSetPreallocation(S, 0, NULL);
+  MatSetOption(S, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
   for (PetscInt c_idx = 0; c_idx < local_num_constraints; ++c_idx) {
     const auto& constraint = local_constraints[c_idx];
-
-    PetscInt body_i = constraint.localI;
-    PetscInt body_j = constraint.localJ;
 
     auto n_alpha = constraint.normI;
 
     auto t_i = constraint.orientationI;
     auto t_j = constraint.orientationJ;
 
-    MatSetValueLocal(S, body_i, c_idx, 0.5 * std::abs(dot(t_i, n_alpha)), INSERT_VALUES);
-    MatSetValueLocal(S, body_j, c_idx, 0.5 * std::abs(dot(t_j, n_alpha)), INSERT_VALUES);
+    MatSetValue(S, constraint.gidI, constraint.gid, 1, INSERT_VALUES);
+    MatSetValue(S, constraint.gidJ, constraint.gid, 1, INSERT_VALUES);
   }
 
   MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY);
+
+  MatView(S, PETSC_VIEWER_STDOUT_WORLD);
+
+  if (local_particles.size() == 8) {
+    exit(0);
+  }
 
   return S;
 }

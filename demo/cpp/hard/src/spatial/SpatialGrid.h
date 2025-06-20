@@ -15,9 +15,10 @@
 class Particle;
 
 struct CollisionPair {
-  int local_idx_i, local_idx_j;
-  int global_id_i, global_id_j;
-  bool is_cross_rank;
+  int gidI;
+  int gidJ;
+  bool is_localI;
+  bool is_localJ;
 };
 
 class SpatialGrid {

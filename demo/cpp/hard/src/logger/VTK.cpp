@@ -502,6 +502,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<std::array<double, 3>> contact_positions;
   std::vector<int> ranks;
   std::vector<double> overlap_magnitudes;
+  std::vector<int> gidI;
+  std::vector<int> gidJ;
   std::vector<int> violated;
   std::vector<int> constraint_iterations;
 
@@ -512,6 +514,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   overlap_magnitudes.reserve(n_constraints);
   violated.reserve(n_constraints);
   constraint_iterations.reserve(n_constraints);
+  gidI.reserve(n_constraints);
+  gidJ.reserve(n_constraints);
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
@@ -532,6 +536,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
 
     // Rank information
     ranks.push_back(rank);
+    gidI.push_back(constraint.gidI);
+    gidJ.push_back(constraint.gidJ);
 
     constraint_index++;
   }
@@ -543,6 +549,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   fields.emplace_back("rank", ranks, DataType::Int32);
   fields.emplace_back("contact_positions", contact_positions);
   fields.emplace_back("constraint_iterations", constraint_iterations, DataType::Int32);
+  fields.emplace_back("gidI", gidI, DataType::Int32);
+  fields.emplace_back("gidJ", gidJ, DataType::Int32);
 
   return fields;
 }

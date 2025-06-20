@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>
+#include <unordered_map>
 #include <vector>
 
 #include "dynamics/Constraint.h"
@@ -96,35 +97,27 @@ void ParticleManager::resetLocalParticles() {
 }
 
 void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
-  // Get local portion of dC vector to update particles
-  const PetscScalar* dC_array;
-  const PetscScalar* dL_array;
-  const PetscScalar* df_array;
-  const PetscScalar* dU_array;
+  double dt = physics_engine->solver_config.dt;
 
-  VecGetArrayRead(solution.dC.get(), &dC_array);
-  VecGetArrayRead(solution.f.get(), &df_array);
-  VecGetArrayRead(solution.u.get(), &dU_array);
+  for (auto& p : local_particles) {
+    PetscInt gid = p.getGID();
+    PetscInt base_idx = gid * Particle::getStateSize();
+    std::vector<PetscInt> indices(Particle::getStateSize());
+    std::iota(indices.begin(), indices.end(), base_idx);
 
-  const PetscScalar* gamma_array;
-  PetscInt local_size;
-  VecGetLocalSize(solution.dC.get(), &local_size);
+    std::vector<PetscScalar> dC_values(Particle::getStateSize());
+    std::vector<PetscScalar> f_values(Particle::getStateSize());
+    std::vector<PetscScalar> u_values(Particle::getStateSize());
 
-  for (int i = 0; i < local_particles.size(); i++) {
-    int base_offset = i * Particle::getStateSize();
-    if (base_offset + Particle::getStateSize() <= local_size) {
-      // Update particle state using helper function
+    VecGetValues(solution.dC.get(), Particle::getStateSize(), indices.data(), dC_values.data());
+    VecGetValues(solution.f.get(), Particle::getStateSize(), indices.data(), f_values.data());
+    VecGetValues(solution.u.get(), Particle::getStateSize(), indices.data(), u_values.data());
 
-      double dt = physics_engine->solver_config.dt;
-      local_particles[i].eulerStepPosition(dC_array, i, dt);
-
-      local_particles[i].addForceAndTorque(df_array, dU_array, i);
-    }
+    // Create a dummy gid for the update functions, since they now operate on local data
+    PetscInt dummy_gid = 0;
+    p.eulerStepPosition(dC_values.data(), dummy_gid, dt);
+    p.addForceAndTorque(f_values.data(), u_values.data(), dummy_gid);
   }
-
-  VecRestoreArrayRead(solution.dC.get(), &dC_array);
-  VecRestoreArrayRead(solution.f.get(), &df_array);
-  VecRestoreArrayRead(solution.u.get(), &dU_array);
 }
 
 void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
