@@ -43,8 +43,8 @@ void Particle::updateQuaternion(const PetscScalar* dC, int offset, double dt) {
   normalizeQuaternion();
 }
 
-void Particle::updateLength(const PetscScalar* dL, int particle_index, double dt) {
-  length += dt * PetscRealPart(dL[particle_index]);
+void Particle::updateLength(double ldot, double dt) {
+  length += dt * ldot;
 
   if (length > 2 * l0) {
     length = 2 * l0;
@@ -63,7 +63,7 @@ void Particle::addTorque(const PetscScalar* df, int offset) {
   torque[2] += PetscRealPart(df[offset + 2]);
 }
 
-void Particle::eulerStepPosition(const PetscScalar* dC, int particle_index, double dt) {
+void Particle::eulerStepPosition(const double* dC, double dt) {
   updatePosition(dC, 0, dt);
   updateQuaternion(dC, POSITION_SIZE, dt);
 
@@ -71,9 +71,8 @@ void Particle::eulerStepPosition(const PetscScalar* dC, int particle_index, doub
   validateAndWarn();
 }
 
-void Particle::eulerStepLength(const PetscScalar* dL, int particle_index, double dt) {
-  updateLength(dL, particle_index, dt);
-  torque[2] = 0.0;
+void Particle::eulerStepLength(const double ldot, double dt) {
+  updateLength(ldot, dt);
 }
 
 void Particle::clearForceAndTorque() {
@@ -85,7 +84,7 @@ void Particle::clearForceAndTorque() {
   torque[2] = 0.0;
 }
 
-void Particle::addForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index) {
+void Particle::addForceAndTorque(const PetscScalar* f) {
   addForce(f, 0);
   addTorque(f, 3);
 

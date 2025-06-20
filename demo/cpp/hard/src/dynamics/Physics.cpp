@@ -64,12 +64,12 @@ MatWrapper calculate_Jacobian(
     // Check if body I is owned by this process
     PetscInt local_ids_i[6] = {constraint.gidI * 6 + 0, constraint.gidI * 6 + 1, constraint.gidI * 6 + 2,
                                constraint.gidI * 6 + 3, constraint.gidI * 6 + 4, constraint.gidI * 6 + 5};
-    MatSetValues(D, 6, local_ids_i, 1, &constraint.gid, F_i, ADD_VALUES);
+    MatSetValues(D, 6, local_ids_i, 1, &constraint.gid, F_i, INSERT_VALUES);
 
     // Check if body J is owned by this process
     PetscInt local_ids_j[6] = {constraint.gidJ * 6 + 0, constraint.gidJ * 6 + 1, constraint.gidJ * 6 + 2,
                                constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
-    MatSetValues(D, 6, local_ids_j, 1, &constraint.gid, F_j, ADD_VALUES);
+    MatSetValues(D, 6, local_ids_j, 1, &constraint.gid, F_j, INSERT_VALUES);
   }
 
   MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY);

@@ -28,19 +28,19 @@ class Particle {
 
   void updateQuaternion(const PetscScalar* dC, int offset, double dt);
 
-  void updateLength(const PetscScalar* dL, int particle_index, double dt);
+  void updateLength(double ldot, double dt);
 
   void addForce(const PetscScalar* df, int offset);
 
   void addTorque(const PetscScalar* df, int offset);
 
-  void eulerStepPosition(const PetscScalar* dC, int particle_index, double dt);
+  void eulerStepPosition(const double* dC, double dt);
 
-  void eulerStepLength(const PetscScalar* dL, int particle_index, double dt);
+  void eulerStepLength(double ldot, double dt);
 
   void clearForceAndTorque();
 
-  void addForceAndTorque(const PetscScalar* f, const PetscScalar* U, int particle_index);
+  void addForceAndTorque(const PetscScalar* f);
 
   void printState() const;
 

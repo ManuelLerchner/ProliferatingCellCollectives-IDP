@@ -64,29 +64,6 @@ void ParticleManager::commitNewParticles() {
   this->global_particle_count += total_added_this_step;
 }
 
-void ParticleManager::eulerStepfromSolution(const VecWrapper& dC) {
-  // Get local portion of dC vector to update particles
-  const PetscScalar* dC_array;
-
-  VecGetArrayRead(dC.get(), &dC_array);
-
-  const PetscScalar* gamma_array;
-  PetscInt local_size;
-  VecGetLocalSize(dC.get(), &local_size);
-
-  for (int i = 0; i < local_particles.size(); i++) {
-    int base_offset = i * Particle::getStateSize();
-    if (base_offset + Particle::getStateSize() <= local_size) {
-      // Update particle state using helper function
-
-      double dt = physics_engine->solver_config.dt;
-      local_particles[i].eulerStepPosition(dC_array, i, dt);
-    }
-  }
-
-  VecRestoreArrayRead(dC.get(), &dC_array);
-}
-
 void ParticleManager::resetLocalParticles() {
   const PetscScalar* gamma_array;
   PetscInt local_size;
@@ -95,49 +72,113 @@ void ParticleManager::resetLocalParticles() {
     local_particles[i].clearForceAndTorque();
   }
 }
+// Helper function to scatter values from a parallel vector to a local array
+static void scatterVectorToLocal(Vec global_vec, const std::vector<PetscInt>& indices,
+                                 Vec& local_vec, VecScatter& scatter, IS& is) {
+  ISCreateGeneral(PETSC_COMM_SELF, indices.size(), indices.data(), PETSC_COPY_VALUES, &is);
+  VecCreateSeq(PETSC_COMM_SELF, indices.size(), &local_vec);
+  VecScatterCreate(global_vec, is, local_vec, NULL, &scatter);
+  VecScatterBegin(scatter, global_vec, local_vec, INSERT_VALUES, SCATTER_FORWARD);
+  VecScatterEnd(scatter, global_vec, local_vec, INSERT_VALUES, SCATTER_FORWARD);
+}
 
+// Helper function to clean up scattered resources
+static void cleanupScatteredResources(Vec& local_vec, VecScatter& scatter, IS& is) {
+  VecScatterDestroy(&scatter);
+  VecDestroy(&local_vec);
+  ISDestroy(&is);
+}
+
+// Updated move function using helpers
 void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
   double dt = physics_engine->solver_config.dt;
 
+  // Collect all needed global indices (7 per particle)
+  std::vector<PetscInt> indicesConfig;
+  std::vector<PetscInt> indicesVelocity;
   for (auto& p : local_particles) {
-    PetscInt gid = p.getGID();
-    PetscInt base_idx = gid * Particle::getStateSize();
-    std::vector<PetscInt> indices(Particle::getStateSize());
-    std::iota(indices.begin(), indices.end(), base_idx);
-
-    std::vector<PetscScalar> dC_values(Particle::getStateSize());
-    std::vector<PetscScalar> f_values(Particle::getStateSize());
-    std::vector<PetscScalar> u_values(Particle::getStateSize());
-
-    VecGetValues(solution.dC.get(), Particle::getStateSize(), indices.data(), dC_values.data());
-    VecGetValues(solution.f.get(), Particle::getStateSize(), indices.data(), f_values.data());
-    VecGetValues(solution.u.get(), Particle::getStateSize(), indices.data(), u_values.data());
-
-    // Create a dummy gid for the update functions, since they now operate on local data
-    PetscInt dummy_gid = 0;
-    p.eulerStepPosition(dC_values.data(), dummy_gid, dt);
-    p.addForceAndTorque(f_values.data(), u_values.data(), dummy_gid);
+    for (PetscInt i = 0; i < Particle::getStateSize(); i++) {
+      indicesConfig.push_back(p.getGID() * Particle::getStateSize() + i);
+    }
+    for (PetscInt i = 0; i < 6; i++) {
+      indicesVelocity.push_back(p.getGID() * 6 + i);
+    }
   }
+
+  // Scatter the dC vector
+  Vec dC_local;
+  VecScatter dC_scatter;
+  IS dC_is;
+  scatterVectorToLocal(solution.dC.get(), indicesConfig, dC_local, dC_scatter, dC_is);
+
+  // Get array pointer
+  const PetscScalar* dC_array;
+  VecGetArrayRead(dC_local, &dC_array);
+
+  Vec dF_local;
+  VecScatter dF_scatter;
+  IS dF_is;
+  scatterVectorToLocal(solution.f.get(), indicesVelocity, dF_local, dF_scatter, dF_is);
+
+  const PetscScalar* dF_array;
+  VecGetArrayRead(dF_local, &dF_array);
+
+  // Process each particle (7 values per particle)
+  for (auto& p : local_particles) {
+    const PetscScalar* particle_values = &dC_array[p.getLocalID() * Particle::getStateSize()];
+    const PetscScalar* force_values = &dF_array[p.getLocalID() * 6];
+
+    p.eulerStepPosition(particle_values, dt);
+    p.addForceAndTorque(force_values);
+  }
+
+  // Clean up
+  VecRestoreArrayRead(dC_local, &dC_array);
+  VecRestoreArrayRead(dF_local, &dF_array);
+  cleanupScatteredResources(dC_local, dC_scatter, dC_is);
+  cleanupScatteredResources(dF_local, dF_scatter, dF_is);
 }
 
 void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
-  const PetscScalar* dL_array;
-  const PetscScalar* impedance_array;
+  double dt = physics_engine->solver_config.dt;
 
-  VecGetArrayRead(solution.dL.get(), &dL_array);
-  VecGetArrayRead(solution.impedance.get(), &impedance_array);
-
-  for (int i = 0; i < local_particles.size(); i++) {
-    double dt = physics_engine->solver_config.dt;
-    // Use local array index since PETSc vectors are accessed with local indices
-    // The local-to-global mapping is handled internally by PETSc during vector creation
-    local_particles[i].eulerStepLength(dL_array, i, dt);
-
-    local_particles[i].setImpedance(impedance_array[i]);
+  // Collect needed global indices and maintain mapping
+  std::vector<PetscInt> indices;
+  std::vector<size_t> local_indices;  // Maps to position in local_particles
+  for (size_t i = 0; i < local_particles.size(); i++) {
+    indices.push_back(local_particles[i].getGID());
+    local_indices.push_back(i);
   }
 
-  VecRestoreArrayRead(solution.dL.get(), &dL_array);
-  VecRestoreArrayRead(solution.impedance.get(), &impedance_array);
+  // Scatter both vectors
+  Vec dL_local, impedance_local;
+  VecScatter dL_scatter, impedance_scatter;
+  IS dL_is, impedance_is;
+
+  VecView(solution.dL.get(), PETSC_VIEWER_STDOUT_WORLD);
+
+  scatterVectorToLocal(solution.dL.get(), indices, dL_local, dL_scatter, dL_is);
+  scatterVectorToLocal(solution.impedance.get(), indices, impedance_local,
+                       impedance_scatter, impedance_is);
+
+  // Get array pointers
+  const PetscScalar *dL_array, *impedance_array;
+  VecGetArrayRead(dL_local, &dL_array);
+  VecGetArrayRead(impedance_local, &impedance_array);
+
+  // Process each particle using correct mapping
+  for (size_t arr_idx = 0; arr_idx < local_indices.size(); arr_idx++) {
+    size_t particle_idx = local_indices[arr_idx];
+
+    local_particles[particle_idx].eulerStepLength(dL_array[arr_idx], dt);
+    local_particles[particle_idx].setImpedance(impedance_array[arr_idx]);
+  }
+
+  // Clean up
+  VecRestoreArrayRead(dL_local, &dL_array);
+  VecRestoreArrayRead(impedance_local, &impedance_array);
+  cleanupScatteredResources(dL_local, dL_scatter, dL_is);
+  cleanupScatteredResources(impedance_local, impedance_scatter, impedance_is);
 }
 
 void ParticleManager::divideParticles() {

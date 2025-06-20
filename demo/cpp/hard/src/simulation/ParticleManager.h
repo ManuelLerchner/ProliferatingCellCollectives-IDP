@@ -24,7 +24,6 @@ class ParticleManager {
   std::unique_ptr<ConstraintGenerator> constraint_generator;
 
   std::vector<Particle> local_particles;
-  void eulerStepfromSolution(const VecWrapper& dC);
   void moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution);
   void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
   void resetLocalParticles();
