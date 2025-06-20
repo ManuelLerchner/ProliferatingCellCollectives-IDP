@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-  double DT = 60;  // seconds
+  double DT = 30;  // seconds
 
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
       .l0 = 1,
       .LAMBDA = 2.44e-1,
   };
-  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e3, .max_bbpgd_iterations = 5000, .max_recursive_iterations = 1};
+  SolverConfig solver_config = {.dt = DT, .tolerance = physic_config.l0 / 1e3, .max_bbpgd_iterations = 100000, .max_recursive_iterations = 15};
 
   ParticleManager system(physic_config, solver_config);
 
@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
     std::normal_distribution<> d(0, 1);
     double angle = d(gen) * 2 * M_PI;
 
-    double x = 5 + rank;
-    double y = 5 + rank;
+    double x = 5 + 0.2 * rank;
+    double y = 5 + 0.2 * rank;
     double z = 0;
 
     Particle p1 = Particle(0, {x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);

@@ -29,6 +29,7 @@ class CollisionDetector {
   std::vector<Constraint> detectCollisions(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles,
+      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   static std::vector<Particle> gatherAllParticles(const std::vector<Particle>& local_particles);
@@ -56,12 +57,14 @@ class CollisionDetector {
       const std::vector<Particle>& particles1,
       const std::vector<Particle>& particles2,
       std::vector<Constraint>& constraints,
+      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   void checkParticlePairsCrossRank(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles,
       std::vector<Constraint>& constraints,
+      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   const Particle* getParticle(
@@ -71,5 +74,7 @@ class CollisionDetector {
 
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,
-      bool p1_local, bool p2_local, double tolerance, int constraint_iterations);
+      bool p1_local, bool p2_local, double tolerance,
+      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
+      int constraint_iterations);
 };

@@ -93,6 +93,9 @@ BBPGDResult BBPGD(
     // Safeguard against division by zero or very small denominator
 
     alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
+
+    // clamp alpha between 1e-10 and 100
+    // alpha = std::max(1e-10, std::min(100.0, alpha));
   }
 
   if (iteration == config.max_bbpgd_iterations) {

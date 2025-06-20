@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 
 class Constraint {
  public:
@@ -8,8 +9,10 @@ class Constraint {
   Constraint(double delta0, bool violated, int gidI, int gidJ, int localI, int localJ,
              bool particleI_isLocal, bool particleJ_isLocal,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
-             std::array<double, 3> orientationI, std::array<double, 3> orientationJ,
+             double stressI, double stressJ,
              int constraint_iterations, int gid);
+
+  Constraint();
 
  public:
   // current overlap of the constraint
@@ -36,14 +39,34 @@ class Constraint {
   std::array<double, 3> rPosJ;
   // contact point on particle I
   std::array<double, 3> contactPoint;
-  // orientation of particle I
-  std::array<double, 3> orientationI;
-  // orientation of particle J
-  std::array<double, 3> orientationJ;
+  // stress on particle I
+  double stressI;
+  // stress on particle J
+  double stressJ;
   // number of constraint iterations since the constraint was created
   int constraint_iterations;
   // global index of the constraint
   int gid;
 
   void print() const;
+};
+
+// Custom hash for Constraint based on particle GIDs
+struct ConstraintHash {
+  std::size_t operator()(const Constraint& c) const {
+    // A simple hash combination function
+    std::size_t h1 = std::hash<int>()(c.gidI);
+    std::size_t h2 = std::hash<int>()(c.gidJ);
+    std::size_t h3 = std::hash<int>()(c.delta0);
+    std::size_t h4 = std::hash<int>()(c.stressI);
+    std::size_t h5 = std::hash<int>()(c.stressJ);
+    return h1 ^ h2 ^ h3 ^ h4 ^ h5;
+  }
+};
+
+// Custom equality for Constraint based on particle GIDs
+struct ConstraintEqual {
+  bool operator()(const Constraint& a, const Constraint& b) const {
+    return a.gidI == b.gidI && a.gidJ == b.gidJ && a.delta0 == b.delta0 && a.stressI == b.stressI && a.stressJ == b.stressJ;
+  }
 };

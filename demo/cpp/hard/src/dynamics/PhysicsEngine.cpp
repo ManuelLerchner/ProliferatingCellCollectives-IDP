@@ -53,10 +53,11 @@ VecWrapper getLengthVector(const std::vector<Particle>& local_particles, ISLocal
   VecSetFromOptions(l);
 
   // Set the local-to-global mapping to ensure consistency with other vectors
+  VecSetLocalToGlobalMapping(l, length_map);
 
   // Set values using local indices - PETSc will handle the global mapping
   for (int i = 0; i < local_particles.size(); i++) {
-    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLength(), INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValueLocal(l, i, local_particles[i].getLength(), INSERT_VALUES));
   }
 
   VecAssemblyBegin(l);
@@ -108,20 +109,12 @@ void calculate_growth_rate_vector(const VecWrapper& l, const VecWrapper& sigma, 
   VecScale(growth_rates_out, 1 / tau);
 }
 
-void calculate_ldot(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out, bool use_zero_length = false) {
+void calculate_ldot(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out) {
   VecWrapper sigma;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(L.get(), NULL, sigma.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(L.get(), gamma.get(), sigma.get()));
 
-  if (use_zero_length) {
-    // For first constraint iteration, use zero length vector as in Python implementation
-    VecWrapper l_zero;
-    VecDuplicate(l.get(), l_zero.get_ref());
-    VecZeroEntries(l_zero.get());
-    calculate_growth_rate_vector(l_zero, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
-  } else {
-    calculate_growth_rate_vector(l, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
-  }
+  calculate_growth_rate_vector(l, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
 };
 
 void estimate_phi_dot_growth_inplace(
@@ -181,7 +174,8 @@ double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
 }
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt) {
-  auto local_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, 0);
+  std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
+  auto local_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, all_constraints, 0);
   auto matrices = calculateMatrices(particle_manager.local_particles, local_constraints);
 
   PetscInt phi_size;
@@ -279,7 +273,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   VecDuplicate(l.get(), ldot_prev.get_ref());
   VecDuplicate(l.get(), impedance_curr_workspace.get_ref());
 
-  std::vector<Constraint> all_constraints;
+  std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
 
@@ -288,22 +282,15 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   const double LAMBDA_DIMENSIONLESS = (physics_config.TAU / (physics_config.xi * physics_config.l0 * physics_config.l0)) * physics_config.LAMBDA;
 
   bool converged = false;
-  while (constraint_iterations < solver_config.max_recursive_iterations && !converged) {
-    std::vector<Constraint> current_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, constraint_iterations);
-    all_constraints.insert(all_constraints.end(), current_constraints.begin(), current_constraints.end());
+  while (constraint_iterations < solver_config.max_recursive_iterations) {
+    std::vector<Constraint> new_constraints = particle_manager.constraint_generator->generateConstraints(
+        particle_manager.local_particles, all_constraints, constraint_iterations);
 
-    if (constraint_iterations > 0) {
-      PetscInt total_constraints = all_constraints.size();
+    // Add the new constraints to the master set
+    all_constraints.insert(new_constraints.begin(), new_constraints.end());
 
-      // calculate total memory usage
-      PetscLogDouble total_memory;
-      PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&total_memory));
-
-      MPI_Allreduce(&total_constraints, &total_constraints, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
-      PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4d | Memory: %4.2f MB", constraint_iterations, total_constraints, total_memory / 1024 / 1024);
-    }
-
-    auto matrices = calculateMatrices(particle_manager.local_particles, current_constraints);
+    // Calculate matrices only for the newly identified constraints
+    auto matrices = calculateMatrices(particle_manager.local_particles, new_constraints);
 
     // stack PHI with matrices.phi
     PHI_PREV = concatenateVectors(PHI_PREV, matrices.phi);
@@ -312,7 +299,25 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     double min_seperation;
     PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
     double max_overlap = -min_seperation;
-    converged = true;
+    converged = max_overlap < solver_config.tolerance && constraint_iterations > 0;
+
+    PetscInt total_constraints = all_constraints.size();
+
+    // calculate total memory usage
+    PetscLogDouble total_memory;
+    PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&total_memory));
+
+    std::vector<Constraint> all_constraints_vec(all_constraints.begin(), all_constraints.end());
+    PetscInt local_violated_constraint_count = std::count_if(all_constraints_vec.begin(), all_constraints_vec.end(), [](const Constraint& constraint) { return constraint.violated; });
+    PetscInt global_violated_constraint_count;
+    MPI_Allreduce(&local_violated_constraint_count, &global_violated_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+
+    MPI_Allreduce(&total_constraints, &total_constraints, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+    PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4d | Violated: %4d | Memory: %4.2f MB | Residual: %4.2e", constraint_iterations, total_constraints, global_violated_constraint_count, total_memory / 1024 / 1024, max_overlap);
+
+    if (converged) {
+      break;
+    }
 
     // pad gamma with 0
     VecWrapper zero_pad;
@@ -359,7 +364,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       estimate_phi_dot_movement_inplace(D_PREV, matrices.M, gamma_diff_workspace,
                                         t1_workspace, t2_workspace, phi_dot_movement_workspace);
 
-      calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace, false);
+      calculate_ldot(L_PREV, l, gamma_curr, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
 
       // growth
       VecCopy(ldot_curr_workspace.get(), ldot_diff_workspace.get());
@@ -388,10 +393,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // calculate forces
     auto [df, du, dC] = calculate_forces(D_PREV, matrices.M, matrices.G, gamma_diff);
 
-    // shape of dc
-    int rows;
-
-    calculate_ldot(L_PREV, l, GAMMA_NEXT, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace, false);
+    calculate_ldot(L_PREV, l, GAMMA_NEXT, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
 
     // prepare for next iteration
     particle_manager.moveLocalParticlesFromSolution({.dC = dC, .f = df, .u = du});
@@ -411,5 +413,5 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   particle_manager.growLocalParticlesFromSolution({.dL = ldot_curr_workspace, .impedance = impedance_curr_workspace});
 
-  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
+  return {.constraints = std::vector<Constraint>(all_constraints.begin(), all_constraints.end()), .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }

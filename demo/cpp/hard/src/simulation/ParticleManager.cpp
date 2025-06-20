@@ -155,8 +155,6 @@ void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::Growth
   VecScatter dL_scatter, impedance_scatter;
   IS dL_is, impedance_is;
 
-  VecView(solution.dL.get(), PETSC_VIEWER_STDOUT_WORLD);
-
   scatterVectorToLocal(solution.dL.get(), indices, dL_local, dL_scatter, dL_is);
   scatterVectorToLocal(solution.impedance.get(), indices, impedance_local,
                        impedance_scatter, impedance_is);

@@ -16,6 +16,8 @@
 #include "util/Quaternion.h"
 #include "util/SpherocylinderCell.h"
 
+utils::geometry::DCPSegment3Segment3<double> distance_query;
+
 // CollisionDetector Implementation
 CollisionDetector::CollisionDetector(double collision_tolerance)
     : collision_tolerance_(collision_tolerance), spatial_grid_(1.0, {-10, -10, -10}, {10, 10, 10}) {
@@ -48,9 +50,12 @@ CollisionDetails CollisionDetector::checkSpherocylinderCollision(
   auto [p2_start, p2_end] = getParticleEndpoints(p2);
 
   // Use DCPQuery for accurate segment-segment distance calculation
-  DCPQuery distance_query;
+
   std::array<double, 3> closest_p1, closest_p2;
-  details.min_distance = distance_query(p1_start, p1_end, p2_start, p2_end, closest_p1, closest_p2);
+  auto result = distance_query(p1_start, p1_end, p2_start, p2_end);
+  details.min_distance = result.distance;
+  closest_p1 = result.closest[0];
+  closest_p2 = result.closest[1];
 
   // Store closest points
   details.closest_p1 = closest_p1;
@@ -89,16 +94,17 @@ std::array<double, 3> CollisionDetector::getParticleDirection(const Particle& p)
 std::vector<Constraint> CollisionDetector::detectCollisions(
     const std::vector<Particle>& local_particles,
     const std::vector<Particle>& ghost_particles,
+    const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairsLocal(local_particles, local_particles, constraints, constraint_iterations);
+  checkParticlePairsLocal(local_particles, local_particles, constraints, existing_constraints, constraint_iterations);
 
   // Check local-ghost pairs using spatial grid
   if (!ghost_particles.empty()) {
     updateSpatialGrid(local_particles, ghost_particles);
-    checkParticlePairsCrossRank(local_particles, ghost_particles, constraints, constraint_iterations);
+    checkParticlePairsCrossRank(local_particles, ghost_particles, constraints, existing_constraints, constraint_iterations);
   }
 
   // Assign unique global IDs to constraints
@@ -151,6 +157,7 @@ void CollisionDetector::checkParticlePairsLocal(
     const std::vector<Particle>& particles1,
     const std::vector<Particle>& particles2,
     std::vector<Constraint>& constraints,
+    const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
   for (int i = 0; i < particles1.size(); ++i) {
     int j_start = i + 1;
@@ -160,6 +167,7 @@ void CollisionDetector::checkParticlePairsLocal(
           particles1[i], particles2[j],
           true, true,
           collision_tolerance_,
+          existing_constraints,
           constraint_iterations);
 
       if (constraint.has_value()) {
@@ -173,6 +181,7 @@ void CollisionDetector::checkParticlePairsCrossRank(
     const std::vector<Particle>& local_particles,
     const std::vector<Particle>& ghost_particles,
     std::vector<Constraint>& constraints,
+    const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
   // Create ghost lookup map for efficiency
   std::unordered_map<PetscInt, const Particle*> ghost_map;
@@ -227,6 +236,7 @@ void CollisionDetector::checkParticlePairsCrossRank(
         pair.is_localI,
         pair.is_localJ,
         collision_tolerance_,
+        existing_constraints,
         constraint_iterations);
 
     if (constraint.has_value()) {
@@ -249,15 +259,18 @@ const Particle* CollisionDetector::getParticle(
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     const Particle& p1, const Particle& p2,
-    bool p1_local, bool p2_local, double tolerance, int constraint_iterations) {
+    bool p1_local, bool p2_local, double tolerance,
+    const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
+    int constraint_iterations) {
+  // Ensure canonical ordering of particles by GID
+  if (p1.getGID() > p2.getGID()) {
+    return tryCreateConstraint(p2, p1, p2_local, p1_local, tolerance, existing_constraints, constraint_iterations);
+  }
+
   CollisionDetails details = checkSpherocylinderCollision(p1, p2);
 
   if (!details.collision_detected && !details.potential_collision) {
     return std::nullopt;
-  }
-
-  if (p1.getGID() > p2.getGID()) {
-    return tryCreateConstraint(p2, p1, p2_local, p1_local, tolerance, constraint_iterations);
   }
 
   using namespace utils::ArrayMath;
@@ -270,7 +283,10 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   auto orientation1 = utils::Quaternion::getDirectionVector(p1.getQuaternion());
   auto orientation2 = utils::Quaternion::getDirectionVector(p2.getQuaternion());
 
-  return Constraint(
+  auto stress1 = 0.5 * abs(dot(details.normal, orientation1));
+  auto stress2 = 0.5 * abs(dot(details.normal, orientation2));
+
+  auto constraint = Constraint(
       -details.overlap,
       details.overlap > tolerance,
       p1.setGID(), p2.setGID(),
@@ -279,9 +295,15 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       details.normal,
       rPos1, rPos2,
       details.contact_point,
-      orientation1, orientation2,
+      stress1, stress2,
       constraint_iterations,
       p1.setGID());
+
+  if (existing_constraints.contains(constraint)) {
+    return std::nullopt;
+  }
+
+  return constraint;
 }
 
 std::vector<Particle> CollisionDetector::gatherAllParticles(const std::vector<Particle>& local_particles) {
