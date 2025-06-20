@@ -14,9 +14,9 @@ int main(int argc, char** argv) {
 
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-  double DT = 30;                 // seconds
-  double END_TIME = 5 * 60 * 60;  // 5 hours
-  double LOG_FREQUENCY = 1;  // 5 minutes
+  double DT = 30;                   // seconds
+  double END_TIME = 100 * 60 * 60;  // 100 hours
+  double LOG_FREQUENCY = 10 * 60;   // 10 minutes
 
   SimulationConfig sim_config = {
       .dt = DT,
@@ -24,10 +24,13 @@ int main(int argc, char** argv) {
       .log_frequency_seconds = LOG_FREQUENCY};
 
   PhysicsConfig physic_config = {
-      .xi = 1,
+      .xi = 200 * 3600,
       .TAU = 54 * 60,
       .l0 = 1,
       .LAMBDA = 2.44e-1,
+      .temperature = 0,
+      .monolayer = true,
+      .gravity = {0.0, 0.0, 0.0},
   };
 
   SolverConfig solver_config = {
@@ -48,8 +51,8 @@ int main(int argc, char** argv) {
     std::normal_distribution<> d(0, 1);
     double angle = d(gen) * 2 * M_PI;
 
-    double x = 5 + rank;
-    double y = 5 + rank;
+    double x = physic_config.l0 * (5 + rank);
+    double y = physic_config.l0 * (5 + rank);
     double z = 0;
 
     Particle p1 = Particle(0, {x, y, z}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);

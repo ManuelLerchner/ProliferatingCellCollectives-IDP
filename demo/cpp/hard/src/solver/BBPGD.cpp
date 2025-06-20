@@ -1,8 +1,10 @@
 #include "BBPGD.h"
 
 #include <algorithm>  // For std::min/max
+#include <cmath>      // For std::abs
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <utility>  // For std::move
 
 // Assuming VecWrapper and SolverConfig are defined elsewhere
@@ -77,8 +79,9 @@ BBPGDResult BBPGD(
       break;
     }
 
-    // Step 12: Compute new step size using Barzilai-Borwein formula
-    // αi := (γi − γi−1)^T (γi − γi−1) / (γi − γi−1)^T (gi − gi−1)
+    // Step 12: Compute new step size using alternating Barzilai-Borwein formula
+    // αi_1 := (si−1^T si−1) / (si−1^T yi−1)
+    // αi_2 := (si−1^T yi−1) / (yi−1^T yi−1)
 
     // Compute delta_gamma = gamma - gamma_prev
     VecWAXPY(delta_gamma.get(), -1.0, gamma_prev.get(), gamma.get());
@@ -86,16 +89,39 @@ BBPGDResult BBPGD(
     // Compute delta_g = g - g_prev
     VecWAXPY(delta_g.get(), -1.0, g_prev.get(), g.get());
 
-    PetscScalar numerator, denominator;
-    VecDot(delta_gamma.get(), delta_gamma.get(), &numerator);  // ||δγ||²
-    VecDot(delta_gamma.get(), delta_g.get(), &denominator);    // δγ^T δg
+    PetscScalar s_dot_y;
+    VecDot(delta_gamma.get(), delta_g.get(), &s_dot_y);
 
-    // Safeguard against division by zero or very small denominator
+    double numerator_val;
+    double denominator_val;
 
-    alpha = PetscRealPart(numerator) / PetscRealPart(denominator);
+    // Alternating BB1 and BB2 methods
+    if (iteration % 2 == 0) {
+      // Barzilai-Borwein step size Choice 1 (BB1)
+      PetscScalar s_dot_s;
+      VecDot(delta_gamma.get(), delta_gamma.get(), &s_dot_s);
+      numerator_val = PetscRealPart(s_dot_s);
+      denominator_val = PetscRealPart(s_dot_y);
+    } else {
+      // Barzilai-Borwein step size Choice 2 (BB2)
+      PetscScalar y_dot_y;
+      VecDot(delta_g.get(), delta_g.get(), &y_dot_y);
+      numerator_val = PetscRealPart(s_dot_y);
+      denominator_val = PetscRealPart(y_dot_y);
+    }
 
-    // clamp alpha between 1e-10 and 100
-    // alpha = std::max(1e-10, std::min(100.0, alpha));
+    if (std::abs(denominator_val) < 10 * std::numeric_limits<double>::epsilon()) {
+      denominator_val += 10 * std::numeric_limits<double>::epsilon();  // prevent div 0 error
+    }
+
+    alpha = numerator_val / denominator_val;
+
+    if (alpha < 10 * std::numeric_limits<double>::epsilon()) {
+      PetscPrintf(PETSC_COMM_WORLD,
+                  "\n  BBPGD step size is too small on iteration %lld. Stagnating.",
+                  iteration);
+      break;
+    }
   }
 
   if (iteration == config.max_bbpgd_iterations) {

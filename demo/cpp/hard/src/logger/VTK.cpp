@@ -414,6 +414,24 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   }
   fields.emplace_back("torques", torques);
 
+  // Velocities_linear - use sim_state velocities if available, otherwise create empty
+  std::vector<std::array<double, 3>> velocities_linear;
+  if (!sim_state->velocities_linear.empty() && sim_state->velocities_linear.size() == n_particles) {
+    velocities_linear = sim_state->velocities_linear;
+  } else {
+    velocities_linear.resize(n_particles, {0.0, 0.0, 0.0});
+  }
+  fields.emplace_back("velocities_linear", velocities_linear);
+
+  // Velocities_angular - use sim_state velocities if available, otherwise create empty
+  std::vector<std::array<double, 3>> velocities_angular;
+  if (!sim_state->velocities_angular.empty() && sim_state->velocities_angular.size() == n_particles) {
+    velocities_angular = sim_state->velocities_angular;
+  } else {
+    velocities_angular.resize(n_particles, {0.0, 0.0, 0.0});
+  }
+  fields.emplace_back("velocities_angular", velocities_angular);
+
   // Always add these fields
   fields.emplace_back("directions", directions);
 

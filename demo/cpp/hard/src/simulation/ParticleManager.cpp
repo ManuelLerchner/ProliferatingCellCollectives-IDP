@@ -32,7 +32,6 @@ ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig phys
 
   vtk_logger_ = vtk::createParticleLogger("./vtk_output", log_every_n_steps);
   constraint_loggers_ = vtk::createConstraintLogger("./vtk_output", log_every_n_steps);
-
 }
 
 void ParticleManager::queueNewParticle(Particle p) {
@@ -136,20 +135,33 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
   const PetscScalar* dF_array;
   VecGetArrayRead(dF_local, &dF_array);
 
+  Vec dU_local;
+  VecScatter dU_scatter;
+  IS dU_is;
+  scatterVectorToLocal(solution.u.get(), indicesVelocity, dU_local, dU_scatter, dU_is);
+
+  const PetscScalar* dU_array;
+  VecGetArrayRead(dU_local, &dU_array);
+
   // Process each particle (7 values per particle)
   for (auto& p : local_particles) {
     const PetscScalar* particle_values = &dC_array[p.getLocalID() * Particle::getStateSize()];
     const PetscScalar* force_values = &dF_array[p.getLocalID() * 6];
+    const PetscScalar* velocity_values = &dU_array[p.getLocalID() * 6];
 
     p.eulerStepPosition(particle_values, dt);
     p.addForceAndTorque(force_values);
+
+    p.addVelocity(velocity_values);
   }
 
   // Clean up
   VecRestoreArrayRead(dC_local, &dC_array);
   VecRestoreArrayRead(dF_local, &dF_array);
+  VecRestoreArrayRead(dU_local, &dU_array);
   cleanupScatteredResources(dC_local, dC_scatter, dC_is);
   cleanupScatteredResources(dF_local, dF_scatter, dF_is);
+  cleanupScatteredResources(dU_local, dU_scatter, dU_is);
 }
 
 void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
@@ -218,19 +230,12 @@ void ParticleManager::run(int num_steps) {
     // Validate particle IDs after committing new particles
     validateParticleIDs();
 
-    // VTK logging if enabled (initial state with no constraints)
-    if (vtk_logger_ && i == 0) {
-      PhysicsEngine::SolverSolution solver_solution = {.constraints = {}, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0.0};
-      auto sim_state = createSimulationState(solver_solution);
-      vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
-      printProgress(i, num_steps, std::nullopt);
-    }
-
     // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
+    std::vector<Particle> particles_before_step = local_particles;
     auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt);
 
     if (vtk_logger_) {
-      auto sim_state = createSimulationState(solver_solution);
+      auto sim_state = createSimulationState(solver_solution, &particles_before_step);
 
       vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
       constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
@@ -323,20 +328,28 @@ void ParticleManager::printProgress(int current_iteration, int total_iterations,
 }
 
 std::unique_ptr<vtk::ParticleSimulationState> ParticleManager::createSimulationState(
-    const PhysicsEngine::SolverSolution& solver_solution) const {
+    const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry) const {
   auto state = std::make_unique<vtk::ParticleSimulationState>();
 
   // Copy particles
-  state->particles = local_particles;
+  if (particles_for_geometry) {
+    state->particles = *particles_for_geometry;
+  } else {
+    state->particles = local_particles;
+  }
   state->constraints = std::move(solver_solution.constraints);
 
   // Initialize empty force/torque vectors (would be populated by physics engine in full implementation)
   state->forces.resize(local_particles.size());
   state->torques.resize(local_particles.size());
+  state->velocities_linear.resize(local_particles.size());
+  state->velocities_angular.resize(local_particles.size());
 
   for (int i = 0; i < local_particles.size(); i++) {
     state->forces[i] = local_particles[i].getForce();
     state->torques[i] = local_particles[i].getTorque();
+    state->velocities_linear[i] = local_particles[i].getVelocityLinear();
+    state->velocities_angular[i] = local_particles[i].getVelocityAngular();
   }
 
   // Calculate max overlap from constraints

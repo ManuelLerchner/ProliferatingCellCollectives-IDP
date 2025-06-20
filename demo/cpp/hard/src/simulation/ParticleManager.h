@@ -49,5 +49,6 @@ class ParticleManager {
 
   void printProgress(int current_iteration, int total_iterations, const std::optional<PhysicsEngine::SolverSolution>& solver_solution) const;
 
-  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(const PhysicsEngine::SolverSolution& solver_solution) const;
+  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
+      const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry = nullptr) const;
 };

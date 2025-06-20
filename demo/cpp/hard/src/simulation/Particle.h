@@ -34,6 +34,10 @@ class Particle {
 
   void addTorque(const PetscScalar* df, int offset);
 
+  void addVelocityLinear(const PetscScalar* dU);
+
+  void addVelocityAngular(const PetscScalar* dU);
+
   void eulerStepPosition(const double* dC, double dt);
 
   void eulerStepLength(double ldot, double dt);
@@ -41,6 +45,8 @@ class Particle {
   void clearForceAndTorque();
 
   void addForceAndTorque(const PetscScalar* f);
+
+  void addVelocity(const PetscScalar* dU);
 
   void printState() const;
 
@@ -67,12 +73,16 @@ class Particle {
 
   PetscInt getGID() const;
 
+  double getVolume() const;
+
   double getImpedance() const;
 
   void setImpedance(double impedance);
 
   const std::array<double, 3>& getForce() const;
   const std::array<double, 3>& getTorque() const;
+  const std::array<double, 3>& getVelocityLinear() const;
+  const std::array<double, 3>& getVelocityAngular() const;
 
   static constexpr int getStateSize() {
     return STATE_SIZE;
@@ -88,6 +98,8 @@ class Particle {
 
   std::array<double, 3> force = {0.0, 0.0, 0.0};
   std::array<double, 3> torque = {0.0, 0.0, 0.0};
+  std::array<double, 3> velocityLinear = {0.0, 0.0, 0.0};
+  std::array<double, 3> velocityAngular = {0.0, 0.0, 0.0};
   double impedance = 0.0;
 
   double length;

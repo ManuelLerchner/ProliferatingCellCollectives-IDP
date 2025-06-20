@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <optional>
+#include <random>
 #include <vector>
 
 #include "Constraint.h"
@@ -47,4 +48,10 @@ class PhysicsEngine {
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;
+
+ private:
+  VecWrapper calculate_external_velocities(const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, ISLocalToGlobalMapping velocity_l2g_map);
+  void apply_monolayer_constraints(VecWrapper& U, int n_local);
+
+  std::mt19937 gen;
 };

@@ -63,6 +63,18 @@ void Particle::addTorque(const PetscScalar* df, int offset) {
   torque[2] += PetscRealPart(df[offset + 2]);
 }
 
+void Particle::addVelocityLinear(const PetscScalar* dU) {
+  velocityLinear[0] += PetscRealPart(dU[0]);
+  velocityLinear[1] += PetscRealPart(dU[1]);
+  velocityLinear[2] += PetscRealPart(dU[2]);
+}
+
+void Particle::addVelocityAngular(const PetscScalar* dU) {
+  velocityAngular[0] += PetscRealPart(dU[0]);
+  velocityAngular[1] += PetscRealPart(dU[1]);
+  velocityAngular[2] += PetscRealPart(dU[2]);
+}
+
 void Particle::eulerStepPosition(const double* dC, double dt) {
   updatePosition(dC, 0, dt);
   updateQuaternion(dC, POSITION_SIZE, dt);
@@ -90,6 +102,11 @@ void Particle::addForceAndTorque(const PetscScalar* f) {
 
   // Final validation after complete state update
   validateAndWarn();
+}
+
+void Particle::addVelocity(const PetscScalar* dU) {
+  addVelocityLinear(dU);
+  addVelocityAngular(dU + 3);
 }
 
 void Particle::normalizeQuaternion() {
@@ -243,12 +260,27 @@ const std::array<double, 3>& Particle::getTorque() const {
   return torque;
 }
 
+const std::array<double, 3>& Particle::getVelocityLinear() const {
+  return velocityLinear;
+}
+
+const std::array<double, 3>& Particle::getVelocityAngular() const {
+  return velocityAngular;
+}
+
 double Particle::getLength() const {
   return length;
 }
 
 double Particle::getDiameter() const {
   return diameter;
+}
+
+double Particle::getVolume() const {
+  const double r = diameter / 2.0;
+  const double cylinder_vol = M_PI * r * r * length;
+  const double cap_vol = (4.0 / 3.0) * M_PI * r * r * r;
+  return cylinder_vol + cap_vol;
 }
 
 const std::array<double, Particle::QUATERNION_SIZE>& Particle::getQuaternion() const {
