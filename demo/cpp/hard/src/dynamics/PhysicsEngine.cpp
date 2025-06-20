@@ -88,11 +88,9 @@ void PhysicsEngine::apply_monolayer_constraints(VecWrapper& U, int n_local) {
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(U.get(), &u_array));
 }
 
-VecWrapper PhysicsEngine::calculate_external_velocities(const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, ISLocalToGlobalMapping velocity_l2g_map) {
+void PhysicsEngine::calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt) {
   // Create a vector for external forces
-  VecWrapper F_ext;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, F_ext.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSet(F_ext.get(), 0.0));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSet(F_ext_workspace.get(), 0.0));
 
   // Add gravity
   if (physics_config.gravity.x != 0.0 || physics_config.gravity.y != 0.0 || physics_config.gravity.z != 0.0) {
@@ -105,16 +103,14 @@ VecWrapper PhysicsEngine::calculate_external_velocities(const std::vector<Partic
       vals[0] = local_particles[i].getVolume() * physics_config.gravity.x;
       vals[1] = local_particles[i].getVolume() * physics_config.gravity.y;
       vals[2] = local_particles[i].getVolume() * physics_config.gravity.z;
-      PetscCallAbort(PETSC_COMM_WORLD, VecSetValuesLocal(F_ext.get(), 3, idx, vals, ADD_VALUES));
+      PetscCallAbort(PETSC_COMM_WORLD, VecSetValuesLocal(F_ext_workspace.get(), 3, idx, vals, ADD_VALUES));
     }
-    PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(F_ext.get()));
-    PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(F_ext.get()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(F_ext_workspace.get()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(F_ext_workspace.get()));
   }
 
   // U_ext = M * F_ext
-  VecWrapper U_ext;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, U_ext.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M.get(), F_ext.get(), U_ext.get()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M.get(), F_ext_workspace.get(), U_ext.get()));
 
   // Add Brownian motion
   if (physics_config.temperature > 0) {
@@ -168,8 +164,6 @@ VecWrapper PhysicsEngine::calculate_external_velocities(const std::vector<Partic
   }
 
   apply_monolayer_constraints(U_ext, local_particles.size());
-
-  return U_ext;
 }
 
 void estimate_phi_dot_movement_inplace(
@@ -237,26 +231,18 @@ void estimate_phi_dot_growth_inplace(
   PetscCallAbort(PETSC_COMM_WORLD, VecScale(phi_dot_growth_result.get(), -1.0));
 }
 
-std::tuple<VecWrapper, VecWrapper, VecWrapper> calculate_forces(const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
+void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
   // f = D @ gamma
-  VecWrapper F;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D.get(), NULL, F.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma.get(), F.get()));
 
   // U = M @ f
-  VecWrapper U;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, U.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F.get(), U.get()));
 
   // U = U + U_ext
   PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(U.get(), 1.0, U_ext.get()));
 
   // deltaC = G @ U
-  VecWrapper deltaC;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(G.get(), NULL, deltaC.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U.get(), deltaC.get()));
-
-  return {std::move(F), std::move(U), std::move(deltaC)};
 }
 
 double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
@@ -307,7 +293,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
 
   // --- External Velocities ---
   auto mappings = createMappings(particle_manager.local_particles, local_constraints);
-  VecWrapper U_ext = calculate_external_velocities(particle_manager.local_particles, matrices.M, dt, mappings.velocityL2GMap);
+  VecWrapper U_ext;
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, U_ext.get_ref()));
+  VecWrapper F_ext_workspace;
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, F_ext_workspace.get_ref()));
+  calculate_external_velocities(U_ext, F_ext_workspace, particle_manager.local_particles, matrices.M, dt);
 
   // create a workspace for phi_dot and t1 and t2
   VecWrapper phi_dot;
@@ -333,9 +323,13 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
 
   auto [gamma, bbpgd_iterations, res] = BBPGD(gradient, residual, gamma0, solver_config);
 
-  auto [F, U, deltaC] = calculate_forces(matrices.D, matrices.M, matrices.G, U_ext, gamma);
+  VecWrapper F, U, deltaC;
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.D.get(), NULL, F.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, U.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.G.get(), NULL, deltaC.get_ref()));
+  calculate_forces(F, U, deltaC, matrices.D, matrices.M, matrices.G, U_ext, gamma);
 
-  PhysicsEngine::MovementSolution solution = {.dC = std::move(deltaC), .f = std::move(F), .u = std::move(U)};
+  PhysicsEngine::MovementSolution solution = {.dC = deltaC, .f = F, .u = U};
   particle_manager.moveLocalParticlesFromSolution(solution);
 
   return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_iterations, .residual = res};
@@ -383,6 +377,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   VecWrapper ldot_prev;
 
   VecWrapper impedance_curr_workspace;
+
+  VecWrapper U_ext;
+  VecWrapper F_ext_workspace;
+
+  VecWrapper df, du, dC;
+  bool force_vectors_initialized = false;
 
   // Create length mapping for consistent indexing
   auto length_map = create_length_map(particle_manager.local_particles);
@@ -456,7 +456,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     // --- External Velocities ---
     auto mappings = createMappings(particle_manager.local_particles, all_constraints_vec);
-    VecWrapper U_ext = calculate_external_velocities(particle_manager.local_particles, matrices.M, dt, mappings.velocityL2GMap);
+    if (constraint_iterations == 0) {
+      PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, U_ext.get_ref()));
+      PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, F_ext_workspace.get_ref()));
+    }
+    calculate_external_velocities(U_ext, F_ext_workspace, particle_manager.local_particles, matrices.M, dt);
 
     bool recreate_workspace = constraint_iterations == 0;
     if (not recreate_workspace) {
@@ -527,7 +531,13 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get()));
 
     // calculate forces
-    auto [df, du, dC] = calculate_forces(D_PREV, matrices.M, matrices.G, U_ext, gamma_diff);
+    if (!force_vectors_initialized) {
+      PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(D_PREV.get(), NULL, df.get_ref()));
+      PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, du.get_ref()));
+      PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.G.get(), NULL, dC.get_ref()));
+      force_vectors_initialized = true;
+    }
+    calculate_forces(df, du, dC, D_PREV, matrices.M, matrices.G, U_ext, gamma_diff);
 
     calculate_ldot(L_PREV, l, GAMMA_NEXT, LAMBDA_DIMENSIONLESS, physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
 

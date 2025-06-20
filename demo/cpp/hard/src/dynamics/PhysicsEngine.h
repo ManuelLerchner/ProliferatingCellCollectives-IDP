@@ -50,7 +50,7 @@ class PhysicsEngine {
   const SolverConfig solver_config;
 
  private:
-  VecWrapper calculate_external_velocities(const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, ISLocalToGlobalMapping velocity_l2g_map);
+  void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt);
   void apply_monolayer_constraints(VecWrapper& U, int n_local);
 
   std::mt19937 gen;
