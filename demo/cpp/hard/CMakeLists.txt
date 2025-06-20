@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(ProliferatingCellCollectives)
 
+set(CMAKE_CXX_STANDARD 23)
+
 set(CELL_COLLECTIVES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}) 
 
 # append custom modules to the module path
