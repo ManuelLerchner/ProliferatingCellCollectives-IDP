@@ -7,7 +7,7 @@ class Constraint {
  public:
   // Constructor with local IDs and ownership
   Constraint(double delta0, bool violated, int gidI, int gidJ, int localI, int localJ,
-             bool particleI_isLocal, bool particleJ_isLocal,
+             bool owned_by_me,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
              double stressI, double stressJ,
              int constraint_iterations, int gid);
@@ -28,7 +28,7 @@ class Constraint {
   // local index of particle J on this rank (-1 if not local)
   int localJ;
   // whether particle I is owned by this rank
-  bool particleI_isLocal;
+  bool owned_by_me;
   // whether particle J is owned by this rank
   bool particleJ_isLocal;
   // surface normal vector at the location of constraint (minimal separation) for particle I
@@ -58,8 +58,8 @@ struct ConstraintHash {
     std::size_t h1 = std::hash<int>()(c.gidI);
     std::size_t h2 = std::hash<int>()(c.gidJ);
     std::size_t h3 = std::hash<int>()(c.delta0);
-    std::size_t h4 = std::hash<int>()(c.stressI);
-    std::size_t h5 = std::hash<int>()(c.stressJ);
+    std::size_t h4 = std::hash<int>()(c.contactPoint[0]) ^ std::hash<int>()(c.contactPoint[1]) ^ std::hash<int>()(c.contactPoint[2]);
+    std::size_t h5 = std::hash<int>()(c.normI[0]) ^ std::hash<int>()(c.normI[1]) ^ std::hash<int>()(c.normI[2]);
     return h1 ^ h2 ^ h3 ^ h4 ^ h5;
   }
 };
@@ -67,6 +67,13 @@ struct ConstraintHash {
 // Custom equality for Constraint based on particle GIDs
 struct ConstraintEqual {
   bool operator()(const Constraint& a, const Constraint& b) const {
-    return a.gidI == b.gidI && a.gidJ == b.gidJ && a.delta0 == b.delta0 && a.stressI == b.stressI && a.stressJ == b.stressJ;
+    return a.gidI == b.gidI && a.gidJ == b.gidJ &&
+           a.delta0 == b.delta0 &&
+           a.contactPoint[0] == b.contactPoint[0] &&
+           a.contactPoint[1] == b.contactPoint[1] &&
+           a.contactPoint[2] == b.contactPoint[2] &&
+           a.normI[0] == b.normI[0] &&
+           a.normI[1] == b.normI[1] &&
+           a.normI[2] == b.normI[2];
   }
 };

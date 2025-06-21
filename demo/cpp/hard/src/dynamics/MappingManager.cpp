@@ -35,15 +35,10 @@ ISLocalToGlobalMappingWrapper createLocalToGlobalMapping(const std::vector<Parti
 ISLocalToGlobalMappingWrapper create_constraint_map(const std::vector<Constraint>& local_constraints) {
   int local_num_constraints = local_constraints.size();
 
-  // This logic creates a contiguous global numbering for the constraints.
-  PetscInt col_start_offset;
-  MPI_Scan(&local_num_constraints, &col_start_offset, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
-  col_start_offset -= local_num_constraints;
-
-  // Build the ownership map using this contiguous numbering.
+  // Build the ownership map using the pre-assigned global IDs (gid).
   std::vector<PetscInt> col_ownership_map(local_num_constraints);
   for (PetscInt i = 0; i < local_num_constraints; ++i) {
-    col_ownership_map[i] = col_start_offset + i;
+    col_ownership_map[i] = local_constraints[i].gid;
   }
 
   // Create the PETSc mapping object.

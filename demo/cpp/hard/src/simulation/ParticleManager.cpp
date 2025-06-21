@@ -232,7 +232,7 @@ void ParticleManager::run(int num_steps) {
 
     // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
     std::vector<Particle> particles_before_step = local_particles;
-    auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt);
+    auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i);
 
     if (vtk_logger_) {
       auto sim_state = createSimulationState(solver_solution, &particles_before_step);

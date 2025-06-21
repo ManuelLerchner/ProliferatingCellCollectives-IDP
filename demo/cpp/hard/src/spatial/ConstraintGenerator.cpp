@@ -22,6 +22,8 @@ std::vector<Constraint> ConstraintGenerator::generateConstraints(
   // 2. Filter for ghost particles
   auto ghost_particles = collision_detector_.filterGhostParticles(all_particles, local_particles, ghost_cutoff_distance_);
 
+  collision_detector_.updateSpatialGrid(local_particles, ghost_particles);
+
   // 3. Detect collisions, now passing the set of existing constraints
   return collision_detector_.detectCollisions(local_particles, ghost_particles, existing_constraints, constraint_iterations);
 }

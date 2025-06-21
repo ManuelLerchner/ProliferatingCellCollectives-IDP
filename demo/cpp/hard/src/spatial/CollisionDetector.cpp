@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -91,6 +92,15 @@ std::array<double, 3> CollisionDetector::getParticleDirection(const Particle& p)
   return utils::Quaternion::getDirectionVector(p.getQuaternion());
 }
 
+struct PairHash {
+  template <class T1, class T2>
+  std::size_t operator()(const std::pair<T1, T2>& p) const {
+    auto h1 = std::hash<T1>{}(p.first);
+    auto h2 = std::hash<T2>{}(p.second);
+    return h1 ^ (h2 << 1);
+  }
+};
+
 std::vector<Constraint> CollisionDetector::detectCollisions(
     const std::vector<Particle>& local_particles,
     const std::vector<Particle>& ghost_particles,
@@ -103,18 +113,61 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
 
   // Check local-ghost pairs using spatial grid
   if (!ghost_particles.empty()) {
-    updateSpatialGrid(local_particles, ghost_particles);
     checkParticlePairsCrossRank(local_particles, ghost_particles, constraints, existing_constraints, constraint_iterations);
   }
 
-  // Assign unique global IDs to constraints
-  int num_local_constraints = constraints.size();
-  int total_constraints_upto_rank;
-  MPI_Scan(&num_local_constraints, &total_constraints_upto_rank, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
-  int starting_gid = total_constraints_upto_rank - num_local_constraints;
+  // --- Globally consistent GID assignment ---
 
-  for (int i = 0; i < num_local_constraints; ++i) {
-    constraints[i].gid = starting_gid + i;
+  // 1. Each process creates a list of its constraint pairs {min_gid, max_gid}
+  std::vector<int> local_constraint_pairs;
+  local_constraint_pairs.reserve(constraints.size() * 2);
+  for (const auto& c : constraints) {
+    local_constraint_pairs.push_back(std::min(c.gidI, c.gidJ));
+    local_constraint_pairs.push_back(std::max(c.gidI, c.gidJ));
+  }
+
+  // 2. Gather the number of pairs from each process
+  int local_num_pairs = local_constraint_pairs.size() / 2;
+  int world_size;
+  MPI_Comm_size(PETSC_COMM_WORLD, &world_size);
+  std::vector<int> pair_counts(world_size);
+  MPI_Allgather(&local_num_pairs, 1, MPI_INT, pair_counts.data(), 1, MPI_INT, PETSC_COMM_WORLD);
+
+  // 3. Gather all pairs from all processes using Allgatherv
+  std::vector<int> displacements(world_size, 0);
+  int total_pairs = pair_counts[0];
+  for (int i = 1; i < world_size; ++i) {
+    displacements[i] = displacements[i - 1] + pair_counts[i - 1];
+    total_pairs += pair_counts[i];
+  }
+  std::vector<int> all_constraint_pairs(total_pairs * 2);
+  // Convert counts and displacements for MPI_Allgatherv (needs pairs -> ints)
+  for (int i = 0; i < world_size; ++i) {
+    pair_counts[i] *= 2;
+    displacements[i] *= 2;
+  }
+  MPI_Allgatherv(local_constraint_pairs.data(), local_constraint_pairs.size(), MPI_INT,
+                 all_constraint_pairs.data(), pair_counts.data(), displacements.data(), MPI_INT, PETSC_COMM_WORLD);
+
+  // 4. Create a unique, sorted list of pairs to establish a global order
+  std::vector<std::pair<int, int>> unique_pairs;
+  unique_pairs.reserve(total_pairs);
+  for (int i = 0; i < total_pairs; ++i) {
+    unique_pairs.emplace_back(all_constraint_pairs[i * 2], all_constraint_pairs[i * 2 + 1]);
+  }
+  std::sort(unique_pairs.begin(), unique_pairs.end());
+  unique_pairs.erase(std::unique(unique_pairs.begin(), unique_pairs.end()), unique_pairs.end());
+
+  // 5. Create a map from the unique pair to a global ID
+  std::unordered_map<std::pair<int, int>, int, PairHash> pair_to_gid;
+  for (int i = 0; i < unique_pairs.size(); ++i) {
+    pair_to_gid[unique_pairs[i]] = i;
+  }
+
+  // 6. Assign the correct global ID to each local constraint
+  for (auto& c : constraints) {
+    std::pair<int, int> p = {std::min(c.gidI, c.gidJ), std::max(c.gidI, c.gidJ)};
+    c.gid = pair_to_gid[p];
   }
 
   return constraints;
@@ -262,16 +315,6 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     bool p1_local, bool p2_local, double tolerance,
     const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
-  // Do not create a constraint between a particle and itself
-  if (p1.getGID() == p2.getGID()) {
-    return std::nullopt;
-  }
-
-  // Ensure canonical ordering of particles by GID
-  if (p1.getGID() > p2.getGID()) {
-    return tryCreateConstraint(p2, p1, p2_local, p1_local, tolerance, existing_constraints, constraint_iterations);
-  }
-
   // For cross-rank constraints, ensure only one rank creates the constraint.
   // The rank owning the particle with the lower GID (p1) is responsible.
   // If p1 is not local to this rank, this rank should not create the constraint.
@@ -298,12 +341,17 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   auto stress1 = 0.5 * abs(dot(details.normal, orientation1));
   auto stress2 = 0.5 * abs(dot(details.normal, orientation2));
 
+  auto local_id1 = p1_local ? p1.getLocalID() : -1;
+  auto local_id2 = p2_local ? p2.getLocalID() : -1;
+
+  auto owned_by_me = (p1_local && p1.setGID() < p2.setGID()) || (!p1_local && p2_local);
+
   auto constraint = Constraint(
       -details.overlap,
       details.overlap > tolerance,
       p1.setGID(), p2.setGID(),
-      p1.getLocalID(), p2.getLocalID(),
-      p1_local, p2_local,
+      local_id1, local_id2,
+      owned_by_me,
       details.normal,
       rPos1, rPos2,
       details.contact_point,

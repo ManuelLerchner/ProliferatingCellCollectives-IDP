@@ -38,6 +38,11 @@ class CollisionDetector {
       const std::vector<Particle>& local_particles,
       double cutoff_distance);
 
+  // Simplified helper methods
+  void updateSpatialGrid(
+      const std::vector<Particle>& local_particles,
+      const std::vector<Particle>& ghost_particles);
+
  private:
   double collision_tolerance_;
   SpatialGrid spatial_grid_;
@@ -47,11 +52,6 @@ class CollisionDetector {
 
   std::array<double, 3> getParticleDirection(const Particle& p);
   std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
-
-  // Simplified helper methods
-  void updateSpatialGrid(
-      const std::vector<Particle>& local_particles,
-      const std::vector<Particle>& ghost_particles);
 
   void checkParticlePairsLocal(
       const std::vector<Particle>& particles1,

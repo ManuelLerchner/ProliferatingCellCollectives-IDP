@@ -23,8 +23,11 @@ MatWrapper calculate_Jacobian(
   PetscInt local_num_bodies = local_particles.size();
   PetscInt local_row_count = 6 * local_num_bodies;
 
+  int owned_constraints = std::count_if(local_constraints.begin(), local_constraints.end(),
+                                        [](const Constraint& c) { return c.owned_by_me; });
+
   // D is a (6 * global_num_bodies, global_num_constraints) matrix
-  MatWrapper D = MatWrapper::CreateAIJ(local_row_count, local_constraints.size(), PETSC_DETERMINE, PETSC_DETERMINE);
+  MatWrapper D = MatWrapper::CreateAIJ(local_row_count, owned_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
 
   // Precise preallocation: count constraints per particle
   std::vector<PetscInt> d_nnz(local_row_count, 0);
@@ -58,7 +61,7 @@ MatWrapper calculate_Jacobian(
     double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
     // Check if body I is owned by this process
-    if (constraint.particleI_isLocal) {
+    if (constraint.localI >= 0) {
       PetscInt local_ids_i[6] = {constraint.localI * 6 + 0, constraint.localI * 6 + 1, constraint.localI * 6 + 2,
                                  constraint.localI * 6 + 3, constraint.localI * 6 + 4, constraint.localI * 6 + 5};
       MatSetValuesLocal(D, 6, local_ids_i, 1, &c_local_idx, F_i, INSERT_VALUES);
@@ -66,7 +69,7 @@ MatWrapper calculate_Jacobian(
 
     // Check if body J is owned by this process
 
-    if (constraint.particleJ_isLocal) {
+    if (constraint.localJ >= 0) {
       PetscInt local_ids_j[6] = {constraint.localJ * 6 + 0, constraint.localJ * 6 + 1, constraint.localJ * 6 + 2,
                                  constraint.localJ * 6 + 3, constraint.localJ * 6 + 4, constraint.localJ * 6 + 5};
       MatSetValuesLocal(D, 6, local_ids_j, 1, &c_local_idx, F_j, INSERT_VALUES);
@@ -81,7 +84,10 @@ MatWrapper calculate_Jacobian(
 
 VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints, const ISLocalToGlobalMappingWrapper& constraintL2GMap_N) {
   // phi is a (global_num_constraints, 1) vector
-  VecWrapper phi = VecWrapper::Create(local_constraints.size());
+  int owned_constraints = std::count_if(local_constraints.begin(), local_constraints.end(),
+                                        [](const Constraint& c) { return c.owned_by_me; });
+
+  VecWrapper phi = VecWrapper::Create(owned_constraints);
 
   // Set the local-to-global mapping (consistent with Jacobian)
   VecSetLocalToGlobalMapping(phi, constraintL2GMap_N.get());
@@ -200,10 +206,12 @@ MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constrai
   using namespace utils::ArrayMath;
 
   PetscInt local_num_particles = local_particles.size();
-  PetscInt local_num_constraints = local_constraints.size();
+
+  int owned_constraints = std::count_if(local_constraints.begin(), local_constraints.end(),
+                                        [](const Constraint& c) { return c.owned_by_me; });
 
   // S is a (num_particles, num_constraints) matrix
-  MatWrapper S = MatWrapper::CreateAIJ(local_num_particles, local_num_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
+  MatWrapper S = MatWrapper::CreateAIJ(local_num_particles, owned_constraints, PETSC_DETERMINE, PETSC_DETERMINE);
 
   std::vector<PetscInt> d_nnz(local_num_particles);
   std::vector<PetscInt> o_nnz(local_num_particles, 0);
@@ -216,13 +224,13 @@ MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constrai
 
   MatSetLocalToGlobalMapping(S, length_map.get(), constraintL2GMap.get());
 
-  for (PetscInt c_idx = 0; c_idx < local_num_constraints; ++c_idx) {
+  for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {
     const auto& constraint = local_constraints[c_idx];
 
-    if (constraint.particleI_isLocal) {
+    if (constraint.localI >= 0) {
       MatSetValueLocal(S, constraint.localI, c_idx, constraint.stressI, INSERT_VALUES);
     }
-    if (constraint.particleJ_isLocal) {
+    if (constraint.localJ >= 0) {
       MatSetValueLocal(S, constraint.localJ, c_idx, constraint.stressJ, INSERT_VALUES);
     }
   }

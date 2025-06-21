@@ -432,7 +432,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
   return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }
 
-PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt) {
+PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter) {
   VecWrapper GAMMA_PREV = VecWrapper::CreateEmpty();
   VecWrapper PHI_PREV = VecWrapper::CreateEmpty();
   MatWrapper D_PREV = MatWrapper::CreateEmpty(particle_manager.local_particles.size() * PARTICLE_DOFS);
@@ -455,7 +455,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   bool converged = false;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
-    std::vector<Constraint> new_constraints = particle_manager.constraint_generator->generateConstraints(
+    auto new_constraints = particle_manager.constraint_generator->generateConstraints(
         particle_manager.local_particles, all_constraints, constraint_iterations);
 
     // Add the new constraints to the master set
