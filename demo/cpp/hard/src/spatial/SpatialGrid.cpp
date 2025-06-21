@@ -28,10 +28,10 @@ void SpatialGrid::clear() {
   }
 }
 
-void SpatialGrid::insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter) {
+void SpatialGrid::insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter, bool is_local) {
   int cell_idx = getCellIndex(position);
   if (cell_idx >= 0 && cell_idx < grid_cells_.size()) {
-    grid_cells_[cell_idx].push_back(particle_idx);
+    grid_cells_[cell_idx].push_back({particle_idx, is_local});
   }
 }
 
@@ -95,43 +95,39 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
   // Insert all particles into grid
   clear();
 
-  for (int i = 0; i < local_particles.size(); ++i) {
-    const auto& pos = local_particles[i].getPosition();
-    insertParticle(local_particles[i].setGID(), pos, local_particles[i].getLength(), local_particles[i].getDiameter());
+  for (const auto& p : local_particles) {
+    insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), true);
   }
 
-  // Insert ghost particles with negative indices to distinguish them
-  for (int i = 0; i < ghost_particles.size(); ++i) {
-    const auto& pos = ghost_particles[i].getPosition();
-    insertParticle(ghost_particles[i].setGID(), pos, ghost_particles[i].getLength(), ghost_particles[i].getDiameter());
+  for (const auto& p : ghost_particles) {
+    insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), false);
   }
 
   for (int cell_idx = 0; cell_idx < grid_cells_.size(); ++cell_idx) {
-    const auto& cell = grid_cells_[cell_idx];
-    auto neighbor_cells = getNeighborCells(cell_idx);
-
-    // Check within cell
-    for (int i = 0; i < cell.size(); ++i) {
-      for (int j = i + 1; j < cell.size(); ++j) {
-        int gidI = cell[i];
-        int gidJ = cell[j];
-
-        CollisionPair pair = {gidI, gidJ, true, true};
-
-        pairs.push_back(pair);
+    auto neighbor_indices = getNeighborCells(cell_idx);
+    for (int neighbor_idx : neighbor_indices) {
+      if (neighbor_idx < cell_idx) {
+        continue;
       }
 
-      // Check with neighbor cells
-      for (int neighbor_idx : neighbor_cells) {
-        const auto& neighbor_cell = grid_cells_[neighbor_idx];
+      const auto& cell1 = grid_cells_[cell_idx];
+      const auto& cell2 = grid_cells_[neighbor_idx];
 
-        for (int p2_idx : neighbor_cell) {
-          int gidI = cell[i];
-          int gidJ = p2_idx;
+      for (size_t i = 0; i < cell1.size(); ++i) {
+        for (size_t j = 0; j < cell2.size(); ++j) {
+          if (cell_idx == neighbor_idx && i >= j) {
+            continue;
+          }
 
-          CollisionPair pair = {gidI, gidJ, true, false};
+          const auto& p1_info = cell1[i];
+          const auto& p2_info = cell2[j];
 
-          pairs.push_back(pair);
+          // Don't check ghost-ghost collisions
+          if (!p1_info.second && !p2_info.second) {
+            continue;
+          }
+
+          pairs.push_back({p1_info.first, p2_info.first, p1_info.second, p2_info.second});
         }
       }
     }

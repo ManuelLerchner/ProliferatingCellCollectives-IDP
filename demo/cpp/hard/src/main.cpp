@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   }
 
   int num_steps = sim_config.end_time / sim_config.dt;
-  system.run(120);
+  system.run(200);
 
   PetscFinalize();
   return EXIT_SUCCESS;

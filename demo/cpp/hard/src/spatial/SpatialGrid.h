@@ -26,14 +26,14 @@ class SpatialGrid {
   SpatialGrid(double cell_size, const std::array<double, 3>& domain_min, const std::array<double, 3>& domain_max);
 
   void clear();
-  void insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter);
+  void insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter, bool is_local);
   std::vector<CollisionPair> findPotentialCollisions(const std::vector<Particle>& local_particles, const std::vector<Particle>& ghost_particles);
 
  private:
   double cell_size_;
   std::array<double, 3> domain_min_, domain_max_;
   std::array<int, 3> grid_dims_;
-  std::vector<std::vector<int>> grid_cells_;
+  std::vector<std::vector<std::pair<int, bool>>> grid_cells_;
 
   int getCellIndex(const std::array<double, 3>& position) const;
   std::array<int, 3> getCellCoords(const std::array<double, 3>& position) const;

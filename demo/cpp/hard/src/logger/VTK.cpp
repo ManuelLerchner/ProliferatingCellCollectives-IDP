@@ -474,10 +474,18 @@ VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int time
 VTKGeometry ConstraintDataExtractor::extractGeometry(const void* state) {
   const auto* sim_state = static_cast<const ParticleSimulationState*>(state);
 
+  int owned_constraints = std::count_if(sim_state->constraints.begin(), sim_state->constraints.end(),
+                                        [](const Constraint& c) { return c.owned_by_me; });
+
   std::vector<std::array<double, 3>> positions;
-  positions.reserve(sim_state->constraints.size());
+  positions.reserve(owned_constraints);
 
   for (const auto& constraint : sim_state->constraints) {
+    // Skip constraints not owned by this rank
+    if (!constraint.owned_by_me) {
+      continue;
+    }
+
     // Validate and sanitize contact point to avoid VTK parsing errors
     auto center = constraint.contactPoint;
 
@@ -498,7 +506,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   const auto* sim_state = static_cast<const ParticleSimulationState*>(state);
   std::vector<VTKField> fields;
 
-  const size_t n_constraints = sim_state->constraints.size();
+  int owned_constraints = std::count_if(sim_state->constraints.begin(), sim_state->constraints.end(),
+                                        [](const Constraint& c) { return c.owned_by_me; });
 
   // Get MPI rank for ownership information
   int rank;
@@ -515,17 +524,22 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<int> constraint_iterations;
 
   // Reserve space for all vectors (one value per constraint)
-  normals.reserve(n_constraints);
-  contact_positions.reserve(n_constraints);
-  ranks.reserve(n_constraints);
-  overlap_magnitudes.reserve(n_constraints);
-  violated.reserve(n_constraints);
-  constraint_iterations.reserve(n_constraints);
-  gidI.reserve(n_constraints);
-  gidJ.reserve(n_constraints);
+  normals.reserve(owned_constraints);
+  contact_positions.reserve(owned_constraints);
+  ranks.reserve(owned_constraints);
+  overlap_magnitudes.reserve(owned_constraints);
+  violated.reserve(owned_constraints);
+  constraint_iterations.reserve(owned_constraints);
+  gidI.reserve(owned_constraints);
+  gidJ.reserve(owned_constraints);
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
+    // Skip constraints not owned by this rank
+    if (!constraint.owned_by_me) {
+      continue;
+    }
+
     // Basic constraint data
     normals.push_back(constraint.normI);
     overlap_magnitudes.push_back(-constraint.delta0);  // Positive overlap value
@@ -577,8 +591,11 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
 
   VTKFieldData field_data;
 
+  int owned_constraints = std::count_if(sim_state->constraints.begin(), sim_state->constraints.end(),
+                                        [](const Constraint& c) { return c.owned_by_me; });
+
   // Basic constraint information
-  field_data.addField("num_constraints", static_cast<int>(sim_state->constraints.size()));
+  field_data.addField("num_constraints", static_cast<int>(owned_constraints));
   field_data.addField("elapsed_time", elapsed_time);
   field_data.addField("simulation_time", dt * timestep);
 

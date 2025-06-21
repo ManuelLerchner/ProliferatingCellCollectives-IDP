@@ -53,14 +53,7 @@ class CollisionDetector {
   std::array<double, 3> getParticleDirection(const Particle& p);
   std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
 
-  void checkParticlePairsLocal(
-      const std::vector<Particle>& particles1,
-      const std::vector<Particle>& particles2,
-      std::vector<Constraint>& constraints,
-      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
-      int constraint_iterations);
-
-  void checkParticlePairsCrossRank(
+  void checkParticlePairs(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles,
       std::vector<Constraint>& constraints,
@@ -68,9 +61,8 @@ class CollisionDetector {
       int constraint_iterations);
 
   const Particle* getParticle(
-      int local_idx, int global_id,
-      const std::vector<Particle>& local_particles,
-      const std::unordered_map<int, const Particle*>& ghost_map);
+      int global_id,
+      const std::vector<Particle>& particles);
 
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,

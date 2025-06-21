@@ -109,14 +109,7 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairsLocal(local_particles, local_particles, constraints, existing_constraints, constraint_iterations);
-
-  // Check local-ghost pairs using spatial grid
-  if (!ghost_particles.empty()) {
-    checkParticlePairsCrossRank(local_particles, ghost_particles, constraints, existing_constraints, constraint_iterations);
-  }
-
-  // --- Globally consistent GID assignment ---
+  checkParticlePairs(local_particles, ghost_particles, constraints, existing_constraints, constraint_iterations);
 
   // 1. Each process creates a list of its constraint pairs {min_gid, max_gid}
   std::vector<int> local_constraint_pairs;
@@ -206,31 +199,7 @@ void CollisionDetector::updateSpatialGrid(
   spatial_grid_ = SpatialGrid(cell_size, min_pos, max_pos);
 }
 
-void CollisionDetector::checkParticlePairsLocal(
-    const std::vector<Particle>& particles1,
-    const std::vector<Particle>& particles2,
-    std::vector<Constraint>& constraints,
-    const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
-    int constraint_iterations) {
-  for (int i = 0; i < particles1.size(); ++i) {
-    int j_start = i + 1;
-
-    for (int j = j_start; j < particles2.size(); ++j) {
-      auto constraint = tryCreateConstraint(
-          particles1[i], particles2[j],
-          true, true,
-          collision_tolerance_,
-          existing_constraints,
-          constraint_iterations);
-
-      if (constraint.has_value()) {
-        constraints.push_back(constraint.value());
-      }
-    }
-  }
-}
-
-void CollisionDetector::checkParticlePairsCrossRank(
+void CollisionDetector::checkParticlePairs(
     const std::vector<Particle>& local_particles,
     const std::vector<Particle>& ghost_particles,
     std::vector<Constraint>& constraints,
@@ -245,44 +214,20 @@ void CollisionDetector::checkParticlePairsCrossRank(
   auto collision_pairs = spatial_grid_.findPotentialCollisions(local_particles, ghost_particles);
 
   for (const auto& pair : collision_pairs) {
-    // Skip local-local pairs (already handled by checkParticlePairsLocal)
-    if (pair.is_localI && pair.is_localJ) {
-      continue;
-    }
+    const Particle* p1;
+    const Particle* p2;
 
-    const Particle* p1 = nullptr;
     if (pair.is_localI) {
-      // Find local particle by GID
-      for (const auto& p : local_particles) {
-        if (p.getGID() == pair.gidI) {
-          p1 = &p;
-          break;
-        }
-      }
+      p1 = getParticle(pair.gidI, local_particles);
     } else {
-      auto it = ghost_map.find(pair.gidI);
-      if (it != ghost_map.end()) {
-        p1 = it->second;
-      }
+      p1 = getParticle(pair.gidI, ghost_particles);
     }
 
-    const Particle* p2 = nullptr;
     if (pair.is_localJ) {
-      // Find local particle by GID
-      for (const auto& p : local_particles) {
-        if (p.getGID() == pair.gidJ) {
-          p2 = &p;
-          break;
-        }
-      }
+      p2 = getParticle(pair.gidJ, local_particles);
     } else {
-      auto it = ghost_map.find(pair.gidJ);
-      if (it != ghost_map.end()) {
-        p2 = it->second;
-      }
+      p2 = getParticle(pair.gidJ, ghost_particles);
     }
-
-    if (!p1 || !p2) continue;
 
     auto constraint = tryCreateConstraint(
         *p1, *p2,
@@ -299,15 +244,14 @@ void CollisionDetector::checkParticlePairsCrossRank(
 }
 
 const Particle* CollisionDetector::getParticle(
-    int local_idx, int global_id,
-    const std::vector<Particle>& local_particles,
-    const std::unordered_map<int, const Particle*>& ghost_map) {
-  if (local_idx >= 0 && local_idx < local_particles.size()) {
-    return &local_particles[local_idx];
+    int global_id,
+    const std::vector<Particle>& particles) {
+  for (const auto& p : particles) {
+    if (p.setGID() == global_id) {
+      return &p;
+    }
   }
-
-  auto it = ghost_map.find(global_id);
-  return (it != ghost_map.end()) ? it->second : nullptr;
+  return nullptr;
 }
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
@@ -315,13 +259,6 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     bool p1_local, bool p2_local, double tolerance,
     const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
-  // For cross-rank constraints, ensure only one rank creates the constraint.
-  // The rank owning the particle with the lower GID (p1) is responsible.
-  // If p1 is not local to this rank, this rank should not create the constraint.
-  if (!p1_local && p2_local) {
-    return std::nullopt;
-  }
-
   CollisionDetails details = checkSpherocylinderCollision(p1, p2);
 
   if (!details.collision_detected && !details.potential_collision) {
@@ -344,7 +281,7 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   auto local_id1 = p1_local ? p1.getLocalID() : -1;
   auto local_id2 = p2_local ? p2.getLocalID() : -1;
 
-  auto owned_by_me = (p1_local && p1.setGID() < p2.setGID()) || (!p1_local && p2_local);
+  auto owned_by_me = p1_local;
 
   auto constraint = Constraint(
       -details.overlap,
