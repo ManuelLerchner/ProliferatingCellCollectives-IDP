@@ -11,13 +11,13 @@
 MatWrapper calculate_Jacobian(
     const std::vector<Constraint>& local_constraints,
     const std::vector<Particle>& local_particles,
-    ISLocalToGlobalMapping col_map_6d,
-    ISLocalToGlobalMapping constraint_map_N);
+    const ISLocalToGlobalMappingWrapper& col_map_6d,
+    const ISLocalToGlobalMappingWrapper& constraint_map_N);
 
-VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints, ISLocalToGlobalMapping constraint_map_N);
+VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints, const ISLocalToGlobalMappingWrapper& constraint_map_N);
 
-MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, PetscInt global_num_particles, double xi, ISLocalToGlobalMappingWrapper& col_map_6d);
+MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, PetscInt global_num_particles, double xi, const ISLocalToGlobalMappingWrapper& col_map_6d);
 
-MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles, ISLocalToGlobalMappingWrapper& row_map_7d, ISLocalToGlobalMappingWrapper& col_map_6d);
+MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles, const ISLocalToGlobalMappingWrapper& row_map_7d, const ISLocalToGlobalMappingWrapper& col_map_6d);
 
-MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constraints, const std::vector<Particle>& local_particles, ISLocalToGlobalMappingWrapper& length_map, ISLocalToGlobalMappingWrapper& constraint_map);
+MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constraints, const std::vector<Particle>& local_particles, const ISLocalToGlobalMappingWrapper& length_map, const ISLocalToGlobalMappingWrapper& constraint_map);

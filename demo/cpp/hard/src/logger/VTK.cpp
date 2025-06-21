@@ -13,6 +13,25 @@
 #include "util/Quaternion.h"
 
 namespace vtk {
+namespace {  // Anonymous namespace for helpers
+
+template <typename T>
+void addOptionalVectorField(
+    std::vector<VTKField>& fields,
+    const std::string& name,
+    const std::vector<T>& source_data,
+    size_t expected_size,
+    const T& default_value) {
+  std::vector<T> field_data;
+  if (!source_data.empty() && source_data.size() == expected_size) {
+    field_data = source_data;
+  } else {
+    field_data.resize(expected_size, default_value);
+  }
+  fields.emplace_back(name, field_data);
+}
+
+}  // namespace
 
 // VTKLogger Implementation
 VTKLogger::VTKLogger(const std::string& output_dir, const std::string& prefix,
@@ -396,41 +415,10 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   std::vector<int> ranks(n_particles, rank);
 
   // Always add all fields, even if empty, to maintain consistency across ranks
-  // Forces field - use sim_state forces if available, otherwise create empty
-  std::vector<std::array<double, 3>> forces;
-  if (!sim_state->forces.empty() && sim_state->forces.size() == n_particles) {
-    forces = sim_state->forces;
-  } else {
-    forces.resize(n_particles, {0.0, 0.0, 0.0});
-  }
-  fields.emplace_back("forces", forces);
-
-  // Torques field - use sim_state torques if available, otherwise create empty
-  std::vector<std::array<double, 3>> torques;
-  if (!sim_state->torques.empty() && sim_state->torques.size() == n_particles) {
-    torques = sim_state->torques;
-  } else {
-    torques.resize(n_particles, {0.0, 0.0, 0.0});
-  }
-  fields.emplace_back("torques", torques);
-
-  // Velocities_linear - use sim_state velocities if available, otherwise create empty
-  std::vector<std::array<double, 3>> velocities_linear;
-  if (!sim_state->velocities_linear.empty() && sim_state->velocities_linear.size() == n_particles) {
-    velocities_linear = sim_state->velocities_linear;
-  } else {
-    velocities_linear.resize(n_particles, {0.0, 0.0, 0.0});
-  }
-  fields.emplace_back("velocities_linear", velocities_linear);
-
-  // Velocities_angular - use sim_state velocities if available, otherwise create empty
-  std::vector<std::array<double, 3>> velocities_angular;
-  if (!sim_state->velocities_angular.empty() && sim_state->velocities_angular.size() == n_particles) {
-    velocities_angular = sim_state->velocities_angular;
-  } else {
-    velocities_angular.resize(n_particles, {0.0, 0.0, 0.0});
-  }
-  fields.emplace_back("velocities_angular", velocities_angular);
+  addOptionalVectorField(fields, "forces", sim_state->forces, n_particles, std::array<double, 3>{0.0, 0.0, 0.0});
+  addOptionalVectorField(fields, "torques", sim_state->torques, n_particles, std::array<double, 3>{0.0, 0.0, 0.0});
+  addOptionalVectorField(fields, "velocities_linear", sim_state->velocities_linear, n_particles, std::array<double, 3>{0.0, 0.0, 0.0});
+  addOptionalVectorField(fields, "velocities_angular", sim_state->velocities_angular, n_particles, std::array<double, 3>{0.0, 0.0, 0.0});
 
   // Always add these fields
   fields.emplace_back("directions", directions);

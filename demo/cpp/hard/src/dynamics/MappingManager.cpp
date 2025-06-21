@@ -24,11 +24,10 @@ ISLocalToGlobalMappingWrapper createLocalToGlobalMapping(const std::vector<Parti
       ownership_map[i * components_per_particle + j] = local_particles[i].setGID() * components_per_particle + j;
     }
   }
-  IS is_local_rows;
-  ISCreateGeneral(PETSC_COMM_SELF, local_dims, ownership_map.data(), PETSC_COPY_VALUES, &is_local_rows);
+  ISWrapper is_local_rows;
+  ISCreateGeneral(PETSC_COMM_SELF, local_dims, ownership_map.data(), PETSC_COPY_VALUES, is_local_rows.get_ref());
   ISLocalToGlobalMappingWrapper ltog_map;
-  ISLocalToGlobalMappingCreateIS(is_local_rows, ltog_map.get_ref());
-  ISDestroy(&is_local_rows);
+  ISLocalToGlobalMappingCreateIS(is_local_rows.get(), ltog_map.get_ref());
 
   return ltog_map;
 }
@@ -48,11 +47,10 @@ ISLocalToGlobalMappingWrapper create_constraint_map(const std::vector<Constraint
   }
 
   // Create the PETSc mapping object.
-  IS is_local_cols;
-  ISCreateGeneral(PETSC_COMM_SELF, local_num_constraints, col_ownership_map.data(), PETSC_COPY_VALUES, &is_local_cols);
+  ISWrapper is_local_cols;
+  ISCreateGeneral(PETSC_COMM_SELF, local_num_constraints, col_ownership_map.data(), PETSC_COPY_VALUES, is_local_cols.get_ref());
   ISLocalToGlobalMappingWrapper ltog_map;
-  ISLocalToGlobalMappingCreateIS(is_local_cols, ltog_map.get_ref());
-  ISDestroy(&is_local_cols);
+  ISLocalToGlobalMappingCreateIS(is_local_cols.get(), ltog_map.get_ref());
 
   return ltog_map;
 }
