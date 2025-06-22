@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
 
   SolverConfig solver_config = {
       .tolerance = physic_config.l0 / 1e3,
-      .max_bbpgd_iterations = 50000,
-      .max_recursive_iterations = 5};
+      .max_bbpgd_iterations = 100000,
+      .max_recursive_iterations = 50};
 
   ParticleManager system(sim_config, physic_config, solver_config);
 
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   }
 
   int num_steps = sim_config.end_time / sim_config.dt;
-  system.run(200);
+  system.run(600);
 
   PetscFinalize();
   return EXIT_SUCCESS;

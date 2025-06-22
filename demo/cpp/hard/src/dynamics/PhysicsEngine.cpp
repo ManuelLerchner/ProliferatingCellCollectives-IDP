@@ -248,32 +248,14 @@ void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const Ma
 }
 
 double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
-  // Get raw arrays (no copies, just access)
-  const PetscScalar *grad_array, *gamma_array;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val.get(), &grad_array));
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma.get(), &gamma_array));
-
-  PetscInt n;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gamma.get(), &n));
-
-  // Compute local residual (no temporary Vec needed)
-  double local_max = 0.0;
-  for (PetscInt i = 0; i < n; i++) {
-    const double g_i = PetscRealPart(grad_array[i]);
-    const double proj_g_i = (PetscRealPart(gamma_array[i]) > 0)
+  auto map_func = [](PetscInt i, PetscScalar grad_i, PetscScalar gamma_i) -> double {
+    const double g_i = PetscRealPart(grad_i);
+    const double proj_g_i = (PetscRealPart(gamma_i) > 0)
                                 ? g_i
                                 : std::min(0.0, g_i);
-    local_max = std::max(local_max, std::abs(proj_g_i));
-  }
-
-  // Restore arrays (critical for PETSc consistency)
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val.get(), &grad_array));
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma.get(), &gamma_array));
-
-  // Global reduction (MPI_MAX for NORM_INFINITY)
-  double global_max;
-  MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, PETSC_COMM_WORLD);
-  return global_max;
+    return std::abs(proj_g_i);
+  };
+  return reduceVector<double>(gradient_val, map_func, MPI_MAX, gamma);
 }
 
 namespace {
@@ -451,7 +433,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
 
-  double res = std::numeric_limits<double>::infinity();
+  double res = 0;
+  long long bbpgd_iterations_this_step = 0;
 
   bool converged = false;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
@@ -467,26 +450,23 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // stack PHI with matrices.phi
     PHI_PREV = concatenateVectors(PHI_PREV, matrices.phi);
 
-    // get maximal overlap
     double min_seperation;
     PetscCallAbort(PETSC_COMM_WORLD, VecMin(PHI_PREV.get(), NULL, &min_seperation));
     double max_overlap = -min_seperation;
-    converged = max_overlap < solver_config.tolerance && constraint_iterations > 0;
 
-    PetscInt total_constraints = all_constraints.size();
+    // Gather statistics for logging
+    PetscInt local_total_constraints = all_constraints.size();
+    PetscInt local_new_constraints = new_constraints.size();
 
-    // calculate total memory usage
     PetscLogDouble total_memory;
     PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&total_memory));
 
-    std::vector<Constraint> all_constraints_vec(all_constraints.begin(), all_constraints.end());
-    PetscInt local_violated_constraint_count = std::count_if(all_constraints_vec.begin(), all_constraints_vec.end(), [](const Constraint& constraint) { return constraint.violated; });
-    PetscInt global_violated_constraint_count;
-    MPI_Allreduce(&local_violated_constraint_count, &global_violated_constraint_count, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+    // Print the comprehensive log line
+    double logged_overlap = std::max(0.0, max_overlap);
+    PetscPrintf(PETSC_COMM_WORLD, "\n  RecurIter: %2d | Constraints: %4d (New: %3d, Violated: %3d) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %5lld | Mem: %4.2f MB",
+                constraint_iterations, globalReduce(local_total_constraints, MPI_SUM), globalReduce(local_new_constraints, MPI_SUM), reduceVector<PetscInt>(PHI_PREV, [](PetscInt i, PetscScalar v) -> PetscInt { return (PetscRealPart(v) < 0) ? 1 : 0; }, MPI_SUM), logged_overlap, res, bbpgd_iterations_this_step, total_memory / 1024 / 1024);
 
-    MPI_Allreduce(&total_constraints, &total_constraints, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
-    PetscPrintf(PETSC_COMM_WORLD, "\n  Recursive Constraint Iteration: %d | Constraints: %4d | Violated: %4d | Memory: %4.2f MB | Residual: %4.2e", constraint_iterations, total_constraints, global_violated_constraint_count, total_memory / 1024 / 1024, max_overlap);
-
+    converged = max_overlap < solver_config.tolerance && constraint_iterations > 0;
     if (converged) {
       break;
     }
@@ -519,7 +499,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     }
 
     // --- External Velocities ---
-    auto mappings = createMappings(particle_manager.local_particles, all_constraints_vec);
     calculate_external_velocities(workspaces.U_ext, workspaces.F_ext_workspace, particle_manager.local_particles, matrices.M, dt);
 
     GradientCalculator gradient_calculator{*this, dt, D_PREV, matrices.M, L_PREV, workspaces.U_ext, l, GAMMA_PREV, workspaces.ldot_prev, PHI_PREV, workspaces.gamma_diff_workspace, workspaces.phi_dot_movement_workspace, workspaces.F_g_workspace, workspaces.U_c_workspace, workspaces.U_total_workspace, workspaces.ldot_curr_workspace, workspaces.impedance_curr_workspace, workspaces.ldot_diff_workspace, workspaces.phi_dot_growth_result};
@@ -528,6 +507,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     auto [GAMMA_NEXT, bbpgd_iterations_temp, res_temp] = BBPGD(gradient_calculator, residual, GAMMA_PREV, solver_config);
 
     res = res_temp;
+    bbpgd_iterations_this_step = bbpgd_iterations_temp;
     bbpgd_iterations += bbpgd_iterations_temp;
 
     VecWrapper gamma_diff = VecWrapper::Like(GAMMA_NEXT);

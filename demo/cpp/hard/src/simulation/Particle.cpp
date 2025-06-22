@@ -185,30 +185,15 @@ std::optional<Particle> Particle::divide() {
     return std::nullopt;
   }
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<double> dis(-M_PI / 32.0, M_PI / 32.0);
+  auto newCenterLeft = position - (0.25 * length) * utils::Quaternion::getDirectionVector(quaternion);
+  auto newCenterRight = position + (0.25 * length) * utils::Quaternion::getDirectionVector(quaternion);
 
-  double angle = 0;
-
-  std::array<double, QUATERNION_SIZE> dqLeft = {cos(angle), 0.0, 0.0, sin(angle)};
-  std::array<double, QUATERNION_SIZE> dqRight = {cos(-angle), 0.0, 0.0, sin(-angle)};
-
-  auto dir = utils::Quaternion::getDirectionVector(quaternion);
-
-  auto newCenterLeft = position - (0.25 * length) * dir;
-  auto newCenterRight = position + (0.25 * length) * dir;
-
-  auto newOrientationLeft = utils::Quaternion::qmul(quaternion, dqLeft);
-  auto newOrientationRight = utils::Quaternion::qmul(quaternion, dqRight);
-
-  // update self
+   // update self
   position = newCenterLeft;
-  quaternion = newOrientationLeft;
   length = l0;
 
   // return other
-  return Particle(-1, newCenterRight, newOrientationRight, l0, l0, diameter);
+  return Particle(-1, newCenterRight, quaternion, l0, l0, diameter);
 }
 
 void Particle::printState() const {
