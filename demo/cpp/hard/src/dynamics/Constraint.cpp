@@ -25,5 +25,6 @@ void Constraint::print() const {
   std::cout << "stressI: " << stressI << std::endl;
   std::cout << "stressJ: " << stressJ << std::endl;
   std::cout << "constraint_iterations: " << constraint_iterations << std::endl;
-  std::cout << "gid: " << gid << std::endl;
+  std::cout << "gid: " << gid << std::endl
+            << std::endl;
 }

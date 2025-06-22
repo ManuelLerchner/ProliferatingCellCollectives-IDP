@@ -120,7 +120,7 @@ void PhysicsEngine::calculate_external_velocities(VecWrapper& U_ext, VecWrapper&
     PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(U_ext.get(), &u_ext_array));
 
     std::normal_distribution<double> dist(0.0, 1.0);
-    const double k_B = 1.380649e-23;
+    const double k_B = 1;
 
 #pragma omp parallel for
     for (size_t i = 0; i < local_particles.size(); ++i) {

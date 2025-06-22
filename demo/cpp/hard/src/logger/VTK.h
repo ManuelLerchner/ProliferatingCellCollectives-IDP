@@ -46,12 +46,12 @@ struct VTKField {
   DataLocation location;
 
   VTKField(const std::string& name, const std::vector<double>& data,
-           int components = 1, DataType type = DataType::Float32,
+           int components = 1, DataType type = DataType::Float64,
            DataLocation loc = DataLocation::Point)
       : name(name), data(data), components(components), data_type(type), location(loc) {}
 
   VTKField(const std::string& name, const std::vector<std::array<double, 3>>& vector_data,
-           DataType type = DataType::Float32, DataLocation loc = DataLocation::Point)
+           DataType type = DataType::Float64, DataLocation loc = DataLocation::Point)
       : name(name), components(3), data_type(type), location(loc) {
     data.reserve(vector_data.size() * 3);
     for (const auto& vec : vector_data) {
