@@ -15,13 +15,14 @@ int main(int argc, char** argv) {
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
   double DT = 30;
-  double END_TIME = 4 * 60 * 60;
-  double LOG_FREQUENCY = 60;
+  double END_TIME = 7 * 60 * 60;
+  double LOG_FREQUENCY = 120;
 
   SimulationConfig sim_config = {
       .dt = DT,
       .end_time = END_TIME,
-      .log_frequency_seconds = LOG_FREQUENCY};
+      .log_frequency_seconds = LOG_FREQUENCY,
+      .min_box_size = {5.0, 5.0, 5.0}};
 
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
@@ -43,27 +44,15 @@ int main(int argc, char** argv) {
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
-  int number_of_particles = 150.0 / (2 * total_ranks);
-
-  std::random_device rd;
-  std::mt19937 gen(55);
-
-  for (int i = 0; i < 1; i++) {
-    std::normal_distribution<> d(0, 1);
-
-    double angle = d(gen) * 2 * M_PI;
-
-    Particle p1 = Particle(0, {rank * 1.5, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
+  if (rank == 0) {
+    double angle = 0;
+    Particle p1 = Particle(0, {0, rank * 1.5, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
     system.queueNewParticle(p1);
   }
 
-
-  // todo: rebalancing
-  // todo: maybe use smaller matrices size. only for owned constraints
-
   int num_steps = sim_config.end_time / sim_config.dt;
-  system.run(600);
+  system.run(num_steps);
 
   PetscFinalize();
   return EXIT_SUCCESS;

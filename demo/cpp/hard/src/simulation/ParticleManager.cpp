@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <string>
 #include <unordered_map>
@@ -20,6 +21,7 @@
 #include "logger/VTK.h"
 #include "spatial/ConstraintGenerator.h"
 #include "util/MPIUtil.h"
+#include "util/ParticleMPI.h"
 
 ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config)
     : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config) {
@@ -33,6 +35,16 @@ ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig phys
 
   vtk_logger_ = vtk::createParticleLogger("./vtk_output", log_every_n_steps);
   constraint_loggers_ = vtk::createConstraintLogger("./vtk_output", log_every_n_steps);
+  domain_decomposition_logger_ = vtk::createDomainDecompositionLogger("./vtk_output", log_every_n_steps);
+  createParticleMPIType(&mpi_particle_data_type_);
+
+  // Set up Cartesian communicator
+  PetscMPIInt rank, size;
+  MPI_Comm_size(PETSC_COMM_WORLD, &size);
+  MPI_Dims_create(size, 2, dims_);
+  MPI_Cart_create(PETSC_COMM_WORLD, 2, dims_, periods_, 1, &cart_comm_);
+  MPI_Comm_rank(cart_comm_, &rank);
+  MPI_Cart_coords(cart_comm_, rank, 2, coords_);
 }
 
 void ParticleManager::queueNewParticle(Particle p) {
@@ -62,7 +74,7 @@ void ParticleManager::commitNewParticles() {
   // Sort particles by ID to maintain ordering across all ranks
   if (new_particle_buffer.size() > 0) {
     std::sort(local_particles.begin(), local_particles.end(),
-              [](const Particle& a, const Particle& b) { return a.setGID() < b.setGID(); });
+              [](const Particle& a, const Particle& b) { return a.getGID() < b.getGID(); });
 
     for (int i = 0; i < local_particles.size(); i++) {
       local_particles[i].setLocalID(i);
@@ -216,19 +228,16 @@ void ParticleManager::divideParticles() {
 }
 
 void ParticleManager::run(int num_steps) {
-  // Print progress information
-
   for (int i = 0; i < num_steps; i++) {
-    // divide particles
     divideParticles();
-
     commitNewParticles();
+
+    if (i % 50 == 0) {
+      updateDomainBounds();
+      redistributeParticles();
+    }
     resetLocalParticles();
 
-    // Validate particle IDs after committing new particles
-    validateParticleIDs();
-
-    // auto solver_solution = physics_engine->solveConstraintsSingleConstraint(*this, physics_engine->solver_config.dt);
     std::vector<Particle> particles_before_step = local_particles;
     auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i);
 
@@ -237,57 +246,127 @@ void ParticleManager::run(int num_steps) {
 
       vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
       constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
+
+      PetscMPIInt rank;
+      MPI_Comm_rank(cart_comm_, &rank);
+      vtk::DomainDecompositionState dd_state = {
+          .domain_min = domain_min_,
+          .domain_max = domain_max_,
+          .rank = rank};
+      std::copy(std::begin(dims_), std::end(dims_), std::begin(dd_state.dims));
+      std::copy(std::begin(coords_), std::end(coords_), std::begin(dd_state.coords));
+
+      domain_decomposition_logger_->logTimestepComplete(sim_config_.dt, &dd_state);
       printProgress(i + 1, num_steps);
     }
-
-    // Print progress information
   }
   PetscPrintf(PETSC_COMM_WORLD, "\n");
 }
 
-void ParticleManager::validateParticleIDs() const {
-  PetscMPIInt rank, size;
-  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  MPI_Comm_size(PETSC_COMM_WORLD, &size);
+void ParticleManager::updateDomainBounds() {
+  std::array<double, 3> local_min = {std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+  std::array<double, 3> local_max = {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()};
 
-  // Check local sorting
-  for (size_t i = 1; i < local_particles.size(); ++i) {
-    if (local_particles[i - 1].setGID() >= local_particles[i].setGID()) {
-      PetscPrintf(PETSC_COMM_WORLD, "ERROR: Local particles not sorted at rank %d: ID[%zu]=%d >= ID[%zu]=%d\n",
-                  rank, i - 1, local_particles[i - 1].setGID(), i, local_particles[i].setGID());
+  for (const auto& p : local_particles) {
+    const auto& pos = p.getPosition();
+    for (int i = 0; i < 3; ++i) {
+      local_min[i] = std::min(local_min[i], pos[i]);
+      local_max[i] = std::max(local_max[i], pos[i]);
     }
   }
 
-  // Gather all IDs to check global uniqueness (only do this for small numbers of particles)
-  if (global_particle_count < 10000) {  // Only for reasonable sizes
-    std::vector<PetscInt> local_ids;
-    for (const auto& p : local_particles) {
-      local_ids.push_back(p.setGID());
+  globalReduce_v(local_min.data(), domain_min_.data(), 3, MPI_MIN);
+  globalReduce_v(local_max.data(), domain_max_.data(), 3, MPI_MAX);
+}
+
+void ParticleManager::redistributeParticles() {
+  PetscMPIInt rank, size;
+  MPI_Comm_rank(cart_comm_, &rank);
+  MPI_Comm_size(cart_comm_, &size);
+
+  if (size == 1) return;
+
+  // Decompose along X and Y axes
+  double domain_x = domain_max_[0] - domain_min_[0];
+  double domain_y = domain_max_[1] - domain_min_[1];
+
+  // Enforce minimum domain size for decomposition
+  double min_total_width_x = sim_config_.min_box_size.x * dims_[0];
+  double min_total_width_y = sim_config_.min_box_size.y * dims_[1];
+  if (domain_x < min_total_width_x) {
+    domain_x = min_total_width_x;
+  }
+  if (domain_y < min_total_width_y) {
+    domain_y = min_total_width_y;
+  }
+
+  double rank_width_x = domain_x / dims_[0];
+  double rank_width_y = domain_y / dims_[1];
+
+  std::vector<std::vector<ParticleData>> send_buffers(size);
+  std::vector<Particle> keep_particles;
+
+  for (auto& p : local_particles) {
+    const auto& pos = p.getPosition();
+    int coord_x = static_cast<int>((pos[0] - domain_min_[0]) / rank_width_x);
+    int coord_y = static_cast<int>((pos[1] - domain_min_[1]) / rank_width_y);
+    coord_x = std::max(0, std::min(dims_[0] - 1, coord_x));
+    coord_y = std::max(0, std::min(dims_[1] - 1, coord_y));
+
+    int owner_rank;
+    int owner_coords[] = {coord_x, coord_y};
+    MPI_Cart_rank(cart_comm_, owner_coords, &owner_rank);
+
+    if (owner_rank == rank) {
+      keep_particles.push_back(std::move(p));
+    } else {
+      send_buffers[owner_rank].push_back(p.toStruct());
     }
+  }
 
-    PetscInt local_count = local_ids.size();
-    std::vector<PetscInt> all_counts(size);
-    MPI_Allgather(&local_count, 1, MPIU_INT, all_counts.data(), 1, MPIU_INT, PETSC_COMM_WORLD);
+  // All-to-all communication to determine send/receive counts
+  std::vector<int> send_counts(size);
+  for (int i = 0; i < size; ++i) {
+    send_counts[i] = send_buffers[i].size();
+  }
+  std::vector<int> recv_counts(size);
+  MPI_Alltoall(send_counts.data(), 1, MPI_INT, recv_counts.data(), 1, MPI_INT, cart_comm_);
 
-    std::vector<PetscInt> displacements(size);
-    displacements[0] = 0;
-    for (int i = 1; i < size; ++i) {
-      displacements[i] = displacements[i - 1] + all_counts[i - 1];
-    }
+  // Prepare for Alltoallv
+  std::vector<ParticleData> send_buffer_flat;
+  std::vector<int> send_displs(size + 1, 0);
+  for (int i = 0; i < size; ++i) {
+    send_displs[i + 1] = send_displs[i] + send_counts[i];
+    send_buffer_flat.insert(send_buffer_flat.end(), send_buffers[i].begin(), send_buffers[i].end());
+  }
 
-    std::vector<PetscInt> all_ids(global_particle_count);
-    MPI_Allgatherv(local_ids.data(), local_count, MPIU_INT,
-                   all_ids.data(), all_counts.data(), displacements.data(), MPIU_INT, PETSC_COMM_WORLD);
+  std::vector<int> recv_displs(size + 1, 0);
+  int total_recv_count = 0;
+  for (int i = 0; i < size; ++i) {
+    recv_displs[i + 1] = recv_displs[i] + recv_counts[i];
+    total_recv_count += recv_counts[i];
+  }
 
-    // Check for duplicates on rank 0
-    if (rank == 0) {
-      std::sort(all_ids.begin(), all_ids.end());
-      for (size_t i = 1; i < all_ids.size(); ++i) {
-        if (all_ids[i - 1] == all_ids[i]) {
-          PetscPrintf(PETSC_COMM_WORLD, "ERROR: Duplicate global ID found: %d\n", all_ids[i]);
-        }
-      }
-    }
+  std::vector<ParticleData> recv_buffer(total_recv_count);
+
+  // Exchange particles
+  MPI_Alltoallv(send_buffer_flat.data(), send_counts.data(), send_displs.data(), mpi_particle_data_type_,
+                recv_buffer.data(), recv_counts.data(), recv_displs.data(), mpi_particle_data_type_,
+                cart_comm_);
+
+  // Update local particles
+  local_particles = std::move(keep_particles);
+  for (const auto& p_data : recv_buffer) {
+    local_particles.emplace_back(p_data);
+  }
+
+  // Update global particle count and re-sort
+  global_particle_count = globalReduce(static_cast<PetscInt>(local_particles.size()), MPI_SUM);
+  std::sort(local_particles.begin(), local_particles.end(),
+            [](const Particle& a, const Particle& b) { return a.getGID() < b.getGID(); });
+
+  for (int i = 0; i < local_particles.size(); i++) {
+    local_particles[i].setLocalID(i);
   }
 }
 

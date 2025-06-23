@@ -1,6 +1,7 @@
 #pragma once
 #include <petsc.h>
 
+#include <array>
 #include <memory>
 #include <optional>
 #include <string>
@@ -26,7 +27,9 @@ class ParticleManager {
   void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
 
   void run(int num_steps);
-  void validateParticleIDs() const;
+
+  void redistributeParticles();
+  void updateDomainBounds();
 
   std::vector<Particle> local_particles;
   PetscInt global_particle_count = 0;
@@ -41,14 +44,25 @@ class ParticleManager {
   vtk::SimulationLogger& getVTKLogger() const { return *vtk_logger_; }
   vtk::SimulationLogger& getConstraintLogger() const { return *constraint_loggers_; }
 
+  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
+      const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry = nullptr) const;
+
  private:
   std::vector<Particle> new_particle_buffer;
 
   std::unique_ptr<vtk::SimulationLogger> vtk_logger_;
   std::unique_ptr<vtk::SimulationLogger> constraint_loggers_;
+  std::unique_ptr<vtk::SimulationLogger> domain_decomposition_logger_;
 
   void printProgress(int current_iteration, int total_iterations) const;
 
-  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
-      const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry = nullptr) const;
+  std::array<double, 3> domain_min_ = {0.0, 0.0, 0.0};
+  std::array<double, 3> domain_max_ = {0.0, 0.0, 0.0};
+  MPI_Datatype mpi_particle_data_type_;
+
+  // Cartesian communicator info
+  MPI_Comm cart_comm_;
+  int dims_[2] = {0, 0};
+  int periods_[2] = {0, 0};
+  int coords_[2] = {0, 0};
 };

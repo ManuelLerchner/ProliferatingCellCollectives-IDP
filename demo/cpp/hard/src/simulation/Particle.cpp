@@ -6,27 +6,39 @@
 #include <iostream>
 #include <random>
 
+#include "ParticleData.h"
 #include "util/ArrayMath.h"
 #include "util/ParticleMPI.h"
 #include "util/Quaternion.h"
 
 Particle::Particle(PetscInt gID, const std::array<double, POSITION_SIZE>& position, const std::array<double, QUATERNION_SIZE>& quaternion, double length, double l0, double diameter) : gID(gID), position(position), quaternion(quaternion), length(length), l0(l0), diameter(diameter) {}
 
-Particle::Particle(const ParticleData& data) : gID(data.gID), localID(data.localID), length(data.length), l0(data.l0), diameter(data.diameter) {
-  std::copy(std::begin(data.position), std::end(data.position), position.begin());
-  std::copy(std::begin(data.quaternion), std::end(data.quaternion), quaternion.begin());
-}
+Particle::Particle(const ParticleData& data)
+    : gID(data.gID),
+      position(data.position),
+      quaternion(data.quaternion),
+      force(data.force),
+      torque(data.torque),
+      velocityLinear(data.velocityLinear),
+      velocityAngular(data.velocityAngular),
+      impedance(data.impedance),
+      length(data.length),
+      l0(data.l0),
+      diameter(data.diameter) {}
 
 ParticleData Particle::toStruct() const {
-  ParticleData data;
-  data.gID = gID;
-  data.localID = localID;
-  std::copy(position.begin(), position.end(), std::begin(data.position));
-  std::copy(quaternion.begin(), quaternion.end(), std::begin(data.quaternion));
-  data.length = length;
-  data.l0 = l0;
-  data.diameter = diameter;
-  return data;
+  return {
+      .gID = gID,
+      .position = position,
+      .quaternion = quaternion,
+      .force = force,
+      .torque = torque,
+      .velocityLinear = velocityLinear,
+      .velocityAngular = velocityAngular,
+      .impedance = impedance,
+      .length = length,
+      .l0 = l0,
+      .diameter = diameter};
 }
 
 void Particle::updatePosition(const PetscScalar* dC, int offset, double dt) {
@@ -188,7 +200,7 @@ std::optional<Particle> Particle::divide() {
   auto newCenterLeft = position - (0.25 * length) * utils::Quaternion::getDirectionVector(quaternion);
   auto newCenterRight = position + (0.25 * length) * utils::Quaternion::getDirectionVector(quaternion);
 
-   // update self
+  // update self
   position = newCenterLeft;
   length = l0;
 

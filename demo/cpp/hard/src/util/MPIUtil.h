@@ -23,3 +23,10 @@ inline T globalReduce(T local_val, MPI_Op op) {
   PetscCallAbort(PETSC_COMM_WORLD, MPI_Allreduce(&local_val, &global_val, 1, mpi_type, op, PETSC_COMM_WORLD));
   return global_val;
 }
+
+// Generic helper for MPI_Allreduce on an array of values
+template <typename T>
+inline void globalReduce_v(const T* local_vals, T* global_vals, int count, MPI_Op op) {
+  MPI_Datatype mpi_type = getMpiDataType<T>();
+  PetscCallAbort(PETSC_COMM_WORLD, MPI_Allreduce(local_vals, global_vals, count, mpi_type, op, PETSC_COMM_WORLD));
+}

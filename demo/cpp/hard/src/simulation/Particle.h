@@ -5,6 +5,8 @@
 #include <optional>
 #include <vector>
 
+#include "ParticleData.h"
+
 // Forward declaration
 struct ParticleData;
 

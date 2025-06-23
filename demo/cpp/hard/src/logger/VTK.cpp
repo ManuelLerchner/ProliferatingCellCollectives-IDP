@@ -132,8 +132,9 @@ void VTKLogger::writeTimestepPVTU(int frame_number, const std::vector<VTKField>&
     file << "    </PFieldData>\n";
   }
 
-  // Point data
-  if (!point_fields.empty()) {
+  // Point data - check for fields that should be here
+  bool has_point_data = !point_fields.empty();
+  if (has_point_data) {
     file << "    <PPointData>\n";
     for (const auto& field : point_fields) {
       file << "      <PDataArray Name=\"" << field.name << "\" "
@@ -143,8 +144,9 @@ void VTKLogger::writeTimestepPVTU(int frame_number, const std::vector<VTKField>&
     file << "    </PPointData>\n";
   }
 
-  // Cell data
-  if (!cell_fields.empty()) {
+  // Cell data - check for fields that should be here
+  bool has_cell_data = !cell_fields.empty();
+  if (has_cell_data) {
     file << "    <PCellData>\n";
     for (const auto& field : cell_fields) {
       file << "      <PDataArray Name=\"" << field.name << "\" "
@@ -152,8 +154,6 @@ void VTKLogger::writeTimestepPVTU(int frame_number, const std::vector<VTKField>&
            << "format=\"ascii\" type=\"" << dataTypeToString(field.data_type) << "\"/>\n";
     }
     file << "    </PCellData>\n";
-  } else {
-    file << "    <PCellData/>\n";
   }
 
   // Points
@@ -607,6 +607,59 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   return field_data;
 }
 
+// DomainDecompositionDataExtractor Implementation
+VTKGeometry DomainDecompositionDataExtractor::extractGeometry(const void* state) {
+  const auto* dd_state = static_cast<const DomainDecompositionState*>(state);
+
+  double domain_x = dd_state->domain_max[0] - dd_state->domain_min[0];
+  double domain_y = dd_state->domain_max[1] - dd_state->domain_min[1];
+  double rank_width_x = domain_x / dd_state->dims[0];
+  double rank_width_y = domain_y / dd_state->dims[1];
+
+  double x_min = dd_state->domain_min[0] + dd_state->coords[0] * rank_width_x;
+  double y_min = dd_state->domain_min[1] + dd_state->coords[1] * rank_width_y;
+
+  // Calculate center position
+  double center_x = x_min + rank_width_x / 2.0;
+  double center_y = y_min + rank_width_y / 2.0;
+
+  std::vector<std::array<double, 3>> positions = {{center_x, center_y, 0.0}};
+
+  // A single vertex
+  return VTKGeometry(positions);
+}
+
+std::vector<VTKField> DomainDecompositionDataExtractor::extractPointData(const void* state) {
+  const auto* dd_state = static_cast<const DomainDecompositionState*>(state);
+  std::vector<VTKField> fields;
+
+  // Calculate scale
+  double domain_x = dd_state->domain_max[0] - dd_state->domain_min[0];
+  double domain_y = dd_state->domain_max[1] - dd_state->domain_min[1];
+  double scale_x = domain_x / dd_state->dims[0];
+  double scale_y = domain_y / dd_state->dims[1];
+  std::vector<std::array<double, 3>> scales = {{scale_x, scale_y, 0.1}};  // Use a small z-scale for 2D vis
+
+  fields.emplace_back("scale", scales);
+  fields.emplace_back("rank", std::vector<double>{static_cast<double>(dd_state->rank)}, 1, DataType::Int32);
+  fields.emplace_back("coord_x", std::vector<double>{static_cast<double>(dd_state->coords[0])}, 1, DataType::Int32);
+  fields.emplace_back("coord_y", std::vector<double>{static_cast<double>(dd_state->coords[1])}, 1, DataType::Int32);
+
+  return fields;
+}
+
+std::vector<VTKField> DomainDecompositionDataExtractor::extractCellData(const void* state) {
+  return {};  // No cell data, moved to point data
+}
+
+VTKFieldData DomainDecompositionDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) {
+  const auto* dd_state = static_cast<const DomainDecompositionState*>(state);
+  VTKFieldData field_data;
+  field_data.addField("dim_x", dd_state->dims[0]);
+  field_data.addField("dim_y", dd_state->dims[1]);
+  return field_data;
+}
+
 // SimulationLogger Implementation
 SimulationLogger::SimulationLogger(std::unique_ptr<VTKLogger> vtk_logger, int log_every_n_iterations)
     : vtk_logger_(std::move(vtk_logger)), log_every_n_iterations_(log_every_n_iterations) {}
@@ -640,6 +693,12 @@ std::unique_ptr<SimulationLogger> createParticleLogger(const std::string& output
 std::unique_ptr<SimulationLogger> createConstraintLogger(const std::string& output_dir, int log_every_n_iterations) {
   auto extractor = std::make_unique<ConstraintDataExtractor>();
   auto vtk_logger = std::make_unique<VTKLogger>(output_dir, "Constraints_", std::move(extractor));
+  return std::make_unique<SimulationLogger>(std::move(vtk_logger), log_every_n_iterations);
+}
+
+std::unique_ptr<SimulationLogger> createDomainDecompositionLogger(const std::string& output_dir, int log_every_n_iterations) {
+  auto extractor = std::make_unique<DomainDecompositionDataExtractor>();
+  auto vtk_logger = std::make_unique<VTKLogger>(output_dir, "Domain_", std::move(extractor));
   return std::make_unique<SimulationLogger>(std::move(vtk_logger), log_every_n_iterations);
 }
 

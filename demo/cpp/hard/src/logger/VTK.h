@@ -117,6 +117,9 @@ struct VTKGeometry {
       cell_types[i] = 1;  // VTK_VERTEX
     }
   }
+
+  VTKGeometry(const std::vector<std::array<double, 3>>& pos, const std::vector<int>& conn, const std::vector<int>& off, const std::vector<uint8_t>& types)
+      : positions(pos), connectivity(conn), offsets(off), cell_types(types) {}
 };
 
 /**
@@ -149,6 +152,14 @@ struct ParticleSimulationState {
   double l0;
 };
 
+struct DomainDecompositionState {
+  std::array<double, 3> domain_min;
+  std::array<double, 3> domain_max;
+  int dims[2];
+  int coords[2];
+  int rank;
+};
+
 /**
  * @brief Data extractor for particle simulations
  */
@@ -164,6 +175,14 @@ class ParticleDataExtractor : public VTKDataExtractor {
  * @brief Data extractor for constraint visualization
  */
 class ConstraintDataExtractor : public VTKDataExtractor {
+ public:
+  VTKGeometry extractGeometry(const void* state) override;
+  std::vector<VTKField> extractPointData(const void* state) override;
+  std::vector<VTKField> extractCellData(const void* state) override;
+  VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) override;
+};
+
+class DomainDecompositionDataExtractor : public VTKDataExtractor {
  public:
   VTKGeometry extractGeometry(const void* state) override;
   std::vector<VTKField> extractPointData(const void* state) override;
@@ -227,5 +246,6 @@ class SimulationLogger {
 // Factory functions
 std::unique_ptr<SimulationLogger> createParticleLogger(const std::string& output_dir, int log_every_n_iterations = 1);
 std::unique_ptr<SimulationLogger> createConstraintLogger(const std::string& output_dir, int log_every_n_iterations = 1);
+std::unique_ptr<SimulationLogger> createDomainDecompositionLogger(const std::string& output_dir, int log_every_n_iterations = 1);
 
 }  // namespace vtk

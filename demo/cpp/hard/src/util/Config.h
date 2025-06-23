@@ -10,6 +10,7 @@ struct SimulationConfig {
   double dt;
   double end_time;
   double log_frequency_seconds = 0;
+  Vec3d min_box_size;
 };
 
 struct PhysicsConfig {
