@@ -43,7 +43,7 @@ class PhysicsEngine {
   PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints);
 
   SolverSolution solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt);
-  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt,int iter);
+  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter);
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;

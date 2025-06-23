@@ -181,3 +181,9 @@ MatWrapper horizontallyStackMatrices(const MatWrapper& matLeft, const MatWrapper
 
   return matResult;
 }
+
+size_t vecSize(const VecWrapper& vec) {
+  PetscInt size;
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(vec, &size));
+  return size;
+}

@@ -510,17 +510,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // stack L with matrices.S
     L_PREV = horizontallyStackMatrices(L_PREV, matrices.S);
 
-    bool need_to_recreate_workspaces = !workspaces_initialized;
-    if (workspaces_initialized) {
-      PetscInt current_gamma_size, workspace_gamma_size;
-      VecGetLocalSize(GAMMA_PREV.get(), &current_gamma_size);
-      VecGetLocalSize(workspaces.gamma_diff_workspace.get(), &workspace_gamma_size);
-      if (current_gamma_size != workspace_gamma_size) {
-        need_to_recreate_workspaces = true;
-      }
-    }
+    bool local_need_to_recreate_workspaces = !workspaces_initialized || vecSize(GAMMA_PREV) != vecSize(workspaces.gamma_diff_workspace);
 
-    if (need_to_recreate_workspaces) {
+    // Ensure all ranks agree on whether to recreate workspaces
+    int global_recreate_flag = globalReduce(local_need_to_recreate_workspaces ? 1 : 0, MPI_MAX);
+
+    if (global_recreate_flag) {
       initializeWorkspaces(D_PREV, matrices.M, matrices.G, L_PREV, GAMMA_PREV, PHI_PREV, l, workspaces);
       workspaces_initialized = true;
     }
