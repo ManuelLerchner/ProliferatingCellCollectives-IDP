@@ -18,7 +18,7 @@ class PhysicsEngine {
   PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config);
 
   struct PhysicsMatrices {
-    MatWrapper D, M, G, S;
+    MatWrapper D, S;
     VecWrapper phi;
   };
 

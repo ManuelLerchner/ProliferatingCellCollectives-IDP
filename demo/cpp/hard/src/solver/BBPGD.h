@@ -8,7 +8,6 @@
 #include "util/PetscRaii.h"
 
 struct BBPGDResult {
-  VecWrapper gamma;
   long long bbpgd_iterations;
   double residual;
 };
@@ -17,39 +16,34 @@ template <typename GradientFunc, typename ResidualFunc>
 BBPGDResult BBPGD(
     GradientFunc&& gradient,
     ResidualFunc&& residual,
-    const VecWrapper& gamma0,
+    VecWrapper& gamma,
     const SolverConfig& solver_config);
 
 template <typename GradientFunc, typename ResidualFunc>
 inline BBPGDResult BBPGD(
     GradientFunc&& gradient,
     ResidualFunc&& residual,
-    const VecWrapper& gamma0,
+    VecWrapper& gamma,  // in-out parameter
     const SolverConfig& config) {
-  // Initialize gamma with gamma0
-  auto gamma = VecWrapper::Like(gamma0);
-  VecCopy(gamma0.get(), gamma.get());
-
-  auto g = VecWrapper::Like(gamma0);
+  auto g_curr = VecWrapper::Like(gamma);
 
   // Compute initial gradient and residual
-  gradient(gamma, g);
-  double res = residual(g, gamma);
+  gradient(gamma, g_curr);
+  double res = residual(g_curr, gamma);
 
   if (res <= config.tolerance) {
-     return {.gamma = std::move(gamma), .bbpgd_iterations = 0, .residual = res};
+    return {.bbpgd_iterations = 0, .residual = res};
   }
 
   // Initial step size
   double alpha = 1.0 / res;
 
-  // Storage for previous values
-  auto gamma_prev = VecWrapper::Like(gamma);
-  auto g_prev = VecWrapper::Like(g);
+  // Storage for next gradient
+  auto g_next = VecWrapper::Like(g_curr);
 
-  // Workspace for differences: s = gamma - gamma_prev and y = g - g_prev
+  // Workspace for differences: s = gamma_next - gamma_curr and y = g_next - g_curr
   auto delta_gamma = VecWrapper::Like(gamma);
-  auto delta_g = VecWrapper::Like(g);
+  auto delta_g = VecWrapper::Like(g_curr);
 
   // Constant zero vector for projection (reused in loop)
   auto zero_vec = VecWrapper::Like(gamma);
@@ -58,37 +52,28 @@ inline BBPGDResult BBPGD(
   long long iteration = 0;
 
   for (iteration = 0; iteration < config.max_bbpgd_iterations; iteration++) {
-    // Store previous values
-    VecCopy(gamma.get(), gamma_prev.get());
-    VecCopy(g.get(), g_prev.get());
+    // We compute the next gamma into a temporary, then swap.
+    auto gamma_next = VecWrapper::Like(gamma);
 
-    // Step 6: γi := max(γi−1 − αi−1*gi−1, 0)
-    // First compute gamma - alpha * g
-    VecAXPY(gamma.get(), -alpha, g.get());  // gamma = gamma - alpha * g
+    // Step 6: γ_next := max(γ_curr − α*g_curr, 0)
+    VecWAXPY(gamma_next.get(), -alpha, g_curr.get(), gamma.get());
+    VecPointwiseMax(gamma_next.get(), gamma_next.get(), zero_vec.get());
 
-    // Project onto non-negative orthant using PETSc's built-in function
-    VecPointwiseMax(gamma.get(), gamma.get(), zero_vec.get());  // gamma = max(gamma, 0)
+    // Step 7: g_next := g(γ_next)
+    gradient(gamma_next, g_next);
 
-    // Step 7: gi := g(γi)
-    gradient(gamma, g);
-
-    // Step 8: resi := res(γi)
-    res = residual(g, gamma);
+    // Step 8: res_next := res(γ_next)
+    res = residual(g_next, gamma_next);
 
     // Step 9-11: Check convergence
     if (res <= config.tolerance) {
+      gamma = std::move(gamma_next);
       break;
     }
 
-    // Step 12: Compute new step size using alternating Barzilai-Borwein formula
-    // αi_1 := (si−1^T si−1) / (si−1^T yi−1)
-    // αi_2 := (si−1^T yi−1) / (yi−1^T yi−1)
-
-    // Compute delta_gamma = gamma - gamma_prev
-    VecWAXPY(delta_gamma.get(), -1.0, gamma_prev.get(), gamma.get());
-
-    // Compute delta_g = g - g_prev
-    VecWAXPY(delta_g.get(), -1.0, g_prev.get(), g.get());
+    // Step 12: Compute new step size
+    VecWAXPY(delta_gamma.get(), -1.0, gamma.get(), gamma_next.get());
+    VecWAXPY(delta_g.get(), -1.0, g_curr.get(), g_next.get());
 
     PetscScalar s_dot_y;
     VecDot(delta_gamma.get(), delta_g.get(), &s_dot_y);
@@ -96,15 +81,12 @@ inline BBPGDResult BBPGD(
     double numerator_val;
     double denominator_val;
 
-    // Alternating BB1 and BB2 methods
     if (iteration % 2 == 0) {
-      // Barzilai-Borwein step size Choice 1 (BB1)
       PetscScalar s_dot_s;
       VecDot(delta_gamma.get(), delta_gamma.get(), &s_dot_s);
       numerator_val = PetscRealPart(s_dot_s);
       denominator_val = PetscRealPart(s_dot_y);
     } else {
-      // Barzilai-Borwein step size Choice 2 (BB2)
       PetscScalar y_dot_y;
       VecDot(delta_g.get(), delta_g.get(), &y_dot_y);
       numerator_val = PetscRealPart(s_dot_y);
@@ -112,7 +94,7 @@ inline BBPGDResult BBPGD(
     }
 
     if (std::abs(denominator_val) < 10 * std::numeric_limits<double>::epsilon()) {
-      denominator_val += 10 * std::numeric_limits<double>::epsilon();  // prevent div 0 error
+      denominator_val += 10 * std::numeric_limits<double>::epsilon();
     }
 
     alpha = numerator_val / denominator_val;
@@ -121,16 +103,18 @@ inline BBPGDResult BBPGD(
       PetscPrintf(PETSC_COMM_WORLD,
                   "\n  BBPGD step size is too small on iteration %lld. Stagnating.",
                   iteration);
+      gamma = std::move(gamma_next);
       break;
     }
+
+    // Prepare for next iteration by swapping buffers
+    gamma = std::move(gamma_next);
+    std::swap(g_curr, g_next);
   }
 
   if (iteration == config.max_bbpgd_iterations) {
     PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %lld iterations. Residual: %f", iteration, res);
   }
 
-  // The destructors of the VecWrapper objects will automatically free the PETSc vectors.
-  return {.gamma = std::move(gamma),
-          .bbpgd_iterations = iteration,
-          .residual = res};
+  return {.bbpgd_iterations = iteration, .residual = res};
 }

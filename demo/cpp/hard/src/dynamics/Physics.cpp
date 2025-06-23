@@ -101,6 +101,7 @@ MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles
 
   // --- Phase 4: Assembly ---
   MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
 
   return M;
 }
@@ -152,6 +153,7 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles)
   }
 
   MatAssemblyBegin(G, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(G, MAT_FINAL_ASSEMBLY);
 
   return G;
 }

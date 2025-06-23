@@ -26,14 +26,6 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   // PetscPrintf(PETSC_COMM_WORLD, "D Matrix:\n");
   // MatView(D.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  MatWrapper M = calculate_MobilityMatrix(local_particles, physics_config.xi);
-  // PetscPrintf(PETSC_COMM_WORLD, "Mobility Matrix M:\n");
-  // MatView(M.get(), PETSC_VIEWER_STDOUT_WORLD);
-
-  MatWrapper G = calculate_QuaternionMap(local_particles);
-  // PetscPrintf(PETSC_COMM_WORLD, "Quaternion Map G:\n");
-  // MatView(G.get(), PETSC_VIEWER_STDOUT_WORLD);
-
   VecWrapper phi = create_phi_vector(local_constraints);
   // PetscPrintf(PETSC_COMM_WORLD, "Phi Vector:\n");
   // VecView(phi.get(), PETSC_VIEWER_STDOUT_WORLD);
@@ -43,36 +35,10 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   // MatView(S.get(), PETSC_VIEWER_STDOUT_WORLD);
 
   MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(G, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY);
   VecAssemblyEnd(phi);
 
-  // --- DEBUG: Assert column counts ---
-  auto assert_column_counts = [](const MatWrapper& mat, const char* name, PetscInt expected_nnz) {
-    MatWrapper mat_T;
-    PetscCallAbort(PETSC_COMM_WORLD, MatTranspose(mat.get(), MAT_INITIAL_MATRIX, mat_T.get_ref()));
-
-    PetscInt r_start, r_end;
-    PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(mat_T.get(), &r_start, &r_end));
-
-    for (PetscInt i = r_start; i < r_end; ++i) {
-      PetscInt nnz;
-      const PetscInt* cols;
-      const PetscScalar* vals;
-      PetscCallAbort(PETSC_COMM_WORLD, MatGetRow(mat_T.get(), i, &nnz, &cols, &vals));
-      if (nnz != expected_nnz) {
-        PetscPrintf(PETSC_COMM_WORLD, "Assertion failed for matrix %s: column %d has %d non-zeros, expected %d\n", name, i, nnz, expected_nnz);
-      }
-      assert(nnz == expected_nnz);
-      PetscCallAbort(PETSC_COMM_WORLD, MatRestoreRow(mat_T.get(), i, &nnz, &cols, &vals));
-    }
-  };
-
-  assert_column_counts(D, "D", 12);
-  assert_column_counts(S, "S", 2);
-
-  return {.D = std::move(D), .M = std::move(M), .G = std::move(G), .S = std::move(S), .phi = std::move(phi)};
+  return {.D = std::move(D), .S = std::move(S), .phi = std::move(phi)};
 }
 
 VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
@@ -207,8 +173,7 @@ void estimate_phi_dot_movement_inplace(
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M.get(), F_g.get(), U_c.get()));
 
   // Step 3: U_total = U_known + U_c
-  PetscCallAbort(PETSC_COMM_WORLD, VecCopy(U_c.get(), U_total.get()));
-  PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(U_total.get(), 1.0, U_known.get()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(U_total.get(), 1.0, U_known.get(), U_c.get()));
 
   // Step 4: phi_dot_out = D^T * U_total
   PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D.get(), U_total.get(), phi_dot_out.get()));
@@ -216,34 +181,34 @@ void estimate_phi_dot_movement_inplace(
   // No return, the result is in phi_dot_out.
 }
 
-void calculate_impedance_vector(const VecWrapper& stresses, double lambda, VecWrapper& impedance_out) {
+void calculate_impedance_inplace(VecWrapper& stresses_and_impedance_out, double lambda) {
   // I is a (num_bodies, 1) vector
   // I = np.exp(-lamb * stress_matrix)
+  // This function modifies the input vector in-place.
 
-  VecCopy(stresses, impedance_out);
-
-  VecScale(impedance_out, -lambda);
-  VecExp(impedance_out);
+  VecScale(stresses_and_impedance_out, -lambda);
+  VecExp(stresses_and_impedance_out);
 }
 
-void calculate_growth_rate_vector(const VecWrapper& l, const VecWrapper& sigma, double lambda, double tau, VecWrapper& growth_rates_out, VecWrapper& impedance_out) {
+void calculate_growth_rate_vector(const VecWrapper& l, VecWrapper& sigma_and_impedance_out, double lambda, double tau, VecWrapper& growth_rates_out) {
   // growth rate is a (num_bodies, 1) vector
   // growth_rate = l / tau * I
 
-  VecCopy(l, growth_rates_out);
+  calculate_impedance_inplace(sigma_and_impedance_out, lambda);
 
-  calculate_impedance_vector(sigma, lambda, impedance_out);
-
-  VecPointwiseMult(growth_rates_out, l, impedance_out);
+  // sigma_and_impedance_out now contains the impedance
+  VecPointwiseMult(growth_rates_out, l, sigma_and_impedance_out);
   VecScale(growth_rates_out, 1 / tau);
 }
 
-void calculate_ldot(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out) {
-  VecWrapper sigma;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(L.get(), NULL, sigma.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(L.get(), gamma.get(), sigma.get()));
+void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out) {
+  // Use impedance_curr_out as a temporary vector to store stresses (sigma)
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(L.get(), gamma.get(), impedance_curr_out.get()));
 
-  calculate_growth_rate_vector(l, sigma, lambda, tau, ldot_curr_out, impedance_curr_out);
+  // We now have stresses in impedance_curr_out.
+  // We need to calculate the growth rate, which will overwrite ldot_curr_out,
+  // and the final impedance, which will overwrite the stresses in impedance_curr_out.
+  calculate_growth_rate_vector(l, impedance_curr_out, lambda, tau, ldot_curr_out);
 };
 
 void estimate_phi_dot_growth_inplace(
@@ -251,7 +216,6 @@ void estimate_phi_dot_growth_inplace(
     const VecWrapper& ldot,
     VecWrapper& phi_dot_growth_result) {
   PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(Sigma.get(), ldot.get(), phi_dot_growth_result.get()));
-  PetscCallAbort(PETSC_COMM_WORLD, VecScale(phi_dot_growth_result.get(), -1.0));
 }
 
 void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
@@ -314,32 +278,29 @@ struct GradientCalculator {
   void operator()(const VecWrapper& gamma_curr, VecWrapper& phi_next_out) const {
     // --- MOVEMENT PART ---
     // gamma_diff = gamma_curr - GAMMA_PREV
-    VecCopy(gamma_curr.get(), gamma_diff_workspace.get());
-    VecAXPY(gamma_diff_workspace.get(), -1.0, GAMMA_PREV.get());
+    VecWAXPY(gamma_diff_workspace.get(), -1.0, GAMMA_PREV.get(), gamma_curr.get());
 
     // phi_dot_movement = D * M * D^T * gamma_diff
     estimate_phi_dot_movement_inplace(D_PREV, M, U_ext, gamma_diff_workspace, F_g_workspace, U_c_workspace, U_total_workspace, phi_dot_movement_workspace);
 
     // --- GROWTH PART ---
     // ldot_curr = growth_rate(gamma_curr)
-    calculate_ldot(L_PREV, l, gamma_curr, physics_engine.physics_config.getLambdaDimensionless(), physics_engine.physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
+    calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_engine.physics_config.getLambdaDimensionless(), physics_engine.physics_config.TAU, ldot_curr_workspace, impedance_curr_workspace);
 
     // ldot_diff = ldot_curr - ldot_prev
-    VecCopy(ldot_curr_workspace.get(), ldot_diff_workspace.get());
-    VecAXPY(ldot_diff_workspace.get(), -1.0, ldot_prev.get());
+    VecWAXPY(ldot_diff_workspace.get(), -1.0, ldot_prev.get(), ldot_curr_workspace.get());
 
     // phi_dot_growth = -L^T * ldot_diff
     estimate_phi_dot_growth_inplace(L_PREV, ldot_diff_workspace, phi_dot_growth_result);
 
-    // --- COMBINE AND REGULARIZE ---
     // Start with the base violation: phi_next_out = PHI_PREV
     PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_PREV.get(), phi_next_out.get()));
 
     // Add movement term: phi_next_out += dt * phi_dot_movement
     PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_movement_workspace.get()));
 
-    // Add growth term: phi_next_out += dt * phi_dot_growth
-    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot_growth_result.get()));
+    // Add growth term: phi_next_out -= dt * phi_dot_growth
+    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), -dt, phi_dot_growth_result.get()));
   }
 };
 
@@ -391,6 +352,10 @@ void initializeWorkspaces(const MatWrapper& D_PREV, const MatWrapper& M, const M
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt) {
   std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
   auto local_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, all_constraints, 0);
+
+  MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
+  MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
+
   auto matrices = calculateMatrices(particle_manager.local_particles, local_constraints);
 
   PetscInt phi_size;
@@ -407,42 +372,45 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
 
   // --- External Velocities ---
   VecWrapper U_ext;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, U_ext.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, U_ext.get_ref()));
   VecWrapper F_ext_workspace;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, F_ext_workspace.get_ref()));
-  calculate_external_velocities(U_ext, F_ext_workspace, particle_manager.local_particles, matrices.M, dt);
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(M.get(), NULL, F_ext_workspace.get_ref()));
+  calculate_external_velocities(U_ext, F_ext_workspace, particle_manager.local_particles, M, dt);
 
   // create a workspace for phi_dot and t1 and t2
   auto phi_dot = VecWrapper::Like(matrices.phi);
   auto F_g = VecWrapper::FromMat(matrices.D);
-  auto U_c = VecWrapper::FromMat(matrices.M);
+  auto U_c = VecWrapper::FromMat(M);
   auto U_total = VecWrapper::FromMat(matrices.D);
 
   auto gradient = [&](const VecWrapper& gamma, VecWrapper& phi_next_out) {
-    estimate_phi_dot_movement_inplace(matrices.D, matrices.M, U_ext, gamma, F_g, U_c, U_total, phi_dot);
+    estimate_phi_dot_movement_inplace(matrices.D, M, U_ext, gamma, F_g, U_c, U_total, phi_dot);
 
     // phi_next = phi + dt * phi_dot
     PetscCallAbort(PETSC_COMM_WORLD, VecCopy(matrices.phi.get(), phi_next_out.get()));
     PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out.get(), dt, phi_dot.get()));
   };
 
-  auto gamma0 = VecWrapper::Like(matrices.phi);
-  PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(gamma0.get()));
+  auto gamma = VecWrapper::Like(matrices.phi);
+  PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(gamma.get()));
 
-  auto [gamma, bbpgd_iterations, res] = BBPGD(gradient, residual, gamma0, solver_config);
+  auto bbpgd_result = BBPGD(gradient, residual, gamma, solver_config);
 
   auto F = VecWrapper::FromMat(matrices.D);
-  auto U = VecWrapper::FromMat(matrices.M);
-  auto deltaC = VecWrapper::FromMat(matrices.G);
-  calculate_forces(F, U, deltaC, matrices.D, matrices.M, matrices.G, U_ext, gamma);
+  auto U = VecWrapper::FromMat(M);
+  auto deltaC = VecWrapper::FromMat(G);
+  calculate_forces(F, U, deltaC, matrices.D, M, G, U_ext, gamma);
 
   PhysicsEngine::MovementSolution solution = {.dC = deltaC, .f = F, .u = U};
   particle_manager.moveLocalParticlesFromSolution(solution);
 
-  return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_iterations, .residual = res};
+  return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_result.bbpgd_iterations, .residual = bbpgd_result.residual};
 }
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter) {
+  MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
+  MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
+
   VecWrapper GAMMA_PREV = VecWrapper::CreateEmpty();
   VecWrapper PHI_PREV = VecWrapper::CreateEmpty();
   MatWrapper D_PREV = MatWrapper::CreateEmpty(particle_manager.local_particles.size() * PARTICLE_DOFS);
@@ -499,9 +467,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     }
 
     // pad gamma with 0
-    VecWrapper zero_pad;
-    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(matrices.phi, zero_pad.get_ref()));
-    PetscCallAbort(PETSC_COMM_WORLD, VecSet(zero_pad, 0.0));
+    VecWrapper zero_pad = VecWrapper::Like(matrices.phi);
+    VecZeroEntries(zero_pad.get());
     GAMMA_PREV = concatenateVectors(GAMMA_PREV, zero_pad);
 
     // stack D with matrices.D
@@ -516,38 +483,39 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     int global_recreate_flag = globalReduce(local_need_to_recreate_workspaces ? 1 : 0, MPI_MAX);
 
     if (global_recreate_flag) {
-      initializeWorkspaces(D_PREV, matrices.M, matrices.G, L_PREV, GAMMA_PREV, PHI_PREV, l, workspaces);
+      initializeWorkspaces(D_PREV, M, G, L_PREV, GAMMA_PREV, PHI_PREV, l, workspaces);
       workspaces_initialized = true;
     }
 
     // --- External Velocities ---
-    calculate_external_velocities(workspaces.U_ext, workspaces.F_ext_workspace, particle_manager.local_particles, matrices.M, dt);
+    calculate_external_velocities(workspaces.U_ext, workspaces.F_ext_workspace, particle_manager.local_particles, M, dt);
 
-    GradientCalculator gradient_calculator{*this, dt, D_PREV, matrices.M, L_PREV, workspaces.U_ext, l, GAMMA_PREV, workspaces.ldot_prev, PHI_PREV, workspaces.gamma_diff_workspace, workspaces.phi_dot_movement_workspace, workspaces.F_g_workspace, workspaces.U_c_workspace, workspaces.U_total_workspace, workspaces.ldot_curr_workspace, workspaces.impedance_curr_workspace, workspaces.ldot_diff_workspace, workspaces.phi_dot_growth_result};
+    GradientCalculator gradient_calculator{*this, dt, D_PREV, M, L_PREV, workspaces.U_ext, l, GAMMA_PREV, workspaces.ldot_prev, PHI_PREV, workspaces.gamma_diff_workspace, workspaces.phi_dot_movement_workspace, workspaces.F_g_workspace, workspaces.U_c_workspace, workspaces.U_total_workspace, workspaces.ldot_curr_workspace, workspaces.impedance_curr_workspace, workspaces.ldot_diff_workspace, workspaces.phi_dot_growth_result};
 
     // solve for gamma
-    auto [GAMMA_NEXT, bbpgd_iterations_temp, res_temp] = BBPGD(gradient_calculator, residual, GAMMA_PREV, solver_config);
+    VecWrapper GAMMA_SOLVED = VecWrapper::Like(GAMMA_PREV);
+    VecCopy(GAMMA_PREV, GAMMA_SOLVED);
 
-    res = res_temp;
-    bbpgd_iterations_this_step = bbpgd_iterations_temp;
-    bbpgd_iterations += bbpgd_iterations_temp;
+    auto bbpgd_result_recursive = BBPGD(gradient_calculator, residual, GAMMA_SOLVED, solver_config);
 
-    VecWrapper gamma_diff = VecWrapper::Like(GAMMA_NEXT);
-    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(GAMMA_NEXT.get(), gamma_diff.get()));
-    PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(gamma_diff.get(), -1.0, GAMMA_PREV.get()));
+    res = bbpgd_result_recursive.residual;
+    bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
+    bbpgd_iterations += bbpgd_iterations_this_step;
+
+    PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspaces.gamma_diff_workspace.get(), -1.0, GAMMA_PREV.get(), GAMMA_SOLVED.get()));
 
     // calculate forces
 
-    calculate_forces(workspaces.df, workspaces.du, workspaces.dC, D_PREV, matrices.M, matrices.G, workspaces.U_ext, gamma_diff);
+    calculate_forces(workspaces.df, workspaces.du, workspaces.dC, D_PREV, M, G, workspaces.U_ext, workspaces.gamma_diff_workspace);
 
-    calculate_ldot(L_PREV, l, GAMMA_NEXT, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces.ldot_curr_workspace, workspaces.impedance_curr_workspace);
+    calculate_ldot_inplace(L_PREV, l, GAMMA_SOLVED, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces.ldot_curr_workspace, workspaces.impedance_curr_workspace);
 
     // prepare for next iteration
     particle_manager.moveLocalParticlesFromSolution({.dC = workspaces.dC, .f = workspaces.df, .u = workspaces.du});
 
-    gradient_calculator(GAMMA_NEXT, PHI_PREV);
-    GAMMA_PREV = std::move(GAMMA_NEXT);
-    VecCopy(workspaces.ldot_curr_workspace.get(), workspaces.ldot_prev.get());
+    gradient_calculator(GAMMA_SOLVED, PHI_PREV);
+    GAMMA_PREV = std::move(GAMMA_SOLVED);
+    std::swap(workspaces.ldot_curr_workspace, workspaces.ldot_prev);
 
     constraint_iterations++;
   }
@@ -558,7 +526,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     PetscPrintf(PETSC_COMM_WORLD, "\n  Did not converge in %d iterations | Residual: %4.2e\n", constraint_iterations, res);
   }
 
-  particle_manager.growLocalParticlesFromSolution({.dL = workspaces.ldot_curr_workspace, .impedance = workspaces.impedance_curr_workspace});
+  particle_manager.growLocalParticlesFromSolution({.dL = workspaces.ldot_prev, .impedance = workspaces.impedance_curr_workspace});
 
   return {.constraints = std::vector<Constraint>(all_constraints.begin(), all_constraints.end()), .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }
