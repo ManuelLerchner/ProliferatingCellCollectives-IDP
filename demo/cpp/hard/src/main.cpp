@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
   double DT = 30;
   double END_TIME = 4 * 60 * 60;
-  double LOG_FREQUENCY = 30;
+  double LOG_FREQUENCY = 60;
 
   SimulationConfig sim_config = {
       .dt = DT,
@@ -57,6 +57,10 @@ int main(int argc, char** argv) {
 
     system.queueNewParticle(p1);
   }
+
+
+  // todo: rebalancing
+  // todo: maybe use smaller matrices size. only for owned constraints
 
   int num_steps = sim_config.end_time / sim_config.dt;
   system.run(600);

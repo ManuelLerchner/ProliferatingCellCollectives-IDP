@@ -281,7 +281,17 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   auto local_id1 = p1_local ? p1.getLocalID() : -1;
   auto local_id2 = p2_local ? p2.getLocalID() : -1;
 
-  auto owned_by_me = p1_local;
+  bool owned_by_me;
+  if (p1_local && p2_local) {
+    owned_by_me = true;   // Owned if both particles are local
+  } else if (p1_local) {  // p2 is a ghost
+    owned_by_me = p1.setGID() < p2.setGID();
+  } else if (p2_local) {  // p1 is a ghost
+    owned_by_me = p2.setGID() < p1.setGID();
+  } else {
+    owned_by_me = false;  // Should not happen if collision detection is correct
+    throw std::runtime_error("Both particles are ghosts");
+  }
 
   auto constraint = Constraint(
       -details.overlap,

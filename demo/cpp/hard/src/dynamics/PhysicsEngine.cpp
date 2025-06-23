@@ -2,11 +2,11 @@
 
 #include <petsc.h>
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
 
 #include "Constraint.h"
-#include "MappingManager.h"
 #include "Physics.h"
 #include "simulation/Particle.h"
 #include "simulation/ParticleManager.h"
@@ -22,48 +22,74 @@ PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_c
 }
 
 PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints) {
-  auto mappings = createMappings(local_particles, local_constraints);
+  // Filter for owned constraints
+  std::vector<Constraint> owned_constraints;
+  for (const auto& c : local_constraints) {
+    if (c.owned_by_me) {
+      owned_constraints.push_back(c);
+    }
+  }
 
   PetscInt local_num_bodies = local_particles.size();
-  PetscInt local_num_constraints = local_constraints.size();
+  PetscInt local_num_constraints = owned_constraints.size();
 
-  MatWrapper D = calculate_Jacobian(local_constraints, local_particles, mappings.velocityL2GMap, mappings.constraintL2GMap);
+  MatWrapper D = calculate_Jacobian(owned_constraints, local_particles);
   // PetscPrintf(PETSC_COMM_WORLD, "D Matrix:\n");
   // MatView(D.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  MatWrapper M = calculate_MobilityMatrix(local_particles, local_num_bodies, physics_config.xi, mappings.velocityL2GMap);
+  MatWrapper M = calculate_MobilityMatrix(local_particles, local_num_bodies, physics_config.xi);
   // PetscPrintf(PETSC_COMM_WORLD, "Mobility Matrix M:\n");
   // MatView(M.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  MatWrapper G = calculate_QuaternionMap(local_particles, mappings.configL2GMap, mappings.velocityL2GMap);
+  MatWrapper G = calculate_QuaternionMap(local_particles);
   // PetscPrintf(PETSC_COMM_WORLD, "Quaternion Map G:\n");
   // MatView(G.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  VecWrapper phi = create_phi_vector(local_constraints, mappings.constraintL2GMap);
+  VecWrapper phi = create_phi_vector(owned_constraints);
   // PetscPrintf(PETSC_COMM_WORLD, "Phi Vector:\n");
   // VecView(phi.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  auto length_map = create_length_map(local_particles);
-  MatWrapper S = calculate_stress_matrix(local_constraints, local_particles, length_map, mappings.constraintL2GMap);
+  MatWrapper S = calculate_stress_matrix(owned_constraints, local_particles);
   // PetscPrintf(PETSC_COMM_WORLD, "Stress Matrix S:\n");
   // MatView(S.get(), PETSC_VIEWER_STDOUT_WORLD);
+
+  // --- DEBUG: Assert column counts ---
+  auto assert_column_counts = [](const MatWrapper& mat, const char* name, PetscInt expected_nnz) {
+    MatWrapper mat_T;
+    PetscCallAbort(PETSC_COMM_WORLD, MatTranspose(mat.get(), MAT_INITIAL_MATRIX, mat_T.get_ref()));
+
+    PetscInt r_start, r_end;
+    PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(mat_T.get(), &r_start, &r_end));
+
+    for (PetscInt i = r_start; i < r_end; ++i) {
+      PetscInt nnz;
+      const PetscInt* cols;
+      const PetscScalar* vals;
+      PetscCallAbort(PETSC_COMM_WORLD, MatGetRow(mat_T.get(), i, &nnz, &cols, &vals));
+      if (nnz != expected_nnz) {
+        PetscPrintf(PETSC_COMM_WORLD, "Assertion failed for matrix %s: column %d has %d non-zeros, expected %d\n", name, i, nnz, expected_nnz);
+      }
+      assert(nnz == expected_nnz);
+      PetscCallAbort(PETSC_COMM_WORLD, MatRestoreRow(mat_T.get(), i, &nnz, &cols, &vals));
+    }
+  };
+
+  assert_column_counts(D, "D", 12);
+  assert_column_counts(S, "S", 2);
 
   return {.D = std::move(D), .M = std::move(M), .G = std::move(G), .S = std::move(S), .phi = std::move(phi)};
 }
 
-VecWrapper getLengthVector(const std::vector<Particle>& local_particles, ISLocalToGlobalMapping length_map) {
+VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
   // l is a (global_num_particles, 1) vector
   VecWrapper l;
   VecCreate(PETSC_COMM_WORLD, l.get_ref());
   VecSetSizes(l, local_particles.size(), PETSC_DETERMINE);
   VecSetFromOptions(l);
 
-  // Set the local-to-global mapping to ensure consistency with other vectors
-  VecSetLocalToGlobalMapping(l, length_map);
-
-  // Set values using local indices - PETSc will handle the global mapping
+  // Set values using global indices
   for (int i = 0; i < local_particles.size(); i++) {
-    PetscCallAbort(PETSC_COMM_WORLD, VecSetValueLocal(l, i, local_particles[i].getLength(), INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLength(), INSERT_VALUES));
   }
 
   VecAssemblyBegin(l);
@@ -377,7 +403,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
   }
 
   // --- External Velocities ---
-  auto mappings = createMappings(particle_manager.local_particles, local_constraints);
   VecWrapper U_ext;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(matrices.M.get(), NULL, U_ext.get_ref()));
   VecWrapper F_ext_workspace;
@@ -426,8 +451,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   bool force_vectors_initialized = false;
 
   // Create length mapping for consistent indexing
-  auto length_map = create_length_map(particle_manager.local_particles);
-  VecWrapper l = getLengthVector(particle_manager.local_particles, length_map.get());
+  VecWrapper l = getLengthVector(particle_manager.local_particles);
 
   std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
   int constraint_iterations = 0;

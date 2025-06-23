@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "Constraint.h"
-#include "MappingManager.h"
 #include "simulation/Particle.h"
 #include "util/Config.h"
 #include "util/PetscRaii.h"
