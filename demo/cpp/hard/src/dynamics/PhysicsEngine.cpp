@@ -42,6 +42,12 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   // PetscPrintf(PETSC_COMM_WORLD, "Stress Matrix S:\n");
   // MatView(S.get(), PETSC_VIEWER_STDOUT_WORLD);
 
+  MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(G, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY);
+  VecAssemblyEnd(phi);
+
   // --- DEBUG: Assert column counts ---
   auto assert_column_counts = [](const MatWrapper& mat, const char* name, PetscInt expected_nnz) {
     MatWrapper mat_T;

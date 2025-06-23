@@ -58,7 +58,6 @@ MatWrapper calculate_Jacobian(
   }
 
   MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY);
 
   return D;
 }
@@ -73,7 +72,6 @@ VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints) {
   }
 
   VecAssemblyBegin(phi);
-  VecAssemblyEnd(phi);
 
   return phi;
 }
@@ -90,8 +88,8 @@ MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles
 
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
-    double inv_len = 1.0 / particle.getLength();
-    double inv_len3_x_12 = 12.0 / (particle.getLength() * particle.getLength() * particle.getLength());
+    double inv_len = 1.0 / (particle.getLength() * xi);
+    double inv_len3_x_12 = 12.0 / (particle.getLength() * particle.getLength() * particle.getLength() * xi);
 
     for (int i = 0; i < 3; ++i) {
       PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(M, particle.getGID() * 6 + i, particle.getGID() * 6 + i, inv_len, INSERT_VALUES));
@@ -103,10 +101,6 @@ MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles
 
   // --- Phase 4: Assembly ---
   MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
-
-  // multiply by xi
-  MatScale(M, 1 / xi);
 
   return M;
 }
@@ -140,17 +134,16 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles)
     const auto& particle = local_particles[p_idx];
     auto [s, wx, wy, wz] = particle.getQuaternion();
 
-    // Identity block (here filled with 2 as we divide by 0.5 later)
     for (int i = 0; i < 3; ++i) {
-      PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(G, particle.getGID() * 7 + i, particle.getGID() * 6 + i, 2, INSERT_VALUES));
+      PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(G, particle.getGID() * 7 + i, particle.getGID() * 6 + i, 1, INSERT_VALUES));
     }
 
     // Xi block
     PetscScalar xi_vals[4][3] = {
-        {-wx, -wy, -wz},
-        {s, -wz, wy},
-        {wz, s, -wx},
-        {-wy, wx, s}};
+        {-0.5 * wx, -0.5 * wy, -0.5 * wz},
+        {0.5 * s, -0.5 * wz, 0.5 * wy},
+        {0.5 * wz, 0.5 * s, -0.5 * wx},
+        {-0.5 * wy, 0.5 * wx, 0.5 * s}};
 
     PetscInt lrows[4] = {particle.getGID() * 7 + 3, particle.getGID() * 7 + 4, particle.getGID() * 7 + 5, particle.getGID() * 7 + 6};
     PetscInt lcols[3] = {particle.getGID() * 6 + 3, particle.getGID() * 6 + 4, particle.getGID() * 6 + 5};
@@ -159,10 +152,6 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles)
   }
 
   MatAssemblyBegin(G, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(G, MAT_FINAL_ASSEMBLY);
-
-  // multiply by 0.5
-  MatScale(G, 0.5);
 
   return G;
 }
@@ -188,7 +177,6 @@ MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constrai
   }
 
   MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY);
 
   return S;
 }
