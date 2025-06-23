@@ -37,7 +37,7 @@ inline BBPGDResult BBPGD(
   double res = residual(g, gamma);
 
   if (res <= config.tolerance) {
-    return {.gamma = std::move(gamma), .bbpgd_iterations = 0, .residual = res};
+     return {.gamma = std::move(gamma), .bbpgd_iterations = 0, .residual = res};
   }
 
   // Initial step size

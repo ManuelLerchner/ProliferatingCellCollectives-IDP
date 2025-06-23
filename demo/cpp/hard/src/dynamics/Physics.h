@@ -14,7 +14,7 @@ MatWrapper calculate_Jacobian(
 
 VecWrapper create_phi_vector(const std::vector<Constraint>& local_constraints);
 
-MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, PetscInt global_num_particles, double xi);
+MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, double xi);
 
 MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles);
 

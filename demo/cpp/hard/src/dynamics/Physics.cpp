@@ -13,6 +13,8 @@
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
+#define PREALLOCATION_NNZ 12
+
 MatWrapper calculate_Jacobian(
     const std::vector<Constraint>& local_constraints,
     const std::vector<Particle>& local_particles) {
@@ -21,26 +23,9 @@ MatWrapper calculate_Jacobian(
   // D is a (6 * global_num_bodies, global_num_constraints) matrix
   MatWrapper D = MatWrapper::CreateAIJ(6 * local_particles.size(), local_constraints.size(), PETSC_DETERMINE, PETSC_DETERMINE);
 
-  // Precise preallocation: count constraints per particle
-  std::vector<PetscInt> d_nnz(6 * local_particles.size(), 0);
-  std::vector<PetscInt> o_nnz(6 * local_particles.size(), 0);
-
-  for (auto constraint : local_constraints) {
-    d_nnz[constraint.gidI * 6 + 0] += 1;
-    d_nnz[constraint.gidI * 6 + 1] += 1;
-    d_nnz[constraint.gidI * 6 + 2] += 1;
-    d_nnz[constraint.gidI * 6 + 3] += 1;
-    d_nnz[constraint.gidI * 6 + 4] += 1;
-
-    d_nnz[constraint.gidJ * 6 + 0] += 1;
-    d_nnz[constraint.gidJ * 6 + 1] += 1;
-    d_nnz[constraint.gidJ * 6 + 2] += 1;
-    d_nnz[constraint.gidJ * 6 + 3] += 1;
-    d_nnz[constraint.gidJ * 6 + 4] += 1;
-  }
-
-  MatMPIAIJSetPreallocation(D, 0, d_nnz.data(), 12, NULL);
-  MatSeqAIJSetPreallocation(D, 0, d_nnz.data());
+  MatMPIAIJSetPreallocation(D, PREALLOCATION_NNZ, NULL, PREALLOCATION_NNZ, NULL);
+  MatSeqAIJSetPreallocation(D, PREALLOCATION_NNZ, NULL);
+  MatSetOption(D, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
   for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
     const auto& constraint = local_constraints[c_local_idx];
@@ -182,7 +167,7 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles)
   return G;
 }
 
-MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constraints, const std::vector<Particle>& local_particles, const std::unordered_map<PetscInt, PetscInt>& constraint_counts) {
+MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constraints, const std::vector<Particle>& local_particles) {
   using namespace utils::ArrayMath;
 
   PetscInt local_num_particles = local_particles.size();
@@ -190,15 +175,9 @@ MatWrapper calculate_stress_matrix(const std::vector<Constraint>& local_constrai
   // S is a (num_particles, num_constraints) matrix
   MatWrapper S = MatWrapper::CreateAIJ(local_num_particles, local_constraints.size(), PETSC_DETERMINE, PETSC_DETERMINE);
 
-  std::vector<PetscInt> d_nnz(local_num_particles);
-
-  for (auto constraint : local_constraints) {
-    d_nnz[constraint.gidI] += 1;
-    d_nnz[constraint.gidJ] += 1;
-  }
-
-  MatMPIAIJSetPreallocation(S, 0, d_nnz.data(), 12, NULL);
-  MatSeqAIJSetPreallocation(S, 0, d_nnz.data());
+  MatMPIAIJSetPreallocation(S, PREALLOCATION_NNZ, NULL, PREALLOCATION_NNZ, NULL);
+  MatSeqAIJSetPreallocation(S, PREALLOCATION_NNZ, NULL);
+  MatSetOption(S, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
   for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {
     const auto& constraint = local_constraints[c_idx];

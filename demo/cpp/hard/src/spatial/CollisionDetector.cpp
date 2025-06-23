@@ -293,12 +293,15 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     throw std::runtime_error("Both particles are ghosts");
   }
 
+  if (!owned_by_me) {
+    return std::nullopt;
+  }
+
   auto constraint = Constraint(
       -details.overlap,
       details.overlap > tolerance,
       p1.setGID(), p2.setGID(),
       local_id1, local_id2,
-      owned_by_me,
       details.normal,
       rPos1, rPos2,
       details.contact_point,

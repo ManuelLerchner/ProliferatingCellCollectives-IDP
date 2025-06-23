@@ -22,22 +22,11 @@ PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_c
 }
 
 PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints) {
-  // Filter for owned constraints
-  std::vector<Constraint> owned_constraints;
-  for (const auto& c : local_constraints) {
-    if (c.owned_by_me) {
-      owned_constraints.push_back(c);
-    }
-  }
-
-  PetscInt local_num_bodies = local_particles.size();
-  PetscInt local_num_constraints = owned_constraints.size();
-
-  MatWrapper D = calculate_Jacobian(owned_constraints, local_particles);
+  MatWrapper D = calculate_Jacobian(local_constraints, local_particles);
   // PetscPrintf(PETSC_COMM_WORLD, "D Matrix:\n");
   // MatView(D.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  MatWrapper M = calculate_MobilityMatrix(local_particles, local_num_bodies, physics_config.xi);
+  MatWrapper M = calculate_MobilityMatrix(local_particles, physics_config.xi);
   // PetscPrintf(PETSC_COMM_WORLD, "Mobility Matrix M:\n");
   // MatView(M.get(), PETSC_VIEWER_STDOUT_WORLD);
 
@@ -45,11 +34,11 @@ PhysicsEngine::PhysicsMatrices PhysicsEngine::calculateMatrices(const std::vecto
   // PetscPrintf(PETSC_COMM_WORLD, "Quaternion Map G:\n");
   // MatView(G.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  VecWrapper phi = create_phi_vector(owned_constraints);
+  VecWrapper phi = create_phi_vector(local_constraints);
   // PetscPrintf(PETSC_COMM_WORLD, "Phi Vector:\n");
   // VecView(phi.get(), PETSC_VIEWER_STDOUT_WORLD);
 
-  MatWrapper S = calculate_stress_matrix(owned_constraints, local_particles);
+  MatWrapper S = calculate_stress_matrix(local_constraints, local_particles);
   // PetscPrintf(PETSC_COMM_WORLD, "Stress Matrix S:\n");
   // MatView(S.get(), PETSC_VIEWER_STDOUT_WORLD);
 
@@ -279,9 +268,17 @@ double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
     const double proj_g_i = (PetscRealPart(gamma_i) > 0)
                                 ? g_i
                                 : std::min(0.0, g_i);
+
     return std::abs(proj_g_i);
   };
-  return reduceVector<double>(gradient_val, map_func, MPI_MAX, gamma);
+
+  auto res = reduceVector<double>(gradient_val, map_func, MPI_MAX, gamma);
+
+  if (res == std::numeric_limits<double>::lowest()) {
+    res = 0.0;
+  }
+
+  return res;
 }
 
 namespace {
