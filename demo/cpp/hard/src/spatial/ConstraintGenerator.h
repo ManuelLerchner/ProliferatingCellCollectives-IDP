@@ -11,7 +11,8 @@ class ConstraintGenerator {
  public:
   ConstraintGenerator(double collision_tolerance, double ghost_cutoff_distance);
   std::vector<Constraint> generateConstraints(
-      const std::vector<Particle>& particles,
+      const std::vector<Particle>& local_particles,
+      const std::vector<Particle>& ghost_particles,
       const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 

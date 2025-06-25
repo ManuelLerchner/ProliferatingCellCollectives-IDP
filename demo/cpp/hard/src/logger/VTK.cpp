@@ -611,19 +611,10 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
 VTKGeometry DomainDecompositionDataExtractor::extractGeometry(const void* state) {
   const auto* dd_state = static_cast<const DomainDecompositionState*>(state);
 
-  double domain_x = dd_state->domain_max[0] - dd_state->domain_min[0];
-  double domain_y = dd_state->domain_max[1] - dd_state->domain_min[1];
-  double rank_width_x = domain_x / dd_state->dims[0];
-  double rank_width_y = domain_y / dd_state->dims[1];
-
-  double x_min = dd_state->domain_min[0] + dd_state->coords[0] * rank_width_x;
-  double y_min = dd_state->domain_min[1] + dd_state->coords[1] * rank_width_y;
-
-  // Calculate center position
-  double center_x = x_min + rank_width_x / 2.0;
-  double center_y = y_min + rank_width_y / 2.0;
-
-  std::vector<std::array<double, 3>> positions = {{center_x, center_y, 0.0}};
+  auto center_x = (dd_state->domain_max[0] + dd_state->domain_min[0]) / 2;
+  auto center_y = (dd_state->domain_max[1] + dd_state->domain_min[1]) / 2;
+  auto center_z = (dd_state->domain_max[2] + dd_state->domain_min[2]) / 2;
+  std::vector<std::array<double, 3>> positions = {{center_x, center_y, center_z}};
 
   // A single vertex
   return VTKGeometry(positions);
@@ -636,9 +627,9 @@ std::vector<VTKField> DomainDecompositionDataExtractor::extractPointData(const v
   // Calculate scale
   double domain_x = dd_state->domain_max[0] - dd_state->domain_min[0];
   double domain_y = dd_state->domain_max[1] - dd_state->domain_min[1];
-  double scale_x = domain_x / dd_state->dims[0];
-  double scale_y = domain_y / dd_state->dims[1];
-  std::vector<std::array<double, 3>> scales = {{scale_x, scale_y, 0.1}};  // Use a small z-scale for 2D vis
+  double domain_z = dd_state->domain_max[2] - dd_state->domain_min[2];
+
+  std::vector<std::array<double, 3>> scales = {{domain_x, domain_y, domain_z}};  // Use a small z-scale for 2D vis
 
   fields.emplace_back("scale", scales);
   fields.emplace_back("rank", std::vector<double>{static_cast<double>(dd_state->rank)}, 1, DataType::Int32);

@@ -7,9 +7,6 @@
 
 #include "ParticleData.h"
 
-// Forward declaration
-struct ParticleData;
-
 class Particle {
  public:
   // Constants for vector operations
@@ -22,9 +19,6 @@ class Particle {
 
   // Constructor from ParticleData struct
   explicit Particle(const ParticleData& data);
-
-  // Convert Particle to ParticleData struct
-  ParticleData toStruct() const;
 
   void updatePosition(const PetscScalar* dC, int offset, double dt);
 
@@ -81,6 +75,9 @@ class Particle {
 
   void setImpedance(double impedance);
 
+  bool getToDelete() const;
+  void setToDelete(bool toDelete);
+
   const std::array<double, 3>& getForce() const;
   const std::array<double, 3>& getTorque() const;
   const std::array<double, 3>& getVelocityLinear() const;
@@ -89,6 +86,8 @@ class Particle {
   static constexpr int getStateSize() {
     return STATE_SIZE;
   }
+
+  ParticleData getData() const;
 
  private:
   void normalizeQuaternion();
@@ -107,4 +106,5 @@ class Particle {
   double length;
   double l0;
   double diameter;
+  bool toDelete = false;
 };

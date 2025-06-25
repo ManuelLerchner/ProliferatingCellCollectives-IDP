@@ -26,21 +26,6 @@ Particle::Particle(const ParticleData& data)
       l0(data.l0),
       diameter(data.diameter) {}
 
-ParticleData Particle::toStruct() const {
-  return {
-      .gID = gID,
-      .position = position,
-      .quaternion = quaternion,
-      .force = force,
-      .torque = torque,
-      .velocityLinear = velocityLinear,
-      .velocityAngular = velocityAngular,
-      .impedance = impedance,
-      .length = length,
-      .l0 = l0,
-      .diameter = diameter};
-}
-
 void Particle::updatePosition(const PetscScalar* dC, int offset, double dt) {
   position[0] += dt * PetscRealPart(dC[offset + 0]);
   position[1] += dt * PetscRealPart(dC[offset + 1]);
@@ -249,6 +234,14 @@ void Particle::setImpedance(double impedance) {
   this->impedance = impedance;
 }
 
+bool Particle::getToDelete() const {
+  return toDelete;
+}
+
+void Particle::setToDelete(bool toDelete) {
+  this->toDelete = toDelete;
+}
+
 const std::array<double, 3>& Particle::getForce() const {
   return force;
 }
@@ -282,4 +275,16 @@ double Particle::getVolume() const {
 
 const std::array<double, Particle::QUATERNION_SIZE>& Particle::getQuaternion() const {
   return quaternion;
+}
+
+ParticleData Particle::getData() const {
+  ParticleData data;
+  data.gID = gID;
+  data.position = position;
+  data.quaternion = quaternion;
+  data.length = length;
+  data.l0 = l0;
+  data.diameter = diameter;
+  data.impedance = impedance;
+  return data;
 }

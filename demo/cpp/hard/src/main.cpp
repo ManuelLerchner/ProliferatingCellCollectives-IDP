@@ -3,7 +3,7 @@
 
 #include <random>
 
-#include "simulation/ParticleManager.h"
+#include "spatial/Domain.h"
 #include "util/Config.h"
 
 int main(int argc, char** argv) {
@@ -22,7 +22,8 @@ int main(int argc, char** argv) {
       .dt = DT,
       .end_time = END_TIME,
       .log_frequency_seconds = LOG_FREQUENCY,
-      .min_box_size = {5.0, 5.0, 5.0}};
+      .min_box_size = {5.0, 5.0, 0},
+      .domain_resize_frequency = 1};
 
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
@@ -39,7 +40,7 @@ int main(int argc, char** argv) {
       .max_bbpgd_iterations = 100000,
       .max_recursive_iterations = 50};
 
-  ParticleManager system(sim_config, physic_config, solver_config);
+  Domain domain(sim_config, physic_config, solver_config);
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -48,11 +49,10 @@ int main(int argc, char** argv) {
     double angle = 0;
     Particle p1 = Particle(0, {0, rank * 1.5, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
-    system.queueNewParticle(p1);
+    domain.queueNewParticles({p1});
   }
 
-  int num_steps = sim_config.end_time / sim_config.dt;
-  system.run(num_steps);
+  domain.run();
 
   PetscFinalize();
   return EXIT_SUCCESS;

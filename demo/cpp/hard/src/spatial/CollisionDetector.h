@@ -32,13 +32,7 @@ class CollisionDetector {
       const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
-  static std::vector<Particle> gatherAllParticles(const std::vector<Particle>& local_particles);
-  static std::vector<Particle> filterGhostParticles(
-      const std::vector<Particle>& all_particles,
-      const std::vector<Particle>& local_particles,
-      double cutoff_distance);
-
-  // Simplified helper methods
+   // Simplified helper methods
   void updateSpatialGrid(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles);

@@ -11,6 +11,7 @@ struct SimulationConfig {
   double end_time;
   double log_frequency_seconds = 0;
   Vec3d min_box_size;
+  int domain_resize_frequency;
 };
 
 struct PhysicsConfig {
