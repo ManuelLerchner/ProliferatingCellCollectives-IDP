@@ -230,4 +230,12 @@ std::array<T, SIZE> normalize(const std::array<T, SIZE> &a) {
   }
 }
 
+template <class T, std::size_t SIZE>
+T infinity_norm(const std::array<T, SIZE> &a) {
+  T result = 0;
+  for (std::size_t d = 0; d < SIZE; ++d) {
+    result = std::max(result, std::abs(a[d]));
+  }
+  return result;
+}
 }  // namespace utils::ArrayMath

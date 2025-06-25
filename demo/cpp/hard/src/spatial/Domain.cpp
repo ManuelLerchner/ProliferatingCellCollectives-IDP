@@ -8,6 +8,7 @@
 
 #include "simulation/Particle.h"
 #include "simulation/ParticleData.h"
+#include "util/ArrayMath.h"
 #include "util/ParticleMPI.h"
 
 Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config)
@@ -18,8 +19,6 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
 
   particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config);
-
-  std::cout << "Domain::run" << std::endl;
 
   int log_every_n_steps = 1;
   if (sim_config.log_frequency_seconds > 0) {
@@ -62,6 +61,7 @@ void Domain::commitNewParticles() {
 }
 
 void Domain::run() {
+  using namespace utils::ArrayMath;
   int num_steps = sim_config_.end_time / sim_config_.dt;
 
   for (int i = 0; i < num_steps; i++) {
@@ -69,14 +69,19 @@ void Domain::run() {
     queueNewParticles(new_particles);
     commitNewParticles();
 
-    if (i % sim_config_.domain_resize_frequency == 0) {
+    auto [local_min, local_max] = calculateLocalBoundingBox();
+    int needs_resize_local = infinity_norm(local_max - min_bounds_) > physics_config_.l0 * 2 || infinity_norm(local_min - min_bounds_) > physics_config_.l0 * 2 ? 1 : 0;
+    bool needs_resize_global = globalReduce(needs_resize_local, MPI_SUM) > 0;
+
+    if (needs_resize_global || i % sim_config_.domain_resize_frequency == 0) {
       resizeDomain();
       rebalance();
     }
 
-    exchangeGhostParticles();
+    auto update_ghosts_fn = [this]() { this->exchangeGhostParticles(); };
+
     auto particles_before_step = particle_manager_->local_particles;
-    auto solver_solution = particle_manager_->step(i);
+    auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
 
     if (vtk_logger_) {
       auto sim_state = createSimulationState(solver_solution, particles_before_step);
@@ -116,12 +121,12 @@ void Domain::exchangeGhostParticles() {
   for (auto& p : particle_manager_->local_particles) {
     const auto& pos = p.getPosition();
     const auto& length = p.getLength();
-    double buffer = physics_config_.l0 * 0.5;
+    double buffer = physics_config_.l0 * 0.1;
 
-    if (pos[0] - length / 2 - buffer < min_bounds_[0] && rank_ > 0) {
+    if (pos[0] - length - buffer < min_bounds_[0] && rank_ > 0) {
       particles_to_send_left.push_back(p.getData());
     }
-    if (pos[0] + length / 2 + buffer > max_bounds_[0] && rank_ < size_ - 1) {
+    if (pos[0] + length + buffer > max_bounds_[0] && rank_ < size_ - 1) {
       particles_to_send_right.push_back(p.getData());
     }
   }
@@ -159,7 +164,7 @@ void Domain::printProgress(int current_iteration, int total_iterations) const {
               global_particle_count);
 }
 
-std::array<double, 6> Domain::calculateLocalBoundingBox() const {
+std::pair<std::array<double, 3>, std::array<double, 3>> Domain::calculateLocalBoundingBox() const {
   double local_min_x = std::numeric_limits<double>::max();
   double local_max_x = std::numeric_limits<double>::lowest();
   double local_min_y = std::numeric_limits<double>::max();
@@ -176,16 +181,16 @@ std::array<double, 6> Domain::calculateLocalBoundingBox() const {
     local_min_z = std::min(local_min_z, pos[2]);
     local_max_z = std::max(local_max_z, pos[2]);
   }
-  return {local_min_x, local_max_x, local_min_y, local_max_y, local_min_z, local_max_z};
+  return {{local_min_x, local_min_y, local_min_z}, {local_max_x, local_max_y, local_max_z}};
 }
 
 void Domain::calculateGlobalBounds() {
-  auto local_bounds = calculateLocalBoundingBox();
+  auto [local_min, local_max] = calculateLocalBoundingBox();
 
   double global_min_x, global_max_x, global_min_y, global_max_y, global_min_z, global_max_z;
-  getGlobalMinMax(local_bounds[0], local_bounds[1], global_min_x, global_max_x);
-  getGlobalMinMax(local_bounds[2], local_bounds[3], global_min_y, global_max_y);
-  getGlobalMinMax(local_bounds[4], local_bounds[5], global_min_z, global_max_z);
+  getGlobalMinMax(local_min[0], local_max[0], global_min_x, global_max_x);
+  getGlobalMinMax(local_min[1], local_max[1], global_min_y, global_max_y);
+  getGlobalMinMax(local_min[2], local_max[2], global_min_z, global_max_z);
 
   // Handle case where no particles exist in the simulation yet
   if (global_max_x < global_min_x) {
@@ -225,15 +230,17 @@ void Domain::padGlobalBounds(double& global_min_x, double& global_max_x, double&
 
 std::unique_ptr<vtk::DomainDecompositionState> Domain::createDomainDecompositionState() const {
   std::unique_ptr<vtk::DomainDecompositionState> state = std::make_unique<vtk::DomainDecompositionState>();
+
+  auto spatial_grid = particle_manager_->physics_engine->getCollisionDetectorSpatialGrid();
+
   state->domain_min = {min_bounds_[0], min_bounds_[1], min_bounds_[2]};
   state->domain_max = {max_bounds_[0], max_bounds_[1], max_bounds_[2]};
-  state->dims[0] = size_;
-  state->dims[1] = 1;
-  state->dims[2] = 1;
-  state->coords[0] = rank_;
-  state->coords[1] = 0;
-  state->coords[2] = 0;
   state->rank = rank_;
+
+  state->link_cells_min = spatial_grid.getDomainMin();
+  state->link_cells_max = spatial_grid.getDomainMax();
+  state->link_cells_grid_dims = spatial_grid.getGridDims();
+
   return state;
 }
 

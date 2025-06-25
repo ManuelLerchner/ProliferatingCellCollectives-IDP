@@ -165,11 +165,11 @@ std::vector<Particle> ParticleManager::divideParticles() {
   return new_particles;
 }
 
-PhysicsEngine::SolverSolution ParticleManager::step(int i) {
+PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()> exchangeGhostParticles) {
   resetLocalParticles();
 
   std::vector<Particle> particles_before_step = local_particles;
-  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i);
+  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i, exchangeGhostParticles);
 
   return solver_solution;
 }

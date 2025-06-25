@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include <iostream>
 
 #include "Constraint.h"
@@ -351,7 +352,7 @@ void initializeWorkspaces(const MatWrapper& D_PREV, const MatWrapper& M, const M
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt) {
   std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
-  auto local_constraints = collision_detector.detectCollisions(particle_manager.local_particles, particle_manager.ghost_particles, all_constraints, 0);
+  auto local_constraints = collision_detector.detectCollisions(particle_manager, all_constraints, 0);
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
@@ -407,7 +408,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(Pa
   return {.constraints = local_constraints, .constraint_iterations = 1, .bbpgd_iterations = bbpgd_result.bbpgd_iterations, .residual = bbpgd_result.residual};
 }
 
-PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter) {
+PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles) {
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
@@ -433,8 +434,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   bool converged = false;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
+    exchangeGhostParticles();
     auto new_constraints = collision_detector.detectCollisions(
-        particle_manager.local_particles, particle_manager.ghost_particles, all_constraints, constraint_iterations);
+        particle_manager, all_constraints, constraint_iterations);
 
     // Add the new constraints to the master set
     all_constraints.insert(new_constraints.begin(), new_constraints.end());
@@ -533,4 +535,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
 void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
   collision_detector.updateBounds(min_bounds, max_bounds);
+}
+
+SpatialGrid PhysicsEngine::getCollisionDetectorSpatialGrid() {
+  return collision_detector.getSpatialGrid();
 }

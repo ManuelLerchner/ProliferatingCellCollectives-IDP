@@ -16,14 +16,14 @@ int main(int argc, char** argv) {
 
   double DT = 30;
   double END_TIME = 7 * 60 * 60;
-  double LOG_FREQUENCY = 120;
+  double LOG_FREQUENCY = 20;
 
   SimulationConfig sim_config = {
       .dt = DT,
       .end_time = END_TIME,
       .log_frequency_seconds = LOG_FREQUENCY,
       .min_box_size = {5.0, 5.0, 0},
-      .domain_resize_frequency = 1};
+      .domain_resize_frequency = 50};
 
   PhysicsConfig physic_config = {
       .xi = 200 * 3600,
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
   // if (rank == 0) {
   double angle = 0;
-  Particle p1 = Particle(0, {rank * 6, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
+  Particle p1 = Particle(0, {rank * 3, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
   domain.queueNewParticles({p1});
   // }

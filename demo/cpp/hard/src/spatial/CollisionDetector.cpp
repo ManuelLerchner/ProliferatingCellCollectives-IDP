@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "simulation/Particle.h"
+#include "simulation/ParticleManager.h"
 #include "util/ArrayMath.h"
 #include "util/ParticleMPI.h"
 #include "util/Quaternion.h"
@@ -109,14 +110,13 @@ void CollisionDetector::updateBounds(const std::array<double, 3>& min_bounds, co
 }
 
 std::vector<Constraint> CollisionDetector::detectCollisions(
-    const std::vector<Particle>& local_particles,
-    const std::vector<Particle>& ghost_particles,
+    ParticleManager& particle_manager,
     const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairs(local_particles, ghost_particles, constraints, existing_constraints, constraint_iterations);
+  checkParticlePairs(particle_manager, constraints, existing_constraints, constraint_iterations);
 
   // 1. Each process creates a list of its constraint pairs {min_gid, max_gid}
   std::vector<int> local_constraint_pairs;
@@ -173,13 +173,11 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
   return constraints;
 }
 
-void CollisionDetector::updateSpatialGrid(
-    const std::vector<Particle>& local_particles,
-    const std::vector<Particle>& ghost_particles) {
-  if (local_particles.empty()) return;
+void CollisionDetector::updateSpatialGrid(ParticleManager& particle_manager) {
+  if (particle_manager.local_particles.empty()) return;
 
   // Calculate bounds
-  std::array<double, 3> min_pos = local_particles[0].getPosition();
+  std::array<double, 3> min_pos = particle_manager.local_particles[0].getPosition();
   std::array<double, 3> max_pos = min_pos;
 
   auto updateBounds = [&](const Particle& p) {
@@ -190,15 +188,15 @@ void CollisionDetector::updateSpatialGrid(
     }
   };
 
-  for (const auto& p : local_particles) updateBounds(p);
-  for (const auto& p : ghost_particles) updateBounds(p);
+  for (const auto& p : particle_manager.local_particles) updateBounds(p);
+  for (const auto& p : particle_manager.ghost_particles) updateBounds(p);
 
   // Calculate cell size
   double max_particle_size = 0.0;
-  for (const auto& p : local_particles) {
+  for (const auto& p : particle_manager.local_particles) {
     max_particle_size = std::max(max_particle_size, p.getLength());
   }
-  for (const auto& p : ghost_particles) {
+  for (const auto& p : particle_manager.ghost_particles) {
     max_particle_size = std::max(max_particle_size, p.getLength());
   }
 
@@ -207,33 +205,26 @@ void CollisionDetector::updateSpatialGrid(
 }
 
 void CollisionDetector::checkParticlePairs(
-    const std::vector<Particle>& local_particles,
-    const std::vector<Particle>& ghost_particles,
+    ParticleManager& particle_manager,
     std::vector<Constraint>& constraints,
     const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
     int constraint_iterations) {
   // Create ghost lookup map for efficiency
   std::unordered_map<PetscInt, const Particle*> ghost_map;
-  for (const auto& ghost : ghost_particles) {
-    ghost_map[ghost.setGID()] = &ghost;
+  for (const auto& ghost : particle_manager.ghost_particles) {
+    ghost_map[ghost.getGID()] = &ghost;
   }
 
-  auto collision_pairs = spatial_grid_.findPotentialCollisions(local_particles, ghost_particles);
+  auto collision_pairs = spatial_grid_.findPotentialCollisions(particle_manager.local_particles, particle_manager.ghost_particles);
 
   for (const auto& pair : collision_pairs) {
-    const Particle* p1;
-    const Particle* p2;
+    const Particle* p1 = getParticle(pair.gidI, particle_manager);
+    const Particle* p2 = getParticle(pair.gidJ, particle_manager);
 
-    if (pair.is_localI) {
-      p1 = getParticle(pair.gidI, local_particles);
-    } else {
-      p1 = getParticle(pair.gidI, ghost_particles);
-    }
-
-    if (pair.is_localJ) {
-      p2 = getParticle(pair.gidJ, local_particles);
-    } else {
-      p2 = getParticle(pair.gidJ, ghost_particles);
+    if (!p1 || !p2) {
+      // This can happen if a particle is not found, though it would be unexpected
+      // in the current logic. Good to have a safeguard.
+      continue;
     }
 
     auto constraint = tryCreateConstraint(
@@ -252,9 +243,14 @@ void CollisionDetector::checkParticlePairs(
 
 const Particle* CollisionDetector::getParticle(
     int global_id,
-    const std::vector<Particle>& particles) {
-  for (const auto& p : particles) {
-    if (p.setGID() == global_id) {
+    ParticleManager& particle_manager) {
+  for (const auto& p : particle_manager.local_particles) {
+    if (p.getGID() == global_id) {
+      return &p;
+    }
+  }
+  for (const auto& p : particle_manager.ghost_particles) {
+    if (p.getGID() == global_id) {
       return &p;
     }
   }
@@ -321,4 +317,8 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   }
 
   return constraint;
+}
+
+SpatialGrid CollisionDetector::getSpatialGrid() {
+  return spatial_grid_;
 }

@@ -443,13 +443,14 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
 
 std::vector<VTKField> ParticleDataExtractor::getEmptyPointFields() {
   std::vector<VTKField> fields;
-  fields.emplace_back("Radius", std::vector<double>{}, 1, DataType::Float64);
-  fields.emplace_back("GID", std::vector<double>{}, 1, DataType::Float64);
-  fields.emplace_back("CellType", std::vector<double>{}, 1, DataType::Float64);
-  fields.emplace_back("Force", std::vector<std::array<double, 3>>{});
-  fields.emplace_back("Torque", std::vector<std::array<double, 3>>{});
-  fields.emplace_back("Velocity", std::vector<std::array<double, 3>>{});
-  fields.emplace_back("VelocityAngular", std::vector<std::array<double, 3>>{});
+  fields.emplace_back("rank", std::vector<double>{}, 1, DataType::Int32);
+  fields.emplace_back("typeIds", std::vector<double>{}, 1, DataType::Int32);
+  fields.emplace_back("ids", std::vector<double>{}, 1, DataType::Int32);
+  fields.emplace_back("gIDs", std::vector<double>{}, 1, DataType::Int32);
+  fields.emplace_back("lengths", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("directions", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("impedance", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("forces", std::vector<double>{}, 1, DataType::Float64);
   return fields;
 }
 
@@ -643,10 +644,18 @@ std::vector<VTKField> DomainDecompositionDataExtractor::extractPointData(const v
 
   std::vector<std::array<double, 3>> scales = {{domain_x, domain_y, domain_z}};  // Use a small z-scale for 2D vis
 
+  std::vector<std::array<double, 3>> link_cells_grid_dims = {{static_cast<double>(dd_state->link_cells_grid_dims[0]),
+                                                              static_cast<double>(dd_state->link_cells_grid_dims[1]),
+                                                              static_cast<double>(dd_state->link_cells_grid_dims[2])}};
+
+  std::vector<std::array<double, 3>> link_cells_min = {{dd_state->link_cells_min[0], dd_state->link_cells_min[1], dd_state->link_cells_min[2]}};
+  std::vector<std::array<double, 3>> link_cells_max = {{dd_state->link_cells_max[0], dd_state->link_cells_max[1], dd_state->link_cells_max[2]}};
+
   fields.emplace_back("scale", scales);
   fields.emplace_back("rank", std::vector<double>{static_cast<double>(dd_state->rank)}, 1, DataType::Int32);
-  fields.emplace_back("coord_x", std::vector<double>{static_cast<double>(dd_state->coords[0])}, 1, DataType::Int32);
-  fields.emplace_back("coord_y", std::vector<double>{static_cast<double>(dd_state->coords[1])}, 1, DataType::Int32);
+  fields.emplace_back("link_cells_min", link_cells_min);
+  fields.emplace_back("link_cells_max", link_cells_max);
+  fields.emplace_back("link_cells_grid_dims", link_cells_grid_dims);
 
   return fields;
 }
@@ -656,10 +665,8 @@ std::vector<VTKField> DomainDecompositionDataExtractor::extractCellData(const vo
 }
 
 VTKFieldData DomainDecompositionDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) {
-  const auto* dd_state = static_cast<const DomainDecompositionState*>(state);
   VTKFieldData field_data;
-  field_data.addField("dim_x", dd_state->dims[0]);
-  field_data.addField("dim_y", dd_state->dims[1]);
+
   return field_data;
 }
 

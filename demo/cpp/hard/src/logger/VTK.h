@@ -155,9 +155,10 @@ struct ParticleSimulationState {
 struct DomainDecompositionState {
   std::array<double, 3> domain_min;
   std::array<double, 3> domain_max;
-  int dims[2];
-  int coords[2];
   int rank;
+  std::array<double, 3> link_cells_min;
+  std::array<double, 3> link_cells_max;
+  std::array<size_t, 3> link_cells_grid_dims;
 };
 
 /**

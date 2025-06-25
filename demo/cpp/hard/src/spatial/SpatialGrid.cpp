@@ -22,8 +22,6 @@ SpatialGrid::SpatialGrid(double cell_size, const std::array<double, 3>& domain_m
     }
   }
 
-  std::cout << "Grid dims: " << grid_dims_[0] << " " << grid_dims_[1] << " " << grid_dims_[2] << std::endl;
-
   size_t total_cells = grid_dims_[0] * grid_dims_[1] * grid_dims_[2];
   grid_cells_.resize(total_cells);
 }
@@ -148,4 +146,20 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
   }
 
   return pairs;
+}
+
+double SpatialGrid::getCellSize() const {
+  return cell_size_;
+}
+
+std::array<double, 3> SpatialGrid::getDomainMin() const {
+  return domain_min_;
+}
+
+std::array<double, 3> SpatialGrid::getDomainMax() const {
+  return domain_max_;
+}
+
+std::array<size_t, 3> SpatialGrid::getGridDims() const {
+  return grid_dims_;
 }

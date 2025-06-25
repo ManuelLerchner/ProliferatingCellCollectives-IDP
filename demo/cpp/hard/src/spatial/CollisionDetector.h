@@ -22,6 +22,8 @@ struct CollisionDetails {
   std::array<double, 3> closest_p2;
 };
 
+class ParticleManager;
+
 class CollisionDetector {
  public:
   CollisionDetector(double collision_tolerance, double cell_size);
@@ -29,15 +31,14 @@ class CollisionDetector {
   void updateBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
 
   std::vector<Constraint> detectCollisions(
-      const std::vector<Particle>& local_particles,
-      const std::vector<Particle>& ghost_particles,
+      ParticleManager& particle_manager,
       const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   // Simplified helper methods
-  void updateSpatialGrid(
-      const std::vector<Particle>& local_particles,
-      const std::vector<Particle>& ghost_particles);
+  void updateSpatialGrid(ParticleManager& particle_manager);
+
+  SpatialGrid getSpatialGrid();
 
  private:
   double collision_tolerance_;
@@ -51,15 +52,14 @@ class CollisionDetector {
   std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
 
   void checkParticlePairs(
-      const std::vector<Particle>& local_particles,
-      const std::vector<Particle>& ghost_particles,
+      ParticleManager& particle_manager,
       std::vector<Constraint>& constraints,
       const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   const Particle* getParticle(
       int global_id,
-      const std::vector<Particle>& particles);
+      ParticleManager& particle_manager);
 
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,

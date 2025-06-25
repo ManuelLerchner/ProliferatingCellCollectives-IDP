@@ -2,6 +2,7 @@
 #include <petsc.h>
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -24,7 +25,7 @@ class ParticleManager {
   void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
 
   std::vector<Particle> divideParticles();
-  PhysicsEngine::SolverSolution step(int i);
+  PhysicsEngine::SolverSolution step(int i, std::function<void()> exchangeGhostParticles);
 
   void redistributeParticles();
   void updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);

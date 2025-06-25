@@ -21,7 +21,7 @@ class Domain {
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
       const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>& particles) const;
 
-  std::array<double, 6> calculateLocalBoundingBox() const;
+  std::pair<std::array<double, 3>, std::array<double, 3>> calculateLocalBoundingBox() const;
   void calculateGlobalBounds();
   void padGlobalBounds(double& global_min_x, double& global_max_x, double& global_min_y, double& global_max_y,
                        double& global_min_z, double& global_max_z) const;

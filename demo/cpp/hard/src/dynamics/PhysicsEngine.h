@@ -45,9 +45,10 @@ class PhysicsEngine {
   PhysicsMatrices calculateMatrices(const std::vector<Particle>& local_particles, const std::vector<Constraint>& local_constraints);
 
   SolverSolution solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt);
-  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter);
+  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles);
 
   void updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
+  SpatialGrid getCollisionDetectorSpatialGrid();
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;
