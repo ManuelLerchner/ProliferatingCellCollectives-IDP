@@ -24,7 +24,9 @@ struct CollisionDetails {
 
 class CollisionDetector {
  public:
-  CollisionDetector(double collision_tolerance);
+  CollisionDetector(double collision_tolerance, double cell_size);
+
+  void updateBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
 
   std::vector<Constraint> detectCollisions(
       const std::vector<Particle>& local_particles,
@@ -32,13 +34,14 @@ class CollisionDetector {
       const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
-   // Simplified helper methods
+  // Simplified helper methods
   void updateSpatialGrid(
       const std::vector<Particle>& local_particles,
       const std::vector<Particle>& ghost_particles);
 
  private:
   double collision_tolerance_;
+  double cell_size_;
   SpatialGrid spatial_grid_;
 
   CollisionDetails checkSpherocylinderCollision(

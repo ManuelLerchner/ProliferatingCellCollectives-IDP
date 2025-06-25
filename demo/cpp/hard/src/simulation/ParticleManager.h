@@ -27,7 +27,7 @@ class ParticleManager {
   PhysicsEngine::SolverSolution step(int i);
 
   void redistributeParticles();
-  void updateDomainBounds();
+  void updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
 
   std::vector<Particle> local_particles;
   std::vector<Particle> ghost_particles;

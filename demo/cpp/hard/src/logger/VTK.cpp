@@ -441,12 +441,24 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   return fields;
 }
 
-std::vector<VTKField> ParticleDataExtractor::extractCellData(const void* state) {
-  // No cell data for particle simulation
-  return {};
+std::vector<VTKField> ParticleDataExtractor::getEmptyPointFields() {
+  std::vector<VTKField> fields;
+  fields.emplace_back("Radius", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("GID", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("CellType", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("Force", std::vector<std::array<double, 3>>{});
+  fields.emplace_back("Torque", std::vector<std::array<double, 3>>{});
+  fields.emplace_back("Velocity", std::vector<std::array<double, 3>>{});
+  fields.emplace_back("VelocityAngular", std::vector<std::array<double, 3>>{});
+  return fields;
 }
 
-VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) {
+std::vector<VTKField> ParticleDataExtractor::extractCellData(const void* state) {
+  return {};  // No cell data for particles
+}
+
+VTKFieldData ParticleDataExtractor::extractFieldData(const void* state, int timestep, double dt, double elapsed_time,
+                                                     bool is_substep) {
   const auto* sim_state = static_cast<const ParticleSimulationState*>(state);
 
   // Get MPI rank and size information

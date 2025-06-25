@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 
 #include "simulation/Particle.h"
 #include "simulation/ParticleData.h"
@@ -28,6 +29,7 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   vtk_logger_ = vtk::createParticleLogger("./vtk_output", log_every_n_steps);
   constraint_loggers_ = vtk::createConstraintLogger("./vtk_output", log_every_n_steps);
   domain_decomposition_logger_ = vtk::createDomainDecompositionLogger("./vtk_output", log_every_n_steps);
+  ghost_logger_ = vtk::createParticleLogger("./vtk_output/ghost", log_every_n_steps);
   createParticleMPIType(&mpi_particle_type_);
 }
 
@@ -69,17 +71,21 @@ void Domain::run() {
 
     if (i % sim_config_.domain_resize_frequency == 0) {
       resizeDomain();
-      exchangeParticles();
+      rebalance();
     }
 
+    exchangeGhostParticles();
     auto particles_before_step = particle_manager_->local_particles;
     auto solver_solution = particle_manager_->step(i);
 
     if (vtk_logger_) {
-      auto sim_state = createSimulationState(solver_solution, &particles_before_step);
+      auto sim_state = createSimulationState(solver_solution, particles_before_step);
       auto dd_state = createDomainDecompositionState();
 
+      auto ghost_state = createSimulationState(solver_solution, particle_manager_->ghost_particles);
+
       vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
+      ghost_logger_->logTimestepComplete(sim_config_.dt, ghost_state.get());
       constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
 
       domain_decomposition_logger_->logTimestepComplete(sim_config_.dt, dd_state.get());
@@ -89,17 +95,43 @@ void Domain::run() {
   }
 }
 
-void Domain::exchangeParticles() {
+void Domain::rebalance() {
   // 1. Determine which particles to send to which rank
   std::vector<std::vector<ParticleData>> particles_to_send(size_);
   std::vector<Particle> particles_to_keep;
   groupParticlesForExchange(particles_to_send, particles_to_keep);
 
   // 2. Exchange particle data
-  auto recv_buffer = exchangeParticleData(particles_to_send);
+  auto recv_buffer = exchangeParticleDataGlobal(particles_to_send);
 
   // 3. Update local particles
   updateParticlesAfterExchange(particles_to_keep, recv_buffer);
+}
+
+void Domain::exchangeGhostParticles() {
+  std::vector<ParticleData> particles_to_send_left;
+  std::vector<ParticleData> particles_to_send_right;
+  double buffer = physics_config_.l0 * 0.5;
+
+  for (auto& p : particle_manager_->local_particles) {
+    const auto& pos = p.getPosition();
+    const auto& length = p.getLength();
+    double buffer = physics_config_.l0 * 0.5;
+
+    if (pos[0] - length / 2 - buffer < min_bounds_[0] && rank_ > 0) {
+      particles_to_send_left.push_back(p.getData());
+    }
+    if (pos[0] + length / 2 + buffer > max_bounds_[0] && rank_ < size_ - 1) {
+      particles_to_send_right.push_back(p.getData());
+    }
+  }
+
+  auto received_particles_data = exchangeParticleDataWithAdjacentRank(particles_to_send_left, particles_to_send_right);
+
+  particle_manager_->ghost_particles.clear();
+  for (const auto& pd : received_particles_data) {
+    particle_manager_->ghost_particles.emplace_back(pd);
+  }
 }
 
 void Domain::resizeDomain() {
@@ -114,6 +146,8 @@ void Domain::resizeDomain() {
   max_bounds_[1] = global_max_bounds_[1];
   min_bounds_[2] = global_min_bounds_[2];
   max_bounds_[2] = global_max_bounds_[2];
+
+  particle_manager_->updateDomainBounds(min_bounds_, max_bounds_);
 }
 
 void Domain::printProgress(int current_iteration, int total_iterations) const {
@@ -122,7 +156,7 @@ void Domain::printProgress(int current_iteration, int total_iterations) const {
               (double)current_iteration / total_iterations * 100,
               (double)current_iteration * sim_config_.dt / 60,
               (double)total_iterations * sim_config_.dt / 60,
-              particle_manager_->global_particle_count);
+              global_particle_count);
 }
 
 std::array<double, 6> Domain::calculateLocalBoundingBox() const {
@@ -152,6 +186,16 @@ void Domain::calculateGlobalBounds() {
   getGlobalMinMax(local_bounds[0], local_bounds[1], global_min_x, global_max_x);
   getGlobalMinMax(local_bounds[2], local_bounds[3], global_min_y, global_max_y);
   getGlobalMinMax(local_bounds[4], local_bounds[5], global_min_z, global_max_z);
+
+  // Handle case where no particles exist in the simulation yet
+  if (global_max_x < global_min_x) {
+    global_min_x = -1.0;
+    global_max_x = 1.0;
+    global_min_y = -1.0;
+    global_max_y = 1.0;
+    global_min_z = -1.0;
+    global_max_z = 1.0;
+  }
 
   padGlobalBounds(global_min_x, global_max_x, global_min_y, global_max_y, global_min_z, global_max_z);
 
@@ -194,17 +238,12 @@ std::unique_ptr<vtk::DomainDecompositionState> Domain::createDomainDecomposition
 }
 
 std::unique_ptr<vtk::ParticleSimulationState> Domain::createSimulationState(
-    const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry) const {
+    const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>& particles) const {
   auto state = std::make_unique<vtk::ParticleSimulationState>();
 
   auto& local_particles = particle_manager_->local_particles;
 
-  // Copy particles
-  if (particles_for_geometry) {
-    state->particles = *particles_for_geometry;
-  } else {
-    state->particles = local_particles;
-  }
+  state->particles = particles;
   state->constraints = std::move(solver_solution.constraints);
 
   // Initialize empty force/torque vectors (would be populated by physics engine in full implementation)
@@ -253,7 +292,7 @@ void Domain::groupParticlesForExchange(std::vector<std::vector<ParticleData>>& p
   }
 }
 
-std::vector<ParticleData> Domain::exchangeParticleData(
+std::vector<ParticleData> Domain::exchangeParticleDataGlobal(
     const std::vector<std::vector<ParticleData>>& particles_to_send) {
   std::vector<int> send_counts(size_, 0);
   std::vector<int> send_displacements(size_, 0);
@@ -287,6 +326,42 @@ std::vector<ParticleData> Domain::exchangeParticleData(
                 PETSC_COMM_WORLD);
 
   return recv_buffer;
+}
+
+std::vector<ParticleData> Domain::exchangeParticleDataWithAdjacentRank(
+    const std::vector<ParticleData>& to_send_left, const std::vector<ParticleData>& to_send_right) {
+  MPI_Status status;
+  int left_neighbor = (rank_ > 0) ? rank_ - 1 : MPI_PROC_NULL;
+  int right_neighbor = (rank_ < size_ - 1) ? rank_ + 1 : MPI_PROC_NULL;
+
+  int send_count_left = to_send_left.size();
+  int send_count_right = to_send_right.size();
+  int recv_count_left = 0;
+  int recv_count_right = 0;
+
+  // Exchange counts: send to right, receive from left
+  MPI_Sendrecv(&send_count_right, 1, MPI_INT, right_neighbor, 0, &recv_count_left, 1, MPI_INT, left_neighbor, 0,
+               PETSC_COMM_WORLD, &status);
+
+  // Exchange counts: send to left, receive from right
+  MPI_Sendrecv(&send_count_left, 1, MPI_INT, left_neighbor, 1, &recv_count_right, 1, MPI_INT, right_neighbor, 1,
+               PETSC_COMM_WORLD, &status);
+
+  std::vector<ParticleData> received_from_left(recv_count_left);
+  std::vector<ParticleData> received_from_right(recv_count_right);
+
+  // Exchange data: send to right, receive from left
+  MPI_Sendrecv(to_send_right.data(), send_count_right, mpi_particle_type_, right_neighbor, 2, received_from_left.data(),
+               recv_count_left, mpi_particle_type_, left_neighbor, 2, PETSC_COMM_WORLD, &status);
+  MPI_Sendrecv(to_send_left.data(), send_count_left, mpi_particle_type_, left_neighbor, 3, received_from_right.data(),
+               recv_count_right, mpi_particle_type_, right_neighbor, 3, PETSC_COMM_WORLD, &status);
+
+  std::vector<ParticleData> received_particles;
+  received_particles.reserve(recv_count_left + recv_count_right);
+  received_particles.insert(received_particles.end(), received_from_left.begin(), received_from_left.end());
+  received_particles.insert(received_particles.end(), received_from_right.begin(), received_from_right.end());
+
+  return received_particles;
 }
 
 void Domain::updateParticlesAfterExchange(std::vector<Particle>& particles_to_keep,

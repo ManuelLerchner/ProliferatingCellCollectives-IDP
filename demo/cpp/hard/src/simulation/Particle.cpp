@@ -267,10 +267,10 @@ double Particle::getDiameter() const {
 }
 
 double Particle::getVolume() const {
-  const double r = diameter / 2.0;
-  const double cylinder_vol = M_PI * r * r * length;
+  double r = diameter / 2.0;
+  double cylinder_volume = M_PI * r * r * (length - diameter);
   const double cap_vol = (4.0 / 3.0) * M_PI * r * r * r;
-  return cylinder_vol + cap_vol;
+  return cylinder_volume + cap_vol;
 }
 
 const std::array<double, Particle::QUATERNION_SIZE>& Particle::getQuaternion() const {

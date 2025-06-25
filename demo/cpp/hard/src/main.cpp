@@ -38,19 +38,20 @@ int main(int argc, char** argv) {
   SolverConfig solver_config = {
       .tolerance = physic_config.l0 / 1e3,
       .max_bbpgd_iterations = 100000,
-      .max_recursive_iterations = 50};
+      .max_recursive_iterations = 50,
+      .linked_cell_size = physic_config.l0 * 2.5};
 
   Domain domain(sim_config, physic_config, solver_config);
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
-  if (rank == 0) {
-    double angle = 0;
-    Particle p1 = Particle(0, {0, rank * 1.5, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
+  // if (rank == 0) {
+  double angle = 0;
+  Particle p1 = Particle(0, {rank * 6, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
-    domain.queueNewParticles({p1});
-  }
+  domain.queueNewParticles({p1});
+  // }
 
   domain.run();
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <functional>
 #include <optional>
 #include <random>
@@ -7,9 +8,9 @@
 
 #include "Constraint.h"
 #include "simulation/Particle.h"
+#include "spatial/CollisionDetector.h"
 #include "util/Config.h"
 #include "util/PetscRaii.h"
-#include "spatial/CollisionDetector.h"
 
 // Forward declaration
 class ParticleManager;
@@ -45,6 +46,8 @@ class PhysicsEngine {
 
   SolverSolution solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt);
   SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter);
+
+  void updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
 
   const PhysicsConfig physics_config;
   const SolverConfig solver_config;

@@ -12,13 +12,14 @@ class Domain {
   void run();
 
  private:
-  void exchangeParticles();
+  void rebalance();
+  void exchangeGhostParticles();
   void resizeDomain();
   void printProgress(int current_iteration, int total_iterations) const;
 
   std::unique_ptr<vtk::DomainDecompositionState> createDomainDecompositionState() const;
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
-      const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry) const;
+      const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>& particles) const;
 
   std::array<double, 6> calculateLocalBoundingBox() const;
   void calculateGlobalBounds();
@@ -27,7 +28,9 @@ class Domain {
 
   void groupParticlesForExchange(std::vector<std::vector<ParticleData>>& particles_to_send,
                                  std::vector<Particle>& particles_to_keep);
-  std::vector<ParticleData> exchangeParticleData(const std::vector<std::vector<ParticleData>>& particles_to_send);
+  std::vector<ParticleData> exchangeParticleDataGlobal(const std::vector<std::vector<ParticleData>>& particles_to_send);
+  std::vector<ParticleData> exchangeParticleDataWithAdjacentRank(const std::vector<ParticleData>& to_send_left,
+                                                                 const std::vector<ParticleData>& to_send_right);
   void updateParticlesAfterExchange(std::vector<Particle>& particles_to_keep,
                                     const std::vector<ParticleData>& received_particles);
   void assignGlobalIDsToNewParticles();
@@ -43,6 +46,7 @@ class Domain {
   std::vector<Particle> new_particle_buffer;
 
   std::unique_ptr<vtk::SimulationLogger> vtk_logger_;
+  std::unique_ptr<vtk::SimulationLogger> ghost_logger_;
   std::unique_ptr<vtk::SimulationLogger> constraint_loggers_;
   std::unique_ptr<vtk::SimulationLogger> domain_decomposition_logger_;
 

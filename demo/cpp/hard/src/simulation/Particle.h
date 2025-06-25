@@ -96,6 +96,7 @@ class Particle {
   PetscInt localID = -1;
   std::array<double, POSITION_SIZE> position;
   std::array<double, QUATERNION_SIZE> quaternion;
+  int cell_type_ = 0;
 
   std::array<double, 3> force = {0.0, 0.0, 0.0};
   std::array<double, 3> torque = {0.0, 0.0, 0.0};

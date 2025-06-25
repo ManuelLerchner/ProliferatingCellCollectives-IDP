@@ -32,4 +32,5 @@ struct SolverConfig {
   double tolerance;
   long long max_bbpgd_iterations;
   int max_recursive_iterations;
+  double linked_cell_size;
 };

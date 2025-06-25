@@ -16,7 +16,7 @@
 
 constexpr int PARTICLE_DOFS = 6;
 
-PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config), collision_detector(CollisionDetector(solver_config.tolerance)) {
+PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config), collision_detector(CollisionDetector(solver_config.tolerance, solver_config.linked_cell_size)) {
   std::random_device rd;
   gen = std::mt19937(rd());
 }
@@ -529,4 +529,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces.ldot_prev, .impedance = workspaces.impedance_curr_workspace});
 
   return {.constraints = std::vector<Constraint>(all_constraints.begin(), all_constraints.end()), .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
+}
+
+void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
+  collision_detector.updateBounds(min_bounds, max_bounds);
 }

@@ -20,8 +20,8 @@
 utils::geometry::DCPSegment3Segment3<double> distance_query;
 
 // CollisionDetector Implementation
-CollisionDetector::CollisionDetector(double collision_tolerance)
-    : collision_tolerance_(collision_tolerance), spatial_grid_(1.0, {-10, -10, -10}, {10, 10, 10}) {
+CollisionDetector::CollisionDetector(double collision_tolerance, double cell_size)
+    : collision_tolerance_(collision_tolerance), cell_size_(cell_size), spatial_grid_(cell_size, {-1, -1, -1}, {1, 1, 1}) {
 }
 
 std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getParticleEndpoints(const Particle& p) {
@@ -100,6 +100,13 @@ struct PairHash {
     return h1 ^ (h2 << 1);
   }
 };
+
+void CollisionDetector::updateBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
+  double padding = 3.0;
+  std::array<double, 3> padded_min = {min_bounds[0] - padding, min_bounds[1] - padding, min_bounds[2] - padding};
+  std::array<double, 3> padded_max = {max_bounds[0] + padding, max_bounds[1] + padding, max_bounds[2] + padding};
+  spatial_grid_ = SpatialGrid(cell_size_, padded_min, padded_max);
+}
 
 std::vector<Constraint> CollisionDetector::detectCollisions(
     const std::vector<Particle>& local_particles,

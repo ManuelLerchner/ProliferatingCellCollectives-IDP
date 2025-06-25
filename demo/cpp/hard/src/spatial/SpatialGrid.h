@@ -32,10 +32,10 @@ class SpatialGrid {
  private:
   double cell_size_;
   std::array<double, 3> domain_min_, domain_max_;
-  std::array<int, 3> grid_dims_;
+  std::array<size_t, 3> grid_dims_;
   std::vector<std::vector<std::pair<int, bool>>> grid_cells_;
 
-  int getCellIndex(const std::array<double, 3>& position) const;
-  std::array<int, 3> getCellCoords(const std::array<double, 3>& position) const;
-  std::vector<int> getNeighborCells(int cell_idx) const;
+  size_t getCellIndex(const std::array<double, 3>& position) const;
+  std::array<size_t, 3> getCellCoords(const std::array<double, 3>& position) const;
+  std::vector<size_t> getNeighborCells(size_t cell_idx) const;
 };

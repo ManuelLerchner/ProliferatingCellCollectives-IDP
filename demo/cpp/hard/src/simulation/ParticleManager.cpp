@@ -174,6 +174,10 @@ PhysicsEngine::SolverSolution ParticleManager::step(int i) {
   return solver_solution;
 }
 
+void ParticleManager::updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
+  physics_engine->updateCollisionDetectorBounds(min_bounds, max_bounds);
+}
+
 // void ParticleManager::redistributeParticles() {
 //   PetscMPIInt rank, size;
 //   MPI_Comm_rank(cart_comm_, &rank);

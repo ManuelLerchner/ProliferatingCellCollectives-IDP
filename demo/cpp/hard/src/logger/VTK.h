@@ -169,6 +169,11 @@ class ParticleDataExtractor : public VTKDataExtractor {
   std::vector<VTKField> extractPointData(const void* state) override;
   std::vector<VTKField> extractCellData(const void* state) override;
   VTKFieldData extractFieldData(const void* state, int timestep, double dt, double elapsed_time, bool is_substep) override;
+
+  static std::vector<VTKField> getEmptyPointFields();
+
+ private:
+  std::vector<VTKField> extractPointDataInternal(const ParticleSimulationState* state);
 };
 
 /**
