@@ -14,17 +14,27 @@ class Domain {
  private:
   void exchangeParticles();
   void resizeDomain();
-  void redistributeParticles();
-  void resetLocalParticles();
   void printProgress(int current_iteration, int total_iterations) const;
 
   std::unique_ptr<vtk::DomainDecompositionState> createDomainDecompositionState() const;
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
       const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>* particles_for_geometry) const;
 
-  SimulationConfig sim_config_;
-  PhysicsConfig physics_config_;
-  SolverConfig solver_config_;
+  std::array<double, 6> calculateLocalBoundingBox() const;
+  void calculateGlobalBounds();
+  void padGlobalBounds(double& global_min_x, double& global_max_x, double& global_min_y, double& global_max_y,
+                       double& global_min_z, double& global_max_z) const;
+
+  void groupParticlesForExchange(std::vector<std::vector<ParticleData>>& particles_to_send,
+                                 std::vector<Particle>& particles_to_keep);
+  std::vector<ParticleData> exchangeParticleData(const std::vector<std::vector<ParticleData>>& particles_to_send);
+  void updateParticlesAfterExchange(std::vector<Particle>& particles_to_keep,
+                                    const std::vector<ParticleData>& received_particles);
+  void assignGlobalIDsToNewParticles();
+
+  const SimulationConfig& sim_config_;
+  const PhysicsConfig& physics_config_;
+  const SolverConfig& solver_config_;
 
   int rank_;
   int size_;

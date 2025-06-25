@@ -10,7 +10,6 @@
 #include "dynamics/PhysicsEngine.h"
 #include "logger/VTK.h"
 #include "simulation/Particle.h"
-#include "spatial/ConstraintGenerator.h"
 #include "util/Config.h"
 
 class ParticleManager {
@@ -34,7 +33,6 @@ class ParticleManager {
   std::vector<Particle> ghost_particles;
   PetscInt global_particle_count = 0;
 
-  std::unique_ptr<ConstraintGenerator> constraint_generator;
   std::unique_ptr<PhysicsEngine> physics_engine;
 
   SimulationConfig sim_config_;

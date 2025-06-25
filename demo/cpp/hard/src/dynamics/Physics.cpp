@@ -9,7 +9,6 @@
 
 #include "Constraint.h"
 #include "petscmat.h"
-#include "simulation/ParticleManager.h"
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 

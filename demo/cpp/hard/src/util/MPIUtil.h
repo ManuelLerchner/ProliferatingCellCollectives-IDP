@@ -30,3 +30,8 @@ inline void globalReduce_v(const T* local_vals, T* global_vals, int count, MPI_O
   MPI_Datatype mpi_type = getMpiDataType<T>();
   PetscCallAbort(PETSC_COMM_WORLD, MPI_Allreduce(local_vals, global_vals, count, mpi_type, op, PETSC_COMM_WORLD));
 }
+
+inline void getGlobalMinMax(double local_min, double local_max, double& global_min, double& global_max) {
+  MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, PETSC_COMM_WORLD);
+  MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, PETSC_COMM_WORLD);
+}

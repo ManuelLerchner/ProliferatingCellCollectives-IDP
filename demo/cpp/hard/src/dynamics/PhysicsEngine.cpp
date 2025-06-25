@@ -16,7 +16,7 @@
 
 constexpr int PARTICLE_DOFS = 6;
 
-PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config) {
+PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config), collision_detector(CollisionDetector(solver_config.tolerance)) {
   std::random_device rd;
   gen = std::mt19937(rd());
 }
@@ -351,7 +351,7 @@ void initializeWorkspaces(const MatWrapper& D_PREV, const MatWrapper& M, const M
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt) {
   std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
-  auto local_constraints = particle_manager.constraint_generator->generateConstraints(particle_manager.local_particles, particle_manager.ghost_particles, all_constraints, 0);
+  auto local_constraints = collision_detector.detectCollisions(particle_manager.local_particles, particle_manager.ghost_particles, all_constraints, 0);
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
@@ -433,7 +433,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   bool converged = false;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
-    auto new_constraints = particle_manager.constraint_generator->generateConstraints(
+    auto new_constraints = collision_detector.detectCollisions(
         particle_manager.local_particles, particle_manager.ghost_particles, all_constraints, constraint_iterations);
 
     // Add the new constraints to the master set

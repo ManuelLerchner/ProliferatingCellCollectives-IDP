@@ -19,13 +19,10 @@
 #include "dynamics/Physics.h"
 #include "dynamics/PhysicsEngine.h"
 #include "logger/VTK.h"
-#include "spatial/ConstraintGenerator.h"
-#include "util/MPIUtil.h"
 #include "util/ParticleMPI.h"
 
 ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config)
     : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config) {
-  constraint_generator = std::make_unique<ConstraintGenerator>(solver_config.tolerance, 2.5 * physics_config.l0);
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 }
 
