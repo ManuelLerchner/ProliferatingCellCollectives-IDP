@@ -398,14 +398,21 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   // Extract particle IDs
   std::vector<int> ids;
   ids.reserve(n_particles);
-  for (const auto& particle : sim_state->particles) {
-    ids.push_back(particle.getLocalID());
+  for (int i = 0; i < n_particles; ++i) {
+    ids.push_back(i);
   }
 
   std::vector<int> gIDs;
   gIDs.reserve(n_particles);
   for (const auto& particle : sim_state->particles) {
     gIDs.push_back(particle.getGID());
+  }
+
+  // Extract age
+  std::vector<int> ages;
+  ages.reserve(n_particles);
+  for (const auto& particle : sim_state->particles) {
+    ages.push_back(particle.getAge());
   }
 
   // Extract type IDs (all zeros for now)
@@ -434,6 +441,7 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   fields.emplace_back("typeIds", type_ids, DataType::Int32);
   fields.emplace_back("ids", ids, DataType::Int32);
   fields.emplace_back("gIDs", gIDs, DataType::Int32);
+  fields.emplace_back("age", ages, DataType::Int32);
 
   // Add rank information as point data
   fields.emplace_back("rank", ranks, DataType::Int32);
@@ -447,6 +455,7 @@ std::vector<VTKField> ParticleDataExtractor::getEmptyPointFields() {
   fields.emplace_back("typeIds", std::vector<double>{}, 1, DataType::Int32);
   fields.emplace_back("ids", std::vector<double>{}, 1, DataType::Int32);
   fields.emplace_back("gIDs", std::vector<double>{}, 1, DataType::Int32);
+  fields.emplace_back("age", std::vector<double>{}, 1, DataType::Int32);
   fields.emplace_back("lengths", std::vector<double>{}, 1, DataType::Float64);
   fields.emplace_back("directions", std::vector<double>{}, 1, DataType::Float64);
   fields.emplace_back("impedance", std::vector<double>{}, 1, DataType::Float64);
@@ -524,6 +533,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<int> gidJ;
   std::vector<int> violated;
   std::vector<int> constraint_iterations;
+  std::vector<int> is_ghost;
 
   // Reserve space for all vectors (one value per constraint)
   normals.reserve(sim_state->constraints.size());
@@ -534,6 +544,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   constraint_iterations.reserve(sim_state->constraints.size());
   gidI.reserve(sim_state->constraints.size());
   gidJ.reserve(sim_state->constraints.size());
+  is_ghost.reserve(sim_state->constraints.size());
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
@@ -557,6 +568,13 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
     gidI.push_back(constraint.gidI);
     gidJ.push_back(constraint.gidJ);
 
+    // Ghost constraint information
+    if (!constraint.is_localI || !constraint.is_localJ) {
+      is_ghost.push_back(1);
+    } else {
+      is_ghost.push_back(0);
+    }
+
     constraint_index++;
   }
 
@@ -569,6 +587,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   fields.emplace_back("constraint_iterations", constraint_iterations, DataType::Int32);
   fields.emplace_back("gidI", gidI, DataType::Int32);
   fields.emplace_back("gidJ", gidJ, DataType::Int32);
+  fields.emplace_back("is_ghost", is_ghost, DataType::Int32);
 
   return fields;
 }
@@ -608,7 +627,7 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   double max_constraint_overlap = 0.0;
 
   for (const auto& constraint : sim_state->constraints) {
-    if (constraint.localI == -1 || constraint.localJ == -1) {
+    if (!constraint.is_localI || !constraint.is_localJ) {
       cross_rank_count++;
     }
     max_constraint_overlap = std::max(max_constraint_overlap, -constraint.delta0);

@@ -6,7 +6,7 @@
 class Constraint {
  public:
   // Constructor with local IDs and ownership
-  Constraint(double delta0, bool violated, int gidI, int gidJ, int localI, int localJ,
+  Constraint(double delta0, bool violated, int gidI, int gidJ, bool is_localI, bool is_localJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
              double stressI, double stressJ,
              int constraint_iterations, int gid);
@@ -23,9 +23,9 @@ class Constraint {
   // unique global ID of particle J
   int gidJ;
   // local index of particle I on this rank (-1 if not local)
-  int localI;
+  bool is_localI;
   // local index of particle J on this rank (-1 if not local)
-  int localJ;
+  bool is_localJ;
   // surface normal vector at the location of constraint (minimal separation) for particle I
   std::array<double, 3> normI;
   // relative constraint position on particle I
@@ -44,31 +44,4 @@ class Constraint {
   int gid;
 
   void print() const;
-};
-
-// Custom hash for Constraint based on particle GIDs
-struct ConstraintHash {
-  std::size_t operator()(const Constraint& c) const {
-    // A simple hash combination function
-    std::size_t h1 = std::hash<int>()(c.gidI);
-    std::size_t h2 = std::hash<int>()(c.gidJ);
-    std::size_t h3 = std::hash<int>()(c.delta0);
-    std::size_t h4 = std::hash<int>()(c.contactPoint[0]) ^ std::hash<int>()(c.contactPoint[1]) ^ std::hash<int>()(c.contactPoint[2]);
-    std::size_t h5 = std::hash<int>()(c.normI[0]) ^ std::hash<int>()(c.normI[1]) ^ std::hash<int>()(c.normI[2]);
-    return h1 ^ h2 ^ h3 ^ h4 ^ h5;
-  }
-};
-
-// Custom equality for Constraint based on particle GIDs
-struct ConstraintEqual {
-  bool operator()(const Constraint& a, const Constraint& b) const {
-    return a.gidI == b.gidI && a.gidJ == b.gidJ &&
-           a.delta0 == b.delta0 &&
-           a.contactPoint[0] == b.contactPoint[0] &&
-           a.contactPoint[1] == b.contactPoint[1] &&
-           a.contactPoint[2] == b.contactPoint[2] &&
-           a.normI[0] == b.normI[0] &&
-           a.normI[1] == b.normI[1] &&
-           a.normI[2] == b.normI[2];
-  }
 };

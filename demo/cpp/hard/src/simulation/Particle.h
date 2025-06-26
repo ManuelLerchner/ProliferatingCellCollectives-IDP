@@ -46,66 +46,95 @@ class Particle {
 
   void printState() const;
 
-  std::optional<Particle> divide();
+  std::optional<Particle> divide(PetscInt new_gID);
 
   // Validation methods
   bool isValid() const;
   void validateAndWarn() const;
 
-  const std::array<double, POSITION_SIZE>& getPosition() const;
-  const std::array<double, QUATERNION_SIZE>& getQuaternion() const;
+  const std::array<double, POSITION_SIZE>& getPosition() const {
+    return data_.position;
+  }
+  const std::array<double, QUATERNION_SIZE>& getQuaternion() const {
+    return data_.quaternion;
+  }
 
-  double getLength() const;
+  double getLength() const {
+    return data_.length;
+  }
 
-  double getDiameter() const;
+  double getDiameter() const {
+    return data_.diameter;
+  }
 
-  PetscInt setGID() const;
+  void setGID(PetscInt gID) {
+    data_.gID = gID;
+  }
 
-  void setGID(PetscInt gID);
-
-  PetscInt getLocalID() const;
-
-  void setLocalID(PetscInt localID);
-
-  PetscInt getGID() const;
+  PetscInt getGID() const {
+    return data_.gID;
+  }
 
   double getVolume() const;
 
-  double getImpedance() const;
+  double getImpedance() const {
+    return impedance_;
+  }
 
-  void setImpedance(double impedance);
+  void setImpedance(double impedance) {
+    impedance_ = impedance;
+  }
 
-  bool getToDelete() const;
-  void setToDelete(bool toDelete);
+  bool getToDelete() const {
+    return toDelete;
+  }
+  void setToDelete(bool toDelete) {
+    this->toDelete = toDelete;
+  }
 
-  const std::array<double, 3>& getForce() const;
-  const std::array<double, 3>& getTorque() const;
-  const std::array<double, 3>& getVelocityLinear() const;
-  const std::array<double, 3>& getVelocityAngular() const;
+  const std::array<double, 3>& getForce() const {
+    return force_;
+  }
+  const std::array<double, 3>& getTorque() const {
+    return torque_;
+  }
+  const std::array<double, 3>& getVelocityLinear() const {
+    return velocityLinear_;
+  }
+  const std::array<double, 3>& getVelocityAngular() const {
+    return velocityAngular_;
+  }
 
   static constexpr int getStateSize() {
     return STATE_SIZE;
   }
 
-  ParticleData getData() const;
+  ParticleData& getData() {
+    return data_;
+  }
+
+  const ParticleData& getData() const {
+    return data_;
+  }
+
+  int getAge() const {
+    return data_.age;
+  }
+
+  void incrementAge() {
+    data_.age++;
+  }
 
  private:
   void normalizeQuaternion();
+  ParticleData data_;
 
-  PetscInt gID;
-  PetscInt localID = -1;
-  std::array<double, POSITION_SIZE> position;
-  std::array<double, QUATERNION_SIZE> quaternion;
-  int cell_type_ = 0;
-
-  std::array<double, 3> force = {0.0, 0.0, 0.0};
-  std::array<double, 3> torque = {0.0, 0.0, 0.0};
-  std::array<double, 3> velocityLinear = {0.0, 0.0, 0.0};
-  std::array<double, 3> velocityAngular = {0.0, 0.0, 0.0};
-  double impedance = 0.0;
-
-  double length;
-  double l0;
-  double diameter;
   bool toDelete = false;
+
+  // Fields not needed for MPI communication
+  std::array<double, 3> force_;
+  std::array<double, 3> torque_;
+  std::array<double, 3> velocityLinear_;
+  std::array<double, 3> velocityAngular_;
+  double impedance_;
 };

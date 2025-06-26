@@ -14,9 +14,9 @@ int main(int argc, char** argv) {
 
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-  double DT = 30;
+  double DT = 10;
   double END_TIME = 7 * 60 * 60;
-  double LOG_FREQUENCY = 20;
+  double LOG_FREQUENCY = 120;
 
   SimulationConfig sim_config = {
       .dt = DT,

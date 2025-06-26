@@ -350,9 +350,9 @@ void initializeWorkspaces(const MatWrapper& D_PREV, const MatWrapper& M, const M
 }
 }  // namespace
 
-PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt) {
-  std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
-  auto local_constraints = collision_detector.detectCollisions(particle_manager, all_constraints, 0);
+PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsSingleConstraint(ParticleManager& particle_manager, double dt, std::function<void()> exchangeGhostParticles) {
+  exchangeGhostParticles();
+  auto local_constraints = collision_detector.detectCollisions(particle_manager, 0);
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
@@ -425,7 +425,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   // Create length mapping for consistent indexing
   VecWrapper l = getLengthVector(particle_manager.local_particles);
 
-  std::unordered_set<Constraint, ConstraintHash, ConstraintEqual> all_constraints;
+  std::vector<Constraint> all_constraints;
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
 
@@ -436,10 +436,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
     auto new_constraints = collision_detector.detectCollisions(
-        particle_manager, all_constraints, constraint_iterations);
+        particle_manager, constraint_iterations);
 
     // Add the new constraints to the master set
-    all_constraints.insert(new_constraints.begin(), new_constraints.end());
+    all_constraints.insert(all_constraints.end(), new_constraints.begin(), new_constraints.end());
 
     // Calculate matrices only for the newly identified constraints
     auto matrices = calculateMatrices(particle_manager.local_particles, new_constraints);
@@ -530,7 +530,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces.ldot_prev, .impedance = workspaces.impedance_curr_workspace});
 
-  return {.constraints = std::vector<Constraint>(all_constraints.begin(), all_constraints.end()), .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
+  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }
 
 void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {

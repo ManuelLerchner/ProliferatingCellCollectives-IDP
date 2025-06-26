@@ -32,7 +32,6 @@ class CollisionDetector {
 
   std::vector<Constraint> detectCollisions(
       ParticleManager& particle_manager,
-      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   // Simplified helper methods
@@ -54,7 +53,6 @@ class CollisionDetector {
   void checkParticlePairs(
       ParticleManager& particle_manager,
       std::vector<Constraint>& constraints,
-      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 
   const Particle* getParticle(
@@ -64,6 +62,5 @@ class CollisionDetector {
   std::optional<Constraint> tryCreateConstraint(
       const Particle& p1, const Particle& p2,
       bool p1_local, bool p2_local, double tolerance,
-      const std::unordered_set<Constraint, ConstraintHash, ConstraintEqual>& existing_constraints,
       int constraint_iterations);
 };

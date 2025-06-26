@@ -9,7 +9,6 @@
 #include "simulation/Particle.h"
 #include "simulation/ParticleData.h"
 #include "util/ArrayMath.h"
-#include "util/ParticleMPI.h"
 
 Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config)
     : sim_config_(sim_config),
@@ -43,16 +42,6 @@ void Domain::commitNewParticles() {
       particle_manager_->local_particles.end(),
       std::make_move_iterator(new_particle_buffer.begin()),
       std::make_move_iterator(new_particle_buffer.end()));
-
-  // Sort particles by ID to maintain ordering across all ranks
-  if (new_particle_buffer.size() > 0) {
-    std::sort(particle_manager_->local_particles.begin(), particle_manager_->local_particles.end(),
-              [](const Particle& a, const Particle& b) { return a.getGID() < b.getGID(); });
-
-    for (int i = 0; i < particle_manager_->local_particles.size(); i++) {
-      particle_manager_->local_particles[i].setLocalID(i);
-    }
-  }
 
   PetscInt num_added_local = new_particle_buffer.size();
   new_particle_buffer.clear();
@@ -377,15 +366,6 @@ void Domain::updateParticlesAfterExchange(std::vector<Particle>& particles_to_ke
 
   for (const auto& pd : received_particles) {
     particle_manager_->local_particles.emplace_back(pd);
-  }
-
-  // Sort and re-index to maintain a consistent state.
-  auto& local_particles = particle_manager_->local_particles;
-  std::sort(local_particles.begin(), local_particles.end(),
-            [](const Particle& a, const Particle& b) { return a.getGID() < b.getGID(); });
-
-  for (int i = 0; i < local_particles.size(); ++i) {
-    local_particles[i].setLocalID(i);
   }
 
   // After exchanging particles, we need to update the global particle count.
