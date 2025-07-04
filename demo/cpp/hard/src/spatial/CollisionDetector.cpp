@@ -243,7 +243,7 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       -details.overlap,
       details.overlap > tolerance,
       p1.getGID(), p2.getGID(),
-      p1_local, p2_local,
+      
       details.normal,
       rPos1, rPos2,
       details.contact_point,

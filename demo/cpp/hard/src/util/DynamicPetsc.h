@@ -3,24 +3,14 @@
 #include <stdexcept>
 #include <vector>
 
+#include "Config.h"
 #include "PetscRaii.h"
-
-// State tracking for a dynamically growing PETSc vector
-struct DynamicVecState {
-  PetscInt size = 0;
-  PetscInt capacity = 0;
-};
-
-// State tracking for a dynamically growing PETSc matrix (by columns)
-struct DynamicMatState {
-  PetscInt ncols = 0;
-  PetscInt capacity = 0;
-};
 
 class DynamicVecWrapper {
  private:
   VecWrapper vec;
-  DynamicVecState state;
+  PetscInt size;
+  PetscInt capacity;
   double growth_factor;
   int min_buffer;
 
@@ -28,22 +18,22 @@ class DynamicVecWrapper {
   DynamicVecWrapper(SolverConfig solver_config) {
     growth_factor = solver_config.growth_factor;
     min_buffer = solver_config.min_preallocation_size;
-    state.size = 0;
-    state.capacity = min_buffer;
+    size = 0;
+    capacity = min_buffer;
     vec = VecWrapper::Create(min_buffer);
   }
 
   void ensureCapacity(PetscInt additional_items) {
-    PetscInt required_size = state.size + additional_items;
-    if (state.capacity < required_size) {
-      PetscInt new_capacity = std::max(required_size, static_cast<PetscInt>(state.capacity * growth_factor));
-      PetscPrintf(PETSC_COMM_WORLD, "\nLOG: DynamicVecWrapper reallocating from capacity %D to %D (size: %D, required: %D)\n", state.capacity, new_capacity, state.size, required_size);
+    PetscInt required_size = size + additional_items;
+    if (capacity < required_size) {
+      PetscInt new_capacity = std::max(required_size, static_cast<PetscInt>(capacity * growth_factor));
+      PetscPrintf(PETSC_COMM_WORLD, "\nLOG: DynamicVecWrapper reallocating from capacity %d to %d (size: %d, required: %d)\n", capacity, new_capacity, size, required_size);
 
       VecWrapper new_vec = VecWrapper::Create(new_capacity);
-      if (state.size > 0) {
+      if (size > 0) {
         IS is_from, is_to;
-        PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, state.size, 0, 1, &is_from));
-        PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, state.size, 0, 1, &is_to));
+        PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, size, 0, 1, &is_from));
+        PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, size, 0, 1, &is_to));
         VecScatter scatter;
         PetscCallAbort(PETSC_COMM_WORLD, VecScatterCreate(vec, is_from, new_vec, is_to, &scatter));
         PetscCallAbort(PETSC_COMM_WORLD, VecScatterBegin(scatter, vec, new_vec, INSERT_VALUES, SCATTER_FORWARD));
@@ -53,28 +43,29 @@ class DynamicVecWrapper {
         PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is_to));
       }
       vec = std::move(new_vec);
-      state.capacity = new_capacity;
+      capacity = new_capacity;
     }
   }
 
   operator VecWrapper&() { return vec; }
   operator const VecWrapper&() const { return vec; }
-  operator Vec() const { return vec.get(); }
-  PetscInt getSize() const { return state.size; }
+  operator Vec() const { return vec; }
+  PetscInt getSize() const { return size; }
 
   void updateSize(PetscInt size_delta) {
-    state.size += size_delta;
+    size += size_delta;
   }
 
   void copyTo(VecWrapper& other) const {
-    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(vec.get(), other.get()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(vec, other));
   }
 };
 
 class DynamicMatWrapper {
  private:
   MatWrapper mat;
-  DynamicMatState state;
+  PetscInt ncols;
+  PetscInt capacity;
   double growth_factor;
   int min_buffer;
 
@@ -82,23 +73,23 @@ class DynamicMatWrapper {
   DynamicMatWrapper(SolverConfig solver_config, PetscInt local_rows) {
     growth_factor = solver_config.growth_factor;
     min_buffer = solver_config.min_preallocation_size;
-    state.ncols = 0;
-    state.capacity = min_buffer;
+    ncols = 0;
+    capacity = min_buffer;
     mat = MatWrapper::CreateAIJ(local_rows, min_buffer);
   }
 
   void ensureCapacity(PetscInt additional_cols) {
-    PetscInt required_cols = state.ncols + additional_cols;
-    if (state.capacity < required_cols) {
-      PetscInt new_capacity = std::max(required_cols, static_cast<PetscInt>(state.capacity * growth_factor));
-      PetscPrintf(PETSC_COMM_WORLD, "\nLOG: DynamicMatWrapper reallocating from capacity %D to %D (cols: %D, required: %D)\n", state.capacity, new_capacity, state.ncols, required_cols);
+    PetscInt required_cols = ncols + additional_cols;
+    if (capacity < required_cols) {
+      PetscInt new_capacity = std::max(required_cols, static_cast<PetscInt>(capacity * growth_factor));
+      PetscPrintf(PETSC_COMM_WORLD, "\nLOG: DynamicMatWrapper reallocating from capacity %d to %d (cols: %d, required: %d )\n", capacity, new_capacity, ncols, required_cols);
 
       PetscInt m_local;
       MatGetLocalSize(mat, &m_local, NULL);
 
       MatWrapper new_mat = MatWrapper::CreateAIJ(m_local, new_capacity);
 
-      if (state.ncols > 0) {
+      if (ncols > 0) {
         PetscInt Istart, Iend;
         MatGetOwnershipRange(mat, &Istart, &Iend);
         for (PetscInt i = Istart; i < Iend; ++i) {
@@ -117,17 +108,17 @@ class DynamicMatWrapper {
       PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(new_mat, MAT_FINAL_ASSEMBLY));
 
       mat = std::move(new_mat);
-      state.capacity = new_capacity;
+      capacity = new_capacity;
     }
   }
 
   operator MatWrapper&() { return mat; }
   operator const MatWrapper&() const { return mat; }
-  operator Mat() const { return mat.get(); }
-  PetscInt getNumCols() const { return state.ncols; }
+  operator Mat() const { return mat; }
+  PetscInt getNumCols() const { return ncols; }
 
   void updateSize(PetscInt ncols_delta) {
-    state.ncols += ncols_delta;
+    ncols += ncols_delta;
   }
 };
 

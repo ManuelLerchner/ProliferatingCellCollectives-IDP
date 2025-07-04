@@ -47,7 +47,7 @@ inline BBPGDResult BBPGD(
 
   // Constant zero vector for projection (reused in loop)
   auto zero_vec = VecWrapper::Like(gamma);
-  VecZeroEntries(zero_vec.get());
+  VecZeroEntries(zero_vec);
 
   long long iteration = 0;
 
@@ -56,8 +56,8 @@ inline BBPGDResult BBPGD(
     auto gamma_next = VecWrapper::Like(gamma);
 
     // Step 6: γ_next := max(γ_curr − α*g_curr, 0)
-    VecWAXPY(gamma_next.get(), -alpha, g_curr.get(), gamma.get());
-    VecPointwiseMax(gamma_next.get(), gamma_next.get(), zero_vec.get());
+    VecWAXPY(gamma_next, -alpha, g_curr, gamma);
+    VecPointwiseMax(gamma_next, gamma_next, zero_vec);
 
     // Step 7: g_next := g(γ_next)
     gradient(gamma_next, g_next);
@@ -72,23 +72,23 @@ inline BBPGDResult BBPGD(
     }
 
     // Step 12: Compute new step size
-    VecWAXPY(delta_gamma.get(), -1.0, gamma.get(), gamma_next.get());
-    VecWAXPY(delta_g.get(), -1.0, g_curr.get(), g_next.get());
+    VecWAXPY(delta_gamma, -1.0, gamma, gamma_next);
+    VecWAXPY(delta_g, -1.0, g_curr, g_next);
 
     PetscScalar s_dot_y;
-    VecDot(delta_gamma.get(), delta_g.get(), &s_dot_y);
+    VecDot(delta_gamma, delta_g, &s_dot_y);
 
     double numerator_val;
     double denominator_val;
 
     if (iteration % 2 == 0) {
       PetscScalar s_dot_s;
-      VecDot(delta_gamma.get(), delta_gamma.get(), &s_dot_s);
+      VecDot(delta_gamma, delta_gamma, &s_dot_s);
       numerator_val = PetscRealPart(s_dot_s);
       denominator_val = PetscRealPart(s_dot_y);
     } else {
       PetscScalar y_dot_y;
-      VecDot(delta_g.get(), delta_g.get(), &y_dot_y);
+      VecDot(delta_g, delta_g, &y_dot_y);
       numerator_val = PetscRealPart(s_dot_y);
       denominator_val = PetscRealPart(y_dot_y);
     }

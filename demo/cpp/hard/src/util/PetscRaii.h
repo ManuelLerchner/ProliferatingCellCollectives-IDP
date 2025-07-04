@@ -62,11 +62,6 @@ class SmartPetscObject {
     return obj_;
   }
 
-  // Explicitly get the raw PETSc object.
-  T get() const {
-    return obj_;
-  }
-
   // Get a reference to the internal pointer.
   // This is essential for creation functions like MatCreate(comm, &mat).
   // Usage: MatCreate(PETSC_COMM_WORLD, my_wrapper.get_ref());
@@ -114,13 +109,13 @@ class MatWrapper : public SmartPetscObject<Mat, PetscObjectTraits<Mat>> {
 
   PetscInt getRows() const {
     PetscInt rows;
-    PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(get(), &rows, NULL));
+    PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(*this, &rows, NULL));
     return rows;
   }
 
   PetscInt getCols() const {
     PetscInt cols;
-    PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(get(), NULL, &cols));
+    PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(*this, NULL, &cols));
     return cols;
   }
 };
@@ -145,56 +140,56 @@ class ISWrapper : public SmartPetscObject<IS, PetscObjectTraits<IS>> {
 
 inline VecWrapper VecWrapper::Like(const VecWrapper& other) {
   VecWrapper new_obj;
-  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(other.get(), new_obj.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(other, new_obj.get_ref()));
   return new_obj;
 }
 
 inline VecWrapper VecWrapper::FromMat(const MatWrapper& mat) {
   VecWrapper new_obj;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(mat.get(), NULL, new_obj.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(mat, NULL, new_obj.get_ref()));
   return new_obj;
 }
 
 inline VecWrapper VecWrapper::FromMatRows(const MatWrapper& mat) {
   VecWrapper new_obj;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(mat.get(), new_obj.get_ref(), NULL));
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreateVecs(mat, new_obj.get_ref(), NULL));
   return new_obj;
 }
 
 inline VecWrapper VecWrapper::CreateEmpty() {
   VecWrapper new_obj;
   PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj.get(), 0, PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetType(new_obj.get(), VECSTANDARD));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj.get()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj, 0, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetType(new_obj, VECSTANDARD));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj));
   return new_obj;
 }
 
 inline VecWrapper VecWrapper::Create(PetscInt local_size) {
   VecWrapper new_obj;
   PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj.get(), local_size, PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj.get()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj, local_size, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj));
   return new_obj;
 }
 
 inline MatWrapper MatWrapper::CreateEmpty(PetscInt local_rows) {
   MatWrapper new_obj;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj.get(), local_rows, 0, PETSC_DETERMINE, PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj.get(), MATMPIAIJ));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj.get()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(new_obj.get(), MAT_FINAL_ASSEMBLY));
-  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(new_obj.get(), MAT_FINAL_ASSEMBLY));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, 0, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATMPIAIJ));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
+  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(new_obj, MAT_FINAL_ASSEMBLY));
+  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(new_obj, MAT_FINAL_ASSEMBLY));
   return new_obj;
 }
 
 inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols) {
   MatWrapper new_obj;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj.get(), local_rows, local_cols, PETSC_DETERMINE, PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj.get(), MATAIJ));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj.get()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, local_cols, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATAIJ));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
   return new_obj;
 }
 
@@ -217,7 +212,7 @@ get_context_arrays_recursive(const std::tuple<VecTuple...>&, std::tuple<PtrTuple
 template <std::size_t I = 0, typename... VecTuple, typename... PtrTuple>
     inline typename std::enable_if < I<sizeof...(VecTuple)>::type
                                      get_context_arrays_recursive(const std::tuple<VecTuple...>& vec_tuple, std::tuple<PtrTuple...>& ptr_tuple) {
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(std::get<I>(vec_tuple).get(), &std::get<I>(ptr_tuple)));
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(std::get<I>(vec_tuple), &std::get<I>(ptr_tuple)));
   get_context_arrays_recursive<I + 1>(vec_tuple, ptr_tuple);
 }
 
@@ -232,13 +227,13 @@ restore_context_arrays_recursive(const std::tuple<VecTuple...>&, std::tuple<PtrT
 template <std::size_t I = 0, typename... VecTuple, typename... PtrTuple>
     inline typename std::enable_if < I<sizeof...(VecTuple)>::type
                                      restore_context_arrays_recursive(const std::tuple<VecTuple...>& vec_tuple, std::tuple<PtrTuple...>& ptr_tuple) {
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(std::get<I>(vec_tuple).get(), &std::get<I>(ptr_tuple)));
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(std::get<I>(vec_tuple), &std::get<I>(ptr_tuple)));
   restore_context_arrays_recursive<I + 1>(vec_tuple, ptr_tuple);
 }
 
 template <typename T, typename MapFunc, typename... ContextVecs>
 inline T reduceVector(const VecWrapper& vec, MapFunc map_func, MPI_Op op, const ContextVecs&... ctx_vecs) {
-  if (!vec.get()) {
+  if (!vec) {
     return T{};
   }
 
@@ -253,8 +248,8 @@ inline T reduceVector(const VecWrapper& vec, MapFunc map_func, MPI_Op op, const 
 
   const PetscScalar* vec_array;
   PetscInt local_size;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(vec.get(), &local_size));
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(vec.get(), &vec_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(vec, &local_size));
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(vec, &vec_array));
 
   // Create a tuple of references to the context vectors.
   auto ctx_tuple = std::forward_as_tuple(ctx_vecs...);
@@ -282,7 +277,7 @@ inline T reduceVector(const VecWrapper& vec, MapFunc map_func, MPI_Op op, const 
     }
   }
 
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(vec.get(), &vec_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(vec, &vec_array));
 
   // Recursively restore all context arrays.
   restore_context_arrays_recursive(ctx_tuple, ctx_arrays);

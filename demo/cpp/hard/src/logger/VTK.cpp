@@ -533,7 +533,6 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<int> gidJ;
   std::vector<int> violated;
   std::vector<int> constraint_iterations;
-  std::vector<int> is_ghost;
 
   // Reserve space for all vectors (one value per constraint)
   normals.reserve(sim_state->constraints.size());
@@ -544,7 +543,6 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   constraint_iterations.reserve(sim_state->constraints.size());
   gidI.reserve(sim_state->constraints.size());
   gidJ.reserve(sim_state->constraints.size());
-  is_ghost.reserve(sim_state->constraints.size());
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
@@ -569,11 +567,6 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
     gidJ.push_back(constraint.gidJ);
 
     // Ghost constraint information
-    if (!constraint.is_localI || !constraint.is_localJ) {
-      is_ghost.push_back(1);
-    } else {
-      is_ghost.push_back(0);
-    }
 
     constraint_index++;
   }
@@ -587,7 +580,6 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   fields.emplace_back("constraint_iterations", constraint_iterations, DataType::Int32);
   fields.emplace_back("gidI", gidI, DataType::Int32);
   fields.emplace_back("gidJ", gidJ, DataType::Int32);
-  fields.emplace_back("is_ghost", is_ghost, DataType::Int32);
 
   return fields;
 }
@@ -623,17 +615,12 @@ VTKFieldData ConstraintDataExtractor::extractFieldData(const void* state, int ti
   field_data.addField("mpi_size", size);
 
   // Count cross-rank constraints
-  int cross_rank_count = 0;
   double max_constraint_overlap = 0.0;
 
   for (const auto& constraint : sim_state->constraints) {
-    if (!constraint.is_localI || !constraint.is_localJ) {
-      cross_rank_count++;
-    }
     max_constraint_overlap = std::max(max_constraint_overlap, -constraint.delta0);
   }
 
-  field_data.addField("cross_rank_constraints", cross_rank_count);
   field_data.addField("max_constraint_overlap", max_constraint_overlap);
 
   return field_data;

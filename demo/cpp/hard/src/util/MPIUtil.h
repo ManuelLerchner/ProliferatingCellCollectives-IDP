@@ -2,6 +2,7 @@
 
 #include <petsc.h>
 
+#include <iostream>
 #include <limits>
 #include <type_traits>
 
@@ -11,6 +12,10 @@ inline MPI_Datatype getMpiDataType() {
   if (std::is_same<T, PetscInt>::value) return MPIU_INT;
   if (std::is_same<T, int>::value) return MPI_INT;
   if (std::is_same<T, double>::value) return MPI_DOUBLE;
+  if (std::is_same<T, size_t>::value) return MPI_LONG_LONG;
+
+  std::cout << "Unsupported type: " << typeid(T).name() << std::endl;
+
   PetscCallAbort(PETSC_COMM_WORLD, MPI_Abort(PETSC_COMM_WORLD, 1));
   return MPI_DATATYPE_NULL;  // Should not be reached
 }

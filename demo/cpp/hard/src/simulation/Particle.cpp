@@ -219,3 +219,45 @@ double Particle::getVolume() const {
   double hemisphere_vol = (4.0 / 3.0) * pi * r * r * r;
   return cylinder_vol + hemisphere_vol;
 }
+
+std::array<double, 3> Particle::calculateGravitationalForce(const std::array<double, 3>& gravity) const {
+  double vol = getVolume();
+  return {vol * gravity[0], vol * gravity[1], vol * gravity[2]};
+}
+
+std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, double xi, double dt, std::normal_distribution<double>& dist, std::mt19937& gen) const {
+  const double L = getLength();
+  const double r = getDiameter() / 2.0;
+  const double aspect_ratio = L / getDiameter();
+  const double log_p = log(aspect_ratio);
+
+  // Slender body theory geometric factors (assuming viscosity mu=1.0)
+  const double geom_para = (2 * M_PI * L) / (log_p + 0.20);
+  const double geom_perp = (4 * M_PI * L) / (log_p + 0.84);
+  const double geom_rot = (M_PI * L * L * L) / (3 * (log_p - 0.66));
+
+  // Total drag, scaled by the friction coefficient
+  const double gamma_para = xi * geom_para;
+  const double gamma_perp = xi * geom_perp;
+  const double gamma_rot = xi * geom_rot;
+
+  // Average translational drag
+  const double gamma_trans_avg = (gamma_para + 2 * gamma_perp) / 3.0;
+
+  // Mobilities
+  const double mobility_trans = 1.0 / gamma_trans_avg;
+  const double mobility_rot = 1.0 / gamma_rot;
+
+  // Brownian velocities
+  const double k_B = 1;
+  const double trans_coeff = sqrt(2.0 * k_B * temperature * mobility_trans * 1.0 / dt);
+  const double rot_coeff = sqrt(2.0 * k_B * temperature * mobility_rot * 1.0 / dt);
+
+  return {
+      trans_coeff * dist(gen),
+      trans_coeff * dist(gen),
+      trans_coeff * dist(gen),
+      rot_coeff * dist(gen),
+      rot_coeff * dist(gen),
+      rot_coeff * dist(gen)};
+}

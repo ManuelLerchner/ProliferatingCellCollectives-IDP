@@ -6,7 +6,7 @@
 class Constraint {
  public:
   // Constructor with local IDs and ownership
-  Constraint(double delta0, bool violated, int gidI, int gidJ, bool is_localI, bool is_localJ,
+  Constraint(double delta0, bool violated, int gidI, int gidJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
              double stressI, double stressJ,
              int constraint_iterations, int gid);
@@ -22,10 +22,6 @@ class Constraint {
   int gidI;
   // unique global ID of particle J
   int gidJ;
-  // local index of particle I on this rank (-1 if not local)
-  bool is_localI;
-  // local index of particle J on this rank (-1 if not local)
-  bool is_localJ;
   // surface normal vector at the location of constraint (minimal separation) for particle I
   std::array<double, 3> normI;
   // relative constraint position on particle I

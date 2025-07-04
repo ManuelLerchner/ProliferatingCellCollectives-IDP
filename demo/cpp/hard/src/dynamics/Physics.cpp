@@ -14,12 +14,10 @@
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
-#define PREALLOCATION_NNZ 12
-
 void calculate_jacobian_local(
     MatWrapper& D,
     const std::vector<Constraint>& local_constraints,
-    PetscInt col_offset) {
+    PetscInt offset) {
   using namespace utils::ArrayMath;
 
   PetscInt local_num_constraints = local_constraints.size();
@@ -38,7 +36,7 @@ void calculate_jacobian_local(
     double F_i[6] = {n_i[0], n_i[1], n_i[2], torque_i[0], torque_i[1], torque_i[2]};
     double F_j[6] = {n_j[0], n_j[1], n_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
-    PetscInt c_global_idx = col_offset + c_local_idx;
+    PetscInt c_global_idx = offset + c_local_idx;
 
     PetscInt rows_i[6] = {constraint.gidI * 6 + 0, constraint.gidI * 6 + 1, constraint.gidI * 6 + 2,
                           constraint.gidI * 6 + 3, constraint.gidI * 6 + 4, constraint.gidI * 6 + 5};
@@ -57,6 +55,20 @@ void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& loc
   for (int i = 0; i < local_num_constraints; ++i) {
     PetscInt c_global_idx = col_offset + i;
     VecSetValue(phi, c_global_idx, local_constraints[i].delta0, INSERT_VALUES);
+  }
+}
+
+void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>& local_constraints, PetscInt offset) {
+  using namespace utils::ArrayMath;
+
+  PetscInt local_num_constraints = local_constraints.size();
+  if (local_num_constraints == 0) return;
+
+  for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {
+    const auto& constraint = local_constraints[c_idx];
+    PetscInt c_global_idx = offset + c_idx;
+    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidI, c_global_idx, constraint.stressI, INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidJ, c_global_idx, constraint.stressJ, INSERT_VALUES));
   }
 }
 
@@ -134,18 +146,4 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles)
   MatAssemblyEnd(G, MAT_FINAL_ASSEMBLY);
 
   return G;
-}
-
-void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
-  using namespace utils::ArrayMath;
-
-  PetscInt local_num_constraints = local_constraints.size();
-  if (local_num_constraints == 0) return;
-
-  for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {
-    const auto& constraint = local_constraints[c_idx];
-    PetscInt c_global_idx = col_offset + c_idx;
-    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidI, c_global_idx, constraint.stressI, INSERT_VALUES));
-    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidJ, c_global_idx, constraint.stressJ, INSERT_VALUES));
-  }
 }

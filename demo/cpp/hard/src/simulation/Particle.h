@@ -3,6 +3,7 @@
 
 #include <array>
 #include <optional>
+#include <random>
 #include <vector>
 
 #include "ParticleData.h"
@@ -124,6 +125,9 @@ class Particle {
   void incrementAge() {
     data_.age++;
   }
+
+  std::array<double, 3> calculateGravitationalForce(const std::array<double, 3>& gravity) const;
+  std::array<double, 6> calculateBrownianVelocity(double temperature, double xi, double dt, std::normal_distribution<double>& dist, std::mt19937& gen) const;
 
  private:
   void normalizeQuaternion();

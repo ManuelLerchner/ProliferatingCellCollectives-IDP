@@ -70,7 +70,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
   Vec dC_local;
   VecScatter dC_scatter;
   IS dC_is;
-  scatterVectorToLocal(solution.dC.get(), indicesConfig, dC_local, dC_scatter, dC_is);
+  scatterVectorToLocal(solution.dC, indicesConfig, dC_local, dC_scatter, dC_is);
 
   // Get array pointer
   const PetscScalar* dC_array;
@@ -79,7 +79,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
   Vec dF_local;
   VecScatter dF_scatter;
   IS dF_is;
-  scatterVectorToLocal(solution.f.get(), indicesVelocity, dF_local, dF_scatter, dF_is);
+  scatterVectorToLocal(solution.f, indicesVelocity, dF_local, dF_scatter, dF_is);
 
   const PetscScalar* dF_array;
   VecGetArrayRead(dF_local, &dF_array);
@@ -87,7 +87,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
   Vec dU_local;
   VecScatter dU_scatter;
   IS dU_is;
-  scatterVectorToLocal(solution.u.get(), indicesVelocity, dU_local, dU_scatter, dU_is);
+  scatterVectorToLocal(solution.u, indicesVelocity, dU_local, dU_scatter, dU_is);
 
   const PetscScalar* dU_array;
   VecGetArrayRead(dU_local, &dU_array);
@@ -129,8 +129,8 @@ void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::Growth
   VecScatter dL_scatter, impedance_scatter;
   IS dL_is, impedance_is;
 
-  scatterVectorToLocal(solution.dL.get(), indices, dL_local, dL_scatter, dL_is);
-  scatterVectorToLocal(solution.impedance.get(), indices, impedance_local,
+  scatterVectorToLocal(solution.dL, indices, dL_local, dL_scatter, dL_is);
+  scatterVectorToLocal(solution.impedance, indices, impedance_local,
                        impedance_scatter, impedance_is);
 
   // Get array pointers
