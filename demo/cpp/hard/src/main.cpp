@@ -39,7 +39,10 @@ int main(int argc, char** argv) {
       .tolerance = physic_config.l0 / 1e3,
       .max_bbpgd_iterations = 100000,
       .max_recursive_iterations = 50,
-      .linked_cell_size = physic_config.l0 * 2.5};
+      .linked_cell_size = physic_config.l0 * 2.5,
+      .min_preallocation_size = 500,
+      .growth_factor = 2,
+  };
 
   Domain domain(sim_config, physic_config, solver_config);
 

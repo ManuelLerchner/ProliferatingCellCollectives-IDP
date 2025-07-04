@@ -33,4 +33,6 @@ struct SolverConfig {
   long long max_bbpgd_iterations;
   int max_recursive_iterations;
   double linked_cell_size;
+  int min_preallocation_size;
+  double growth_factor;
 };

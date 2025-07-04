@@ -110,7 +110,19 @@ class MatWrapper : public SmartPetscObject<Mat, PetscObjectTraits<Mat>> {
  public:
   using SmartPetscObject<Mat, PetscObjectTraits<Mat>>::SmartPetscObject;
   static MatWrapper CreateEmpty(PetscInt local_rows);
-  static MatWrapper CreateAIJ(PetscInt local_rows, PetscInt local_cols, PetscInt global_rows, PetscInt global_cols);
+  static MatWrapper CreateAIJ(PetscInt local_rows, PetscInt local_cols);
+
+  PetscInt getRows() const {
+    PetscInt rows;
+    PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(get(), &rows, NULL));
+    return rows;
+  }
+
+  PetscInt getCols() const {
+    PetscInt cols;
+    PetscCallAbort(PETSC_COMM_WORLD, MatGetLocalSize(get(), NULL, &cols));
+    return cols;
+  }
 };
 
 class VecWrapper : public SmartPetscObject<Vec, PetscObjectTraits<Vec>> {
@@ -177,10 +189,10 @@ inline MatWrapper MatWrapper::CreateEmpty(PetscInt local_rows) {
   return new_obj;
 }
 
-inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols, PetscInt global_rows, PetscInt global_cols) {
+inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols) {
   MatWrapper new_obj;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj.get(), local_rows, local_cols, global_rows, global_cols));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj.get(), local_rows, local_cols, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj.get(), MATAIJ));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj.get()));
   return new_obj;
