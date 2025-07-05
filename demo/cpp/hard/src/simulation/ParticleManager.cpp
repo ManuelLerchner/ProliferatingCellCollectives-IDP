@@ -20,8 +20,8 @@
 #include "dynamics/PhysicsEngine.h"
 #include "logger/VTK.h"
 
-ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config)
-    : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config) {
+ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::SimulationLogger& vtk_logger, vtk::SimulationLogger& constraint_logger)
+    : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config), vtk_logger_(vtk_logger), constraint_logger_(constraint_logger) {
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 }
 
@@ -168,7 +168,7 @@ PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()>
   resetLocalParticles();
 
   std::vector<Particle> particles_before_step = local_particles;
-  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i, exchangeGhostParticles);
+  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i, exchangeGhostParticles, vtk_logger_, constraint_logger_);
 
   return solver_solution;
 }

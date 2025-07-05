@@ -10,6 +10,7 @@
 
 #include "Constraint.h"
 #include "Physics.h"
+#include "logger/VTK.h"
 #include "simulation/Particle.h"
 #include "simulation/ParticleManager.h"
 #include "solver/BBPGD.h"
@@ -35,16 +36,10 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
 
   // Populate matrices and vectors with new data
   create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
-  VecAssemblyBegin(PHI_PREV);
-  VecAssemblyEnd(PHI_PREV);
 
   calculate_jacobian_local(D_PREV, new_constraints, col_offset);
-  MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY);
 
   calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
-  MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY);
 
   // Update sizes
   PHI_PREV.updateSize(global_new_constraints_count);
@@ -53,8 +48,15 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   L_PREV.updateSize(global_new_constraints_count);
 
   // Finalize assembly
+  VecAssemblyBegin(PHI_PREV);
   VecAssemblyBegin(GAMMA_PREV);
+  MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
+
+  VecAssemblyEnd(PHI_PREV);
   VecAssemblyEnd(GAMMA_PREV);
+  MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY);
 }
 
 VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
@@ -285,7 +287,24 @@ struct RecursiveSolverWorkspaces {
   VecWrapper df, du, dC;
 };
 
-PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles) {
+enum class SolverState {
+  RUNNING,
+  CONVERGED,
+  TOO_MANY_CONSTRAINTS,
+  NOT_CONVERGED,
+};
+
+struct pair_hash {
+  template <class T1, class T2>
+  std::size_t operator()(const std::pair<T1, T2>& p) const {
+    auto h1 = std::hash<T1>{}(p.first);
+    auto h2 = std::hash<T2>{}(p.second);
+
+    return h1 ^ h2;
+  }
+};
+
+PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::SimulationLogger& vtk_logger, vtk::SimulationLogger& constraint_logger) {
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
@@ -310,19 +329,37 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   double max_overlap = 0;
   long long bbpgd_iterations_this_step = 0;
 
-  bool converged = false;
+  // hash map counting constraints betwen pairs of particles
+  std::unordered_map<std::pair<int, int>, int, pair_hash> global_constraint_count;
+
+  SolverState solver_state = SolverState::RUNNING;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
-    auto new_constraints = collision_detector.detectCollisions(
-        particle_manager, constraint_iterations);
 
-    all_constraints.insert(all_constraints.end(), new_constraints.begin(), new_constraints.end());
+    double future_collision_factor = constraint_iterations == 0 ? 0.3 : 0.1;
+    auto new_constraints = collision_detector.detectCollisions(
+        particle_manager, constraint_iterations, future_collision_factor);
+
+    // Filter constraints to include at most `max_constraints_per_pair` constraints per particle pair.
+    std::vector<Constraint> filtered_constraints;
+    for (const auto& constraint : new_constraints) {
+      auto pair = std::make_pair(constraint.gidI, constraint.gidJ);
+      if (pair.first > pair.second) std::swap(pair.first, pair.second);
+      global_constraint_count[pair]++;
+      if (global_constraint_count[pair] <= solver_config.max_constraints_per_pair) {
+        filtered_constraints.push_back(constraint);
+      } else {
+        solver_state = SolverState::TOO_MANY_CONSTRAINTS;
+      }
+    }
+
+    all_constraints.insert(all_constraints.end(), filtered_constraints.begin(), filtered_constraints.end());
 
     auto global_total_constraints = globalReduce<size_t>(all_constraints.size(), MPI_SUM);
-    auto global_new_constraints_count = globalReduce<size_t>(new_constraints.size(), MPI_SUM);
+    auto global_new_constraints_count = globalReduce<size_t>(filtered_constraints.size(), MPI_SUM);
 
     // Calculate matrices only for the newly identified constraints
-    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, global_new_constraints_count);
+    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, filtered_constraints, global_new_constraints_count);
 
     double min;
     VecMin(PHI, NULL, &min);
@@ -339,8 +376,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
                 constraint_iterations, global_total_constraints, global_new_constraints_count, logged_overlap, res, bbpgd_iterations_this_step, memory_usage / 1024 / 1024);
 
     // Check convergence
-    converged = max_overlap < solver_config.tolerance && constraint_iterations > 0;
-    if (converged) {
+    if (max_overlap < solver_config.tolerance && constraint_iterations > 0) {
+      solver_state = SolverState::CONVERGED;
       break;
     }
 
@@ -410,13 +447,30 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     std::swap(workspaces->ldot_curr_workspace, workspaces->ldot_prev);
 
+    // log sub-step
+    vtk::ParticleSimulationState state = {
+        .particles = particle_manager.local_particles,
+        .constraints = all_constraints,
+        .forces = {},
+        .torques = {},
+        .velocities_linear = {},
+    };
+    vtk_logger.logSubstep(dt, &particle_manager.local_particles);
+    constraint_logger.logSubstep(dt, &state);
+
     constraint_iterations++;
   }
 
-  if (converged) {
-    PetscPrintf(PETSC_COMM_WORLD, "\n  \033[92mConverged in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
-  } else {
-    PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
+  switch (solver_state) {
+    case SolverState::CONVERGED:
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[92mConverged in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
+      break;
+    case SolverState::TOO_MANY_CONSTRAINTS:
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mToo many constraints: %ld | Constraints per particle: %4.2f\033[0m | Residual: %4.2e | Overlap: %8.2e", globalReduce<size_t>(all_constraints.size(), MPI_SUM), globalReduce<size_t>(all_constraints.size(), MPI_SUM) / (double)global_num_particles, res, max_overlap);
+      break;
+    case SolverState::NOT_CONVERGED:
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
+      break;
   }
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});

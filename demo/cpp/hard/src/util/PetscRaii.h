@@ -101,6 +101,60 @@ struct PetscObjectTraits<IS> {
   static void Destroy(IS* obj) { ISDestroy(obj); }
 };
 
+class VecSubViewWrapper {
+ private:
+  Vec parent_ = nullptr;
+  IS is_ = nullptr;
+  Vec sub_vec_ = nullptr;
+  bool owns_is_ = false;
+
+ public:
+  VecSubViewWrapper(Vec parent, IS is, bool transfer_is_ownership = false) : parent_(parent), is_(is), owns_is_(transfer_is_ownership) {
+    PetscCallAbort(PETSC_COMM_WORLD, VecGetSubVector(parent_, is_, &sub_vec_));
+  }
+  ~VecSubViewWrapper() {
+    if (sub_vec_ != nullptr) {
+      PetscCallAbort(PETSC_COMM_WORLD, VecRestoreSubVector(parent_, is_, &sub_vec_));
+    }
+    if (owns_is_ && is_ != nullptr) {
+      PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is_));
+    }
+  }
+
+  // Rule of Five to prevent copying and manage moves
+  VecSubViewWrapper(const VecSubViewWrapper&) = delete;
+  VecSubViewWrapper& operator=(const VecSubViewWrapper&) = delete;
+
+  VecSubViewWrapper(VecSubViewWrapper&& other) noexcept : parent_(other.parent_), is_(other.is_), sub_vec_(other.sub_vec_), owns_is_(other.owns_is_) {
+    other.parent_ = nullptr;
+    other.is_ = nullptr;
+    other.sub_vec_ = nullptr;
+    other.owns_is_ = false;
+  }
+
+  VecSubViewWrapper& operator=(VecSubViewWrapper&& other) noexcept {
+    if (this != &other) {
+      if (sub_vec_ != nullptr) {
+        PetscCallAbort(PETSC_COMM_WORLD, VecRestoreSubVector(parent_, is_, &sub_vec_));
+      }
+      if (owns_is_ && is_ != nullptr) {
+        PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is_));
+      }
+      parent_ = other.parent_;
+      is_ = other.is_;
+      sub_vec_ = other.sub_vec_;
+      owns_is_ = other.owns_is_;
+      other.parent_ = nullptr;
+      other.is_ = nullptr;
+      other.sub_vec_ = nullptr;
+      other.owns_is_ = false;
+    }
+    return *this;
+  }
+
+  operator Vec() const { return sub_vec_; }
+};
+
 class MatWrapper : public SmartPetscObject<Mat, PetscObjectTraits<Mat>> {
  public:
   using SmartPetscObject<Mat, PetscObjectTraits<Mat>>::SmartPetscObject;
@@ -132,6 +186,7 @@ class VecWrapper : public SmartPetscObject<Vec, PetscObjectTraits<Vec>> {
   static VecWrapper FromMatRows(const MatWrapper& mat);
   static VecWrapper CreateEmpty();
   static VecWrapper Create(PetscInt local_size);
+  static VecWrapper CreateWithGlobalSize(PetscInt global_size);
 };
 
 class ISWrapper : public SmartPetscObject<IS, PetscObjectTraits<IS>> {
@@ -171,6 +226,15 @@ inline VecWrapper VecWrapper::Create(PetscInt local_size) {
   PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj, local_size, PETSC_DETERMINE));
   PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj));
+  return new_obj;
+}
+
+inline VecWrapper VecWrapper::CreateWithGlobalSize(PetscInt global_size) {
+  VecWrapper new_obj;
+  PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj, PETSC_DECIDE, global_size));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj));
+  PetscCallAbort(PETSC_COMM_WORLD, VecSetUp(new_obj));
   return new_obj;
 }
 

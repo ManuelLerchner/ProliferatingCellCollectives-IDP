@@ -17,8 +17,6 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
 
-  particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config);
-
   int log_every_n_steps = 1;
   if (sim_config.log_frequency_seconds > 0) {
     log_every_n_steps = std::max(1, static_cast<int>(sim_config.log_frequency_seconds / sim_config.dt));
@@ -29,6 +27,8 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   domain_decomposition_logger_ = vtk::createDomainDecompositionLogger("./vtk_output", log_every_n_steps);
   ghost_logger_ = vtk::createParticleLogger("./vtk_output/ghost", log_every_n_steps);
   createParticleMPIType(&mpi_particle_type_);
+
+  particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *vtk_logger_, *constraint_loggers_);
 }
 
 void Domain::queueNewParticles(std::vector<Particle> particles) {
@@ -78,9 +78,9 @@ void Domain::run() {
 
       auto ghost_state = createSimulationState(solver_solution, particle_manager_->ghost_particles);
 
-      vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
+      // vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
       ghost_logger_->logTimestepComplete(sim_config_.dt, ghost_state.get());
-      constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
+      // constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
 
       domain_decomposition_logger_->logTimestepComplete(sim_config_.dt, dd_state.get());
       printProgress(i + 1, num_steps);

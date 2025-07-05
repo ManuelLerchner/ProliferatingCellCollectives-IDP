@@ -35,6 +35,8 @@ struct SolverConfig {
   double linked_cell_size;
   int min_preallocation_size;
   double growth_factor;
+  int max_constraints_per_pair;
+
   int getMinPreallocationSize(int n) const {
     int total_ranks;
     MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);

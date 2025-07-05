@@ -693,10 +693,8 @@ void SimulationLogger::logTimestepComplete(double dt, const void* state) {
 }
 
 void SimulationLogger::logSubstep(double dt, const void* state) {
-  if (shouldLog(current_timestep_)) {
-    vtk_logger_->logTimestep(frame_counter_, dt, state, true);
-    frame_counter_++;
-  }
+  vtk_logger_->logTimestep(frame_counter_, dt, state, true);
+  frame_counter_++;
 }
 
 // Factory functions

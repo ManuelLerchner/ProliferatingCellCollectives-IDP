@@ -41,8 +41,17 @@ std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getPa
 }
 
 CollisionDetails CollisionDetector::checkSpherocylinderCollision(
-    const Particle& p1, const Particle& p2) {
+    const Particle& p1, const Particle& p2, double future_colission_factor) {
   using namespace utils::ArrayMath;
+
+  double sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
+
+  double sum_lengths = p1.getLength() + p2.getLength();
+  double dist_centers_sq = magnitude_squared(p1.getPosition() - p2.getPosition());
+
+  if (dist_centers_sq > sum_lengths * sum_lengths) {
+    return CollisionDetails{false, false, 0.0, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+  }
 
   CollisionDetails details;
 
@@ -54,7 +63,6 @@ CollisionDetails CollisionDetector::checkSpherocylinderCollision(
 
   std::array<double, 3> closest_p1, closest_p2;
   auto result = distance_query(p1_start, p1_end, p2_start, p2_end);
-  details.min_distance = result.distance;
   closest_p1 = result.closest[0];
   closest_p2 = result.closest[1];
 
@@ -63,24 +71,19 @@ CollisionDetails CollisionDetector::checkSpherocylinderCollision(
   details.closest_p2 = closest_p2;
 
   // Calculate radii and overlap
-  details.sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
-  details.overlap = details.sum_radii - details.min_distance;
+  details.overlap = sum_radii - result.distance;
 
-  double separation = details.min_distance - details.sum_radii;
+  details.future_collision = -details.overlap < future_colission_factor * sum_radii;
 
-  details.potential_collision = separation < 0.1 * details.sum_radii;
-
-  // Check for actual collision
   details.collision_detected = details.overlap > collision_tolerance_;
 
-  if (details.collision_detected || details.potential_collision) {
+  if (details.collision_detected || details.future_collision) {
     // Calculate contact point and normal using ArrayMath
     details.contact_point = 0.5 * (closest_p1 + closest_p2);
 
     std::array<double, 3> direction = closest_p1 - closest_p2;
     details.normal = normalize(direction);
   }
-
   return details;
 }
 
@@ -97,11 +100,12 @@ void CollisionDetector::updateBounds(const std::array<double, 3>& min_bounds, co
 
 std::vector<Constraint> CollisionDetector::detectCollisions(
     ParticleManager& particle_manager,
-    int constraint_iterations) {
+    int constraint_iterations,
+    double future_colission_factor) {
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairs(particle_manager, constraints, constraint_iterations);
+  checkParticlePairs(particle_manager, constraints, constraint_iterations, future_colission_factor);
 
   // Get the number of locally owned constraints.
   int local_num_constraints = constraints.size();
@@ -152,7 +156,8 @@ void CollisionDetector::updateSpatialGrid(ParticleManager& particle_manager) {
 void CollisionDetector::checkParticlePairs(
     ParticleManager& particle_manager,
     std::vector<Constraint>& constraints,
-    int constraint_iterations) {
+    int constraint_iterations,
+    double future_colission_factor) {
   // Create ghost lookup map for efficiency
   std::unordered_map<PetscInt, const Particle*> ghost_map;
   for (const auto& ghost : particle_manager.ghost_particles) {
@@ -162,17 +167,12 @@ void CollisionDetector::checkParticlePairs(
   auto collision_pairs = spatial_grid_.findPotentialCollisions(particle_manager.local_particles, particle_manager.ghost_particles);
 
   for (const auto& pair : collision_pairs) {
-    const Particle* p1 = getParticle(pair.gidI, particle_manager);
-    const Particle* p2 = getParticle(pair.gidJ, particle_manager);
-
-    if (!p1 || !p2) {
-      // This can happen if a particle is not found, though it would be unexpected
-      // in the current logic. Good to have a safeguard.
-      continue;
-    }
+    const Particle& p1 = getParticle(pair.gidI, particle_manager);
+    const Particle& p2 = getParticle(pair.gidJ, particle_manager);
 
     auto constraint = tryCreateConstraint(
-        *p1, *p2,
+        p1, p2,
+        future_colission_factor,
         pair.is_localI,
         pair.is_localJ,
         collision_tolerance_,
@@ -184,29 +184,30 @@ void CollisionDetector::checkParticlePairs(
   }
 }
 
-const Particle* CollisionDetector::getParticle(
+const Particle& CollisionDetector::getParticle(
     int global_id,
     ParticleManager& particle_manager) {
   for (const auto& p : particle_manager.local_particles) {
     if (p.getGID() == global_id) {
-      return &p;
+      return p;
     }
   }
   for (const auto& p : particle_manager.ghost_particles) {
     if (p.getGID() == global_id) {
-      return &p;
+      return p;
     }
   }
-  return nullptr;
+  throw std::runtime_error("Particle not found");
 }
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     const Particle& p1, const Particle& p2,
+    double future_colission_factor,
     bool p1_local, bool p2_local, double tolerance,
     int constraint_iterations) {
-  CollisionDetails details = checkSpherocylinderCollision(p1, p2);
+  CollisionDetails details = checkSpherocylinderCollision(p1, p2, future_colission_factor);
 
-  if (!details.collision_detected && !details.potential_collision) {
+  if (!details.collision_detected && !details.future_collision) {
     return std::nullopt;
   }
 

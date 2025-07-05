@@ -11,6 +11,7 @@
 #include "spatial/CollisionDetector.h"
 #include "util/Config.h"
 #include "util/PetscRaii.h"
+#include "logger/VTK.h"
 
 // Forward declaration
 class ParticleManager;
@@ -43,7 +44,7 @@ class PhysicsEngine {
   };
 
 
-  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles);
+  SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::SimulationLogger& vtk_logger, vtk::SimulationLogger& constraint_logger);
 
   void updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
   SpatialGrid getCollisionDetectorSpatialGrid();
