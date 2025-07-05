@@ -15,7 +15,7 @@ class Domain {
   void rebalance();
   void exchangeGhostParticles();
   void resizeDomain();
-  void printProgress(int current_iteration, int total_iterations) const;
+  void printProgress(int current_iteration, int total_iterations, double colony_radius) const;
 
   std::unique_ptr<vtk::DomainDecompositionState> createDomainDecompositionState() const;
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(

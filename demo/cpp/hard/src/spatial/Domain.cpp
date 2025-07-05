@@ -1,5 +1,6 @@
 #include "Domain.h"
 
+#include <mpi.h>
 #include <petsc.h>
 
 #include <algorithm>
@@ -83,7 +84,17 @@ void Domain::run() {
       // constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
 
       domain_decomposition_logger_->logTimestepComplete(sim_config_.dt, dd_state.get());
-      printProgress(i + 1, num_steps);
+
+      // Determine colony radius
+      double colony_radius_local = 0;
+      for (const auto& p : particle_manager_->local_particles) {
+        double distance = utils::ArrayMath::magnitude(p.getPosition());
+        colony_radius_local = std::max(colony_radius_local, distance);
+      }
+
+      double colony_radius_global = globalReduce(colony_radius_local, MPI_MAX);
+
+      printProgress(i + 1, num_steps, colony_radius_global);
     }
     PetscPrintf(PETSC_COMM_WORLD, "\n");
   }
@@ -144,13 +155,14 @@ void Domain::resizeDomain() {
   particle_manager_->updateDomainBounds(min_bounds_, max_bounds_);
 }
 
-void Domain::printProgress(int current_iteration, int total_iterations) const {
-  PetscPrintf(PETSC_COMM_WORLD, "\nIteration: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d",
+void Domain::printProgress(int current_iteration, int total_iterations, double colony_radius) const {
+  PetscPrintf(PETSC_COMM_WORLD, "\nIteration: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d | Colony radius: %3.1f",
               current_iteration, total_iterations,
               (double)current_iteration / total_iterations * 100,
               (double)current_iteration * sim_config_.dt / 60,
               (double)total_iterations * sim_config_.dt / 60,
-              global_particle_count);
+              global_particle_count,
+              colony_radius);
 }
 
 std::pair<std::array<double, 3>, std::array<double, 3>> Domain::calculateLocalBoundingBox() const {

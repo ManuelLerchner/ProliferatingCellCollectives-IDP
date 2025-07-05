@@ -471,6 +471,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     case SolverState::NOT_CONVERGED:
       PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
       break;
+    case SolverState::RUNNING:
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mRunning\033[0m | Residual: %4.2e | Overlap: %8.2e", res, max_overlap);
+      break;
   }
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});

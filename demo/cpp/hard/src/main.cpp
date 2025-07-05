@@ -1,5 +1,6 @@
 #include <mpi.h>
 #include <petsc.h>
+#include <petscconf.h>
 
 #include <random>
 
@@ -7,7 +8,8 @@
 #include "util/Config.h"
 
 int main(int argc, char** argv) {
-  PetscInitialize(&argc, &argv, nullptr, nullptr);
+  PetscInitialize(&argc, &argv, 0, 0);
+  PetscLogDefaultBegin();
 
   int total_ranks;
   MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
@@ -15,7 +17,7 @@ int main(int argc, char** argv) {
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
   double DT = 100;
-  double END_TIME = 50 * 60 * 60;
+  double END_TIME = 10 * 60 * 60;
   double LOG_FREQUENCY = 120;
 
   PhysicsConfig physic_config = {
@@ -59,6 +61,7 @@ int main(int argc, char** argv) {
 
   domain.run();
 
+  PetscLogView(PETSC_VIEWER_STDOUT_WORLD);
   PetscFinalize();
   return EXIT_SUCCESS;
 }
