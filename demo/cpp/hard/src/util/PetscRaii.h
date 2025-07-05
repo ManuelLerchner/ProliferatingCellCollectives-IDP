@@ -106,6 +106,7 @@ class MatWrapper : public SmartPetscObject<Mat, PetscObjectTraits<Mat>> {
   using SmartPetscObject<Mat, PetscObjectTraits<Mat>>::SmartPetscObject;
   static MatWrapper CreateEmpty(PetscInt local_rows);
   static MatWrapper CreateAIJ(PetscInt local_rows, PetscInt local_cols);
+  static MatWrapper CreateAIJ(PetscInt local_rows, PetscInt local_cols, PetscInt global_cols);
 
   PetscInt getRows() const {
     PetscInt rows;
@@ -190,99 +191,16 @@ inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols
   PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, local_cols, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATAIJ));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetUp(new_obj));
   return new_obj;
 }
 
-// --- MPI Helper utilities ---
-
-// Helper alias to get the array pointer type for a given vector type.
-template <typename T>
-using ContextArrayPtr = const PetscScalar*;
-
-// --- Recursive helpers for getting/restoring arrays from a tuple of VecWrappers ---
-
-// Base case: When I equals the size of the tuple, we're done.
-template <std::size_t I = 0, typename... VecTuple, typename... PtrTuple>
-inline typename std::enable_if<I == sizeof...(VecTuple)>::type
-get_context_arrays_recursive(const std::tuple<VecTuple...>&, std::tuple<PtrTuple...>&) {
-  // Do nothing.
+inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols, PetscInt global_cols) {
+  MatWrapper new_obj;
+  PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, local_cols, PETSC_DETERMINE, global_cols));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATAIJ));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
+  PetscCallAbort(PETSC_COMM_WORLD, MatSetUp(new_obj));
+  return new_obj;
 }
-
-// Recursive step.
-template <std::size_t I = 0, typename... VecTuple, typename... PtrTuple>
-    inline typename std::enable_if < I<sizeof...(VecTuple)>::type
-                                     get_context_arrays_recursive(const std::tuple<VecTuple...>& vec_tuple, std::tuple<PtrTuple...>& ptr_tuple) {
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(std::get<I>(vec_tuple), &std::get<I>(ptr_tuple)));
-  get_context_arrays_recursive<I + 1>(vec_tuple, ptr_tuple);
-}
-
-// Base case for restore.
-template <std::size_t I = 0, typename... VecTuple, typename... PtrTuple>
-inline typename std::enable_if<I == sizeof...(VecTuple)>::type
-restore_context_arrays_recursive(const std::tuple<VecTuple...>&, std::tuple<PtrTuple...>&) {
-  // Do nothing.
-}
-
-// Recursive step for restore.
-template <std::size_t I = 0, typename... VecTuple, typename... PtrTuple>
-    inline typename std::enable_if < I<sizeof...(VecTuple)>::type
-                                     restore_context_arrays_recursive(const std::tuple<VecTuple...>& vec_tuple, std::tuple<PtrTuple...>& ptr_tuple) {
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(std::get<I>(vec_tuple), &std::get<I>(ptr_tuple)));
-  restore_context_arrays_recursive<I + 1>(vec_tuple, ptr_tuple);
-}
-
-template <typename T, typename MapFunc, typename... ContextVecs>
-inline T reduceVector(const VecWrapper& vec, MapFunc map_func, MPI_Op op, const ContextVecs&... ctx_vecs) {
-  if (!vec) {
-    return T{};
-  }
-
-  T local_val;
-  if (op == MPI_MAX) {
-    local_val = std::numeric_limits<T>::lowest();
-  } else if (op == MPI_MIN) {
-    local_val = std::numeric_limits<T>::max();
-  } else {
-    local_val = T{};
-  }
-
-  const PetscScalar* vec_array;
-  PetscInt local_size;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(vec, &local_size));
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(vec, &vec_array));
-
-  // Create a tuple of references to the context vectors.
-  auto ctx_tuple = std::forward_as_tuple(ctx_vecs...);
-
-  // Create a tuple to hold the raw arrays of the context vectors.
-  std::tuple<ContextArrayPtr<ContextVecs>...> ctx_arrays;
-
-  // Recursively get all context arrays.
-  get_context_arrays_recursive(ctx_tuple, ctx_arrays);
-
-  // Local reduction loop
-  for (PetscInt i = 0; i < local_size; i++) {
-    auto args_tuple = std::tuple_cat(
-        std::make_tuple(i, vec_array[i]),
-        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-          return std::make_tuple(std::get<Is>(ctx_arrays)[i]...);
-        }(std::make_index_sequence<sizeof...(ContextVecs)>{}));
-
-    if (op == MPI_SUM) {
-      local_val += std::apply(map_func, args_tuple);
-    } else if (op == MPI_MAX) {
-      local_val = std::max(local_val, std::apply(map_func, args_tuple));
-    } else if (op == MPI_MIN) {
-      local_val = std::min(local_val, std::apply(map_func, args_tuple));
-    }
-  }
-
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(vec, &vec_array));
-
-  // Recursively restore all context arrays.
-  restore_context_arrays_recursive(ctx_tuple, ctx_arrays);
-
-  return globalReduce(local_val, op);
-}
-
-using ISLocalToGlobalMappingWrapper = SmartPetscObject<ISLocalToGlobalMapping, PetscObjectTraits<ISLocalToGlobalMapping>>;

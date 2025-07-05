@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
   PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-  double DT = 10;
+  double DT = 100;
   double END_TIME = 7 * 60 * 60;
   double LOG_FREQUENCY = 120;
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
       .dt = DT,
       .end_time = END_TIME,
       .log_frequency_seconds = LOG_FREQUENCY,
-      .min_box_size = {5.0, 5.0, 0},
+      .min_box_size = {1.0, 1.0, 0},
       .domain_resize_frequency = 50};
 
   PhysicsConfig physic_config = {
@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
       .tolerance = physic_config.l0 / 1e3,
       .max_bbpgd_iterations = 100000,
       .max_recursive_iterations = 50,
-      .linked_cell_size = physic_config.l0 * 2.5,
-      .min_preallocation_size = 500,
+      .linked_cell_size = physic_config.l0 * 2.2,
+      .min_preallocation_size = 50000,
       .growth_factor = 2,
   };
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
   // if (rank == 0) {
   double angle = 0;
-  Particle p1 = Particle(0, {rank * 3, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
+  Particle p1 = Particle(0, {rank * 3.0, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
 
   domain.queueNewParticles({p1});
   // }

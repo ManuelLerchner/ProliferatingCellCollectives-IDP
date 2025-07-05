@@ -68,7 +68,7 @@ CollisionDetails CollisionDetector::checkSpherocylinderCollision(
 
   double separation = details.min_distance - details.sum_radii;
 
-  details.potential_collision = separation < 0.3 * details.sum_radii;
+  details.potential_collision = separation < 0.1 * details.sum_radii;
 
   // Check for actual collision
   details.collision_detected = details.overlap > collision_tolerance_;
@@ -243,7 +243,6 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       -details.overlap,
       details.overlap > tolerance,
       p1.getGID(), p2.getGID(),
-      
       details.normal,
       rPos1, rPos2,
       details.contact_point,

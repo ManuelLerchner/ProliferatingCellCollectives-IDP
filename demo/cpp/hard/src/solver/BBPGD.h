@@ -25,11 +25,12 @@ inline BBPGDResult BBPGD(
     ResidualFunc&& residual,
     VecWrapper& gamma,  // in-out parameter
     const SolverConfig& config) {
-  auto g_curr = VecWrapper::Like(gamma);
+  auto phi_curr = VecWrapper::Like(gamma);
 
   // Compute initial gradient and residual
-  gradient(gamma, g_curr);
-  double res = residual(g_curr, gamma);
+
+  gradient(gamma, phi_curr);
+  double res = residual(phi_curr, gamma);
 
   if (res <= config.tolerance) {
     return {.bbpgd_iterations = 0, .residual = res};
@@ -39,11 +40,10 @@ inline BBPGDResult BBPGD(
   double alpha = 1.0 / res;
 
   // Storage for next gradient
-  auto g_next = VecWrapper::Like(g_curr);
+  auto g_next = VecWrapper::Like(phi_curr);
 
-  // Workspace for differences: s = gamma_next - gamma_curr and y = g_next - g_curr
   auto delta_gamma = VecWrapper::Like(gamma);
-  auto delta_g = VecWrapper::Like(g_curr);
+  auto delta_phi = VecWrapper::Like(phi_curr);
 
   // Constant zero vector for projection (reused in loop)
   auto zero_vec = VecWrapper::Like(gamma);
@@ -55,8 +55,8 @@ inline BBPGDResult BBPGD(
     // We compute the next gamma into a temporary, then swap.
     auto gamma_next = VecWrapper::Like(gamma);
 
-    // Step 6: γ_next := max(γ_curr − α*g_curr, 0)
-    VecWAXPY(gamma_next, -alpha, g_curr, gamma);
+    // Step 6: γ_next := max(γ_curr − α*phi_curr, 0)
+    VecWAXPY(gamma_next, -alpha, phi_curr, gamma);
     VecPointwiseMax(gamma_next, gamma_next, zero_vec);
 
     // Step 7: g_next := g(γ_next)
@@ -73,10 +73,10 @@ inline BBPGDResult BBPGD(
 
     // Step 12: Compute new step size
     VecWAXPY(delta_gamma, -1.0, gamma, gamma_next);
-    VecWAXPY(delta_g, -1.0, g_curr, g_next);
+    VecWAXPY(delta_phi, -1.0, phi_curr, g_next);
 
     PetscScalar s_dot_y;
-    VecDot(delta_gamma, delta_g, &s_dot_y);
+    VecDot(delta_gamma, delta_phi, &s_dot_y);
 
     double numerator_val;
     double denominator_val;
@@ -88,7 +88,7 @@ inline BBPGDResult BBPGD(
       denominator_val = PetscRealPart(s_dot_y);
     } else {
       PetscScalar y_dot_y;
-      VecDot(delta_g, delta_g, &y_dot_y);
+      VecDot(delta_phi, delta_phi, &y_dot_y);
       numerator_val = PetscRealPart(s_dot_y);
       denominator_val = PetscRealPart(y_dot_y);
     }
@@ -109,7 +109,7 @@ inline BBPGDResult BBPGD(
 
     // Prepare for next iteration by swapping buffers
     gamma = std::move(gamma_next);
-    std::swap(g_curr, g_next);
+    std::swap(phi_curr, g_next);
   }
 
   if (iteration == config.max_bbpgd_iterations) {

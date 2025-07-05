@@ -20,10 +20,7 @@ void calculate_jacobian_local(
     PetscInt offset) {
   using namespace utils::ArrayMath;
 
-  PetscInt local_num_constraints = local_constraints.size();
-  if (local_num_constraints == 0) return;
-
-  for (int c_local_idx = 0; c_local_idx < local_num_constraints; ++c_local_idx) {
+  for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
     const auto& constraint = local_constraints[c_local_idx];
 
     const auto n_i = constraint.normI;

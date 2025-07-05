@@ -145,7 +145,7 @@ void Domain::resizeDomain() {
 }
 
 void Domain::printProgress(int current_iteration, int total_iterations) const {
-  PetscPrintf(PETSC_COMM_WORLD, "\rProgress: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d",
+  PetscPrintf(PETSC_COMM_WORLD, "\nIteration: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d",
               current_iteration, total_iterations,
               (double)current_iteration / total_iterations * 100,
               (double)current_iteration * sim_config_.dt / 60,
