@@ -242,13 +242,11 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
 
   auto constraint = Constraint(
       -details.overlap,
-      details.overlap > tolerance,
       p1.getGID(), p2.getGID(),
       details.normal,
       rPos1, rPos2,
       details.contact_point,
       stress1, stress2,
-      constraint_iterations,
       -1);
 
   return constraint;

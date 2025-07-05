@@ -408,13 +408,6 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
     gIDs.push_back(particle.getGID());
   }
 
-  // Extract age
-  std::vector<int> ages;
-  ages.reserve(n_particles);
-  for (const auto& particle : sim_state->particles) {
-    ages.push_back(particle.getAge());
-  }
-
   // Extract type IDs (all zeros for now)
   std::vector<int> type_ids(n_particles, 0);
 
@@ -441,7 +434,6 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   fields.emplace_back("typeIds", type_ids, DataType::Int32);
   fields.emplace_back("ids", ids, DataType::Int32);
   fields.emplace_back("gIDs", gIDs, DataType::Int32);
-  fields.emplace_back("age", ages, DataType::Int32);
 
   // Add rank information as point data
   fields.emplace_back("rank", ranks, DataType::Int32);
@@ -531,16 +523,13 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<double> overlap_magnitudes;
   std::vector<int> gidI;
   std::vector<int> gidJ;
-  std::vector<int> violated;
-  std::vector<int> constraint_iterations;
+  std::vector<int> constraint_ierations;
 
   // Reserve space for all vectors (one value per constraint)
   normals.reserve(sim_state->constraints.size());
   contact_positions.reserve(sim_state->constraints.size());
   ranks.reserve(sim_state->constraints.size());
   overlap_magnitudes.reserve(sim_state->constraints.size());
-  violated.reserve(sim_state->constraints.size());
-  constraint_iterations.reserve(sim_state->constraints.size());
   gidI.reserve(sim_state->constraints.size());
   gidJ.reserve(sim_state->constraints.size());
 
@@ -549,8 +538,6 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
     // Basic constraint data
     normals.push_back(constraint.normI);
     overlap_magnitudes.push_back(-constraint.delta0);  // Positive overlap value
-    violated.push_back(constraint.violated ? 1 : 0);
-    constraint_iterations.push_back(constraint.constraint_iterations);
 
     // Contact positions - sanitize for VTK output
     auto sanitized_contact = constraint.contactPoint;
@@ -574,10 +561,8 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   // Add essential fields only
   fields.emplace_back("normals", normals);
   fields.emplace_back("overlap_magnitudes", overlap_magnitudes);
-  fields.emplace_back("violated", violated, DataType::Int32);
   fields.emplace_back("rank", ranks, DataType::Int32);
   fields.emplace_back("contact_positions", contact_positions);
-  fields.emplace_back("constraint_iterations", constraint_iterations, DataType::Int32);
   fields.emplace_back("gidI", gidI, DataType::Int32);
   fields.emplace_back("gidJ", gidJ, DataType::Int32);
 

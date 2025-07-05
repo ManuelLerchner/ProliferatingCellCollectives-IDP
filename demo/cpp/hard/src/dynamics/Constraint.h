@@ -6,18 +6,15 @@
 class Constraint {
  public:
   // Constructor with local IDs and ownership
-  Constraint(double delta0, bool violated, int gidI, int gidJ,
+  Constraint(double delta0, int gidI, int gidJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
-             double stressI, double stressJ,
-             int constraint_iterations, int gid);
+             double stressI, double stressJ, int gid);
 
   Constraint();
 
  public:
   // current overlap of the constraint
   double delta0;
-  // whether the constraint is violated
-  bool violated;
   // unique global ID of particle I
   int gidI;
   // unique global ID of particle J
@@ -34,8 +31,6 @@ class Constraint {
   double stressI;
   // stress on particle J
   double stressJ;
-  // number of constraint iterations since the constraint was created
-  int constraint_iterations;
   // global index of the constraint
   int gid;
 
