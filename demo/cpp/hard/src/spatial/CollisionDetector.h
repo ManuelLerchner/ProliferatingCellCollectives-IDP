@@ -54,12 +54,12 @@ class CollisionDetector {
       int constraint_iterations,
       double future_colission_factor);
 
-  const Particle& getParticle(
+  Particle& getParticle(
       int global_id,
       ParticleManager& particle_manager);
 
   std::optional<Constraint> tryCreateConstraint(
-      const Particle& p1, const Particle& p2,
+      Particle& p1, Particle& p2,
       double future_colission_factor,
       bool p1_local, bool p2_local, double tolerance,
       int constraint_iterations);

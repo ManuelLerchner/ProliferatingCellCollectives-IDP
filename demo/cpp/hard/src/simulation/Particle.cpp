@@ -91,13 +91,17 @@ void Particle::eulerStepLength(const double ldot, double dt) {
   updateLength(ldot, dt);
 }
 
-void Particle::clearForceAndTorque() {
+void Particle::reset() {
   force_[0] = 0.0;
   force_[1] = 0.0;
   force_[2] = 0.0;
   torque_[0] = 0.0;
   torque_[1] = 0.0;
   torque_[2] = 0.0;
+  num_constraints_ = 0;
+  velocityLinear_ = {0.0, 0.0, 0.0};
+  velocityAngular_ = {0.0, 0.0, 0.0};
+  impedance_ = 0.0;
 }
 
 void Particle::addForceAndTorque(const PetscScalar* f) {

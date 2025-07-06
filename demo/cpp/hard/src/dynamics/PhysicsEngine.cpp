@@ -336,7 +336,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
-    double future_collision_factor = constraint_iterations == 0 ? 0.3 : 0.1;
+    double future_collision_factor = constraint_iterations == 0 ? 0.3 : 0;
     auto new_constraints = collision_detector.detectCollisions(
         particle_manager, constraint_iterations, future_collision_factor);
 
@@ -446,17 +446,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     gradient(GAMMA, PHI);
 
     std::swap(workspaces->ldot_curr_workspace, workspaces->ldot_prev);
-
-    // log sub-step
-    vtk::ParticleSimulationState state = {
-        .particles = particle_manager.local_particles,
-        .constraints = all_constraints,
-        .forces = {},
-        .torques = {},
-        .velocities_linear = {},
-    };
-    vtk_logger.logSubstep(dt, &particle_manager.local_particles);
-    constraint_logger.logSubstep(dt, &state);
 
     constraint_iterations++;
   }

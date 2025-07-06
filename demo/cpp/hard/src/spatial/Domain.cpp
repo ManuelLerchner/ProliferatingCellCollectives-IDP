@@ -14,13 +14,14 @@
 Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config)
     : sim_config_(sim_config),
       physics_config_(physics_config),
-      solver_config_(solver_config) {
+      solver_config_(solver_config),
+      current_dt_(sim_config.dt) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
 
   int log_every_n_steps = 1;
   if (sim_config.log_frequency_seconds > 0) {
-    log_every_n_steps = std::max(1, static_cast<int>(sim_config.log_frequency_seconds / sim_config.dt));
+    log_every_n_steps = std::max(1, static_cast<int>(sim_config.log_frequency_seconds / current_dt_));
   }
 
   vtk_logger_ = vtk::createParticleLogger("./vtk_output", log_every_n_steps);
@@ -50,9 +51,27 @@ void Domain::commitNewParticles() {
   this->global_particle_count += globalReduce(num_added_local, MPI_SUM);
 }
 
+void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
+  if (!sim_config_.enable_adaptive_dt) {
+    return;
+  }
+
+  auto bbpgd_iterations_per_step = solver_solution.bbpgd_iterations / (double)solver_solution.constraint_iterations;
+
+  // Adjust dt based on the number of BBPGD iterations
+  if (bbpgd_iterations_per_step > sim_config_.target_bbpgd_iterations) {
+    current_dt_ *= (1.0 - sim_config_.dt_adjust_factor);  // Decrease dt
+  } else {
+    current_dt_ *= (1.0 + sim_config_.dt_adjust_factor);  // Increase dt
+  }
+
+  // Clamp dt to the min/max values
+  current_dt_ = std::max(sim_config_.min_dt, std::min(sim_config_.max_dt, current_dt_));
+}
+
 void Domain::run() {
   using namespace utils::ArrayMath;
-  int num_steps = sim_config_.end_time / sim_config_.dt;
+  int num_steps = sim_config_.end_time / current_dt_;
 
   for (int i = 0; i < num_steps; i++) {
     auto new_particles = particle_manager_->divideParticles();
@@ -73,17 +92,22 @@ void Domain::run() {
     auto particles_before_step = particle_manager_->local_particles;
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
 
+    if (sim_config_.enable_adaptive_dt && i % sim_config_.dt_adjust_frequency == 0) {
+      adjustDt(solver_solution);
+      num_steps = sim_config_.end_time / current_dt_;
+    }
+
     if (vtk_logger_) {
       auto sim_state = createSimulationState(solver_solution, particles_before_step);
       auto dd_state = createDomainDecompositionState();
 
       auto ghost_state = createSimulationState(solver_solution, particle_manager_->ghost_particles);
 
-      // vtk_logger_->logTimestepComplete(sim_config_.dt, sim_state.get());
-      ghost_logger_->logTimestepComplete(sim_config_.dt, ghost_state.get());
-      // constraint_loggers_->logTimestepComplete(sim_config_.dt, sim_state.get());
+      vtk_logger_->logTimestepComplete(current_dt_, sim_state.get());
+      // ghost_logger_->logTimestepComplete(sim_config_.dt, ghost_state.get());
+      constraint_loggers_->logTimestepComplete(current_dt_, sim_state.get());
 
-      domain_decomposition_logger_->logTimestepComplete(sim_config_.dt, dd_state.get());
+      domain_decomposition_logger_->logTimestepComplete(current_dt_, dd_state.get());
 
       // Determine colony radius
       double colony_radius_local = 0;
@@ -111,6 +135,9 @@ void Domain::rebalance() {
 
   // 3. Update local particles
   updateParticlesAfterExchange(particles_to_keep, recv_buffer);
+
+  // 4. Re-assign global IDs to all particles to keep them contiguous
+  assignGlobalIDs();
 }
 
 void Domain::exchangeGhostParticles() {
@@ -156,11 +183,15 @@ void Domain::resizeDomain() {
 }
 
 void Domain::printProgress(int current_iteration, int total_iterations, double colony_radius) const {
-  PetscPrintf(PETSC_COMM_WORLD, "\nIteration: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d | Colony radius: %3.1f",
+  double time_elapsed = (double)current_iteration * current_dt_ / 60;
+  double time_total = sim_config_.end_time / 60;
+
+  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f min / %3.1f min | Iteration: %3d / %d (%5.1f%%) | dt: %3.1f | Particles: %4d | Colony radius: %3.1f",
+              time_elapsed,
+              time_total,
               current_iteration, total_iterations,
               (double)current_iteration / total_iterations * 100,
-              (double)current_iteration * sim_config_.dt / 60,
-              (double)total_iterations * sim_config_.dt / 60,
+              current_dt_,
               global_particle_count,
               colony_radius);
 }
@@ -269,6 +300,11 @@ std::unique_ptr<vtk::ParticleSimulationState> Domain::createSimulationState(
 
   // Calculate max overlap from constraints
   state->residual = solver_solution.residual;
+
+  state->num_constraints.resize(local_particles.size());
+  for (int i = 0; i < local_particles.size(); i++) {
+    state->num_constraints[i] = local_particles[i].getNumConstraints();
+  }
 
   // Set other state values
   state->constraint_iterations = solver_solution.constraint_iterations;
@@ -383,6 +419,24 @@ void Domain::updateParticlesAfterExchange(std::vector<Particle>& particles_to_ke
   // After exchanging particles, we need to update the global particle count.
   int local_particle_count = particle_manager_->local_particles.size();
   MPI_Allreduce(&local_particle_count, &global_particle_count, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+}
+
+void Domain::assignGlobalIDs() {
+  // Sort particles by their x-position to group close particles.
+  std::sort(particle_manager_->local_particles.begin(), particle_manager_->local_particles.end(),
+            [](const Particle& a, const Particle& b) {
+              return a.getPosition()[1] < b.getPosition()[1];
+            });
+
+  PetscInt local_particle_count = particle_manager_->local_particles.size();
+
+  PetscInt first_id_for_this_rank;
+  MPI_Scan(&local_particle_count, &first_id_for_this_rank, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
+  first_id_for_this_rank -= local_particle_count;
+
+  for (PetscInt i = 0; i < local_particle_count; ++i) {
+    particle_manager_->local_particles[i].setGID(first_id_for_this_rank + i);
+  }
 }
 
 void Domain::assignGlobalIDsToNewParticles() {

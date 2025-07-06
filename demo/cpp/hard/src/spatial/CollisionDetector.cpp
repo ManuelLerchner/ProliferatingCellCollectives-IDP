@@ -107,6 +107,11 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
   // Simple approach: check all local-local pairs directly
   checkParticlePairs(particle_manager, constraints, constraint_iterations, future_colission_factor);
 
+  // Sort constraints by their contact point's x-position to group them spatially.
+  std::sort(constraints.begin(), constraints.end(), [](const Constraint& a, const Constraint& b) {
+    return a.contactPoint[1] < b.contactPoint[1];
+  });
+
   // Get the number of locally owned constraints.
   int local_num_constraints = constraints.size();
 
@@ -167,8 +172,8 @@ void CollisionDetector::checkParticlePairs(
   auto collision_pairs = spatial_grid_.findPotentialCollisions(particle_manager.local_particles, particle_manager.ghost_particles);
 
   for (const auto& pair : collision_pairs) {
-    const Particle& p1 = getParticle(pair.gidI, particle_manager);
-    const Particle& p2 = getParticle(pair.gidJ, particle_manager);
+    Particle& p1 = getParticle(pair.gidI, particle_manager);
+    Particle& p2 = getParticle(pair.gidJ, particle_manager);
 
     auto constraint = tryCreateConstraint(
         p1, p2,
@@ -184,15 +189,15 @@ void CollisionDetector::checkParticlePairs(
   }
 }
 
-const Particle& CollisionDetector::getParticle(
+Particle& CollisionDetector::getParticle(
     int global_id,
     ParticleManager& particle_manager) {
-  for (const auto& p : particle_manager.local_particles) {
+  for (auto& p : particle_manager.local_particles) {
     if (p.getGID() == global_id) {
       return p;
     }
   }
-  for (const auto& p : particle_manager.ghost_particles) {
+  for (auto& p : particle_manager.ghost_particles) {
     if (p.getGID() == global_id) {
       return p;
     }
@@ -201,7 +206,7 @@ const Particle& CollisionDetector::getParticle(
 }
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
-    const Particle& p1, const Particle& p2,
+    Particle& p1, Particle& p2,
     double future_colission_factor,
     bool p1_local, bool p2_local, double tolerance,
     int constraint_iterations) {
@@ -235,6 +240,9 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     owned_by_me = false;  // Should not happen if collision detection is correct
     throw std::runtime_error("Both particles are ghosts");
   }
+
+  p1.incrementNumConstraints();
+  p2.incrementNumConstraints();
 
   if (!owned_by_me) {
     return std::nullopt;

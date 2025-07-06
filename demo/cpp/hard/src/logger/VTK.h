@@ -145,6 +145,7 @@ struct ParticleSimulationState {
   std::vector<std::array<double, 3>> torques;
   std::vector<std::array<double, 3>> velocities_linear;
   std::vector<std::array<double, 3>> velocities_angular;
+  std::vector<int> num_constraints;
   std::vector<double> impedance;
   double residual;
   int constraint_iterations;

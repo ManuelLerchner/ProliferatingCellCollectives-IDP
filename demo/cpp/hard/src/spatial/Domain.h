@@ -3,6 +3,8 @@
 #include "logger/VTK.h"
 #include "simulation/ParticleData.h"
 #include "simulation/ParticleManager.h"
+#include "util/Config.h"
+
 class Domain {
  public:
   Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config);
@@ -35,6 +37,18 @@ class Domain {
                                     const std::vector<ParticleData>& received_particles);
   void assignGlobalIDsToNewParticles();
 
+  /**
+   * @brief Re-assigns global IDs to all particles in the domain to ensure they are contiguous.
+   * This is typically called after a rebalance operation.
+   */
+  void assignGlobalIDs();
+
+  /**
+   * @brief Adjusts the timestep `dt` based on solver performance.
+   * @param solver_solution The solution from the physics engine for the last step.
+   */
+  void adjustDt(const PhysicsEngine::SolverSolution& solver_solution);
+
   const SimulationConfig& sim_config_;
   const PhysicsConfig& physics_config_;
   const SolverConfig& solver_config_;
@@ -57,5 +71,6 @@ class Domain {
   std::array<double, 3> min_bounds_;
   std::array<double, 3> max_bounds_;
 
-  PetscInt global_particle_count = 0;
+  double current_dt_;
+  int global_particle_count = 0;
 };

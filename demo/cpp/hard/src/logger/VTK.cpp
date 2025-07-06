@@ -408,6 +408,12 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
     gIDs.push_back(particle.getGID());
   }
 
+  std::vector<int> num_constraints;
+  num_constraints.reserve(n_particles);
+  for (int i = 0; i < n_particles; i++) {
+    num_constraints.push_back(sim_state->num_constraints[i]);
+  }
+
   // Extract type IDs (all zeros for now)
   std::vector<int> type_ids(n_particles, 0);
 
@@ -434,6 +440,7 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   fields.emplace_back("typeIds", type_ids, DataType::Int32);
   fields.emplace_back("ids", ids, DataType::Int32);
   fields.emplace_back("gIDs", gIDs, DataType::Int32);
+  fields.emplace_back("num_constraints", num_constraints, DataType::Int32);
 
   // Add rank information as point data
   fields.emplace_back("rank", ranks, DataType::Int32);
@@ -523,6 +530,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   std::vector<double> overlap_magnitudes;
   std::vector<int> gidI;
   std::vector<int> gidJ;
+  std::vector<int> gid;
   std::vector<int> constraint_ierations;
 
   // Reserve space for all vectors (one value per constraint)
@@ -532,6 +540,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   overlap_magnitudes.reserve(sim_state->constraints.size());
   gidI.reserve(sim_state->constraints.size());
   gidJ.reserve(sim_state->constraints.size());
+  gid.reserve(sim_state->constraints.size());
 
   int constraint_index = 0;
   for (const auto& constraint : sim_state->constraints) {
@@ -552,8 +561,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
     ranks.push_back(rank);
     gidI.push_back(constraint.gidI);
     gidJ.push_back(constraint.gidJ);
-
-    // Ghost constraint information
+    gid.push_back(constraint.gid);
 
     constraint_index++;
   }
@@ -565,6 +573,7 @@ std::vector<VTKField> ConstraintDataExtractor::extractPointData(const void* stat
   fields.emplace_back("contact_positions", contact_positions);
   fields.emplace_back("gidI", gidI, DataType::Int32);
   fields.emplace_back("gidJ", gidJ, DataType::Int32);
+  fields.emplace_back("gid", gid, DataType::Int32);
 
   return fields;
 }

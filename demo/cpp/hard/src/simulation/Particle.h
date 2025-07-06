@@ -39,7 +39,7 @@ class Particle {
 
   void eulerStepLength(double ldot, double dt);
 
-  void clearForceAndTorque();
+  void reset();
 
   void addForceAndTorque(const PetscScalar* f);
 
@@ -126,6 +126,14 @@ class Particle {
     data_.age++;
   }
 
+  int getNumConstraints() const {
+    return num_constraints_;
+  }
+
+  void incrementNumConstraints() {
+    num_constraints_++;
+  }
+
   std::array<double, 3> calculateGravitationalForce(const std::array<double, 3>& gravity) const;
   std::array<double, 6> calculateBrownianVelocity(double temperature, double xi, double dt, std::normal_distribution<double>& dist, std::mt19937& gen) const;
 
@@ -141,4 +149,5 @@ class Particle {
   std::array<double, 3> velocityLinear_;
   std::array<double, 3> velocityAngular_;
   double impedance_;
+  int num_constraints_ = 0;
 };

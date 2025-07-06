@@ -30,7 +30,7 @@ void ParticleManager::resetLocalParticles() {
   PetscInt local_size;
 
   for (int i = 0; i < local_particles.size(); i++) {
-    local_particles[i].clearForceAndTorque();
+    local_particles[i].reset();
   }
 }
 // Helper function to scatter values from a parallel vector to a local array
