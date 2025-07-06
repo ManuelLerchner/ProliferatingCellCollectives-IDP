@@ -17,7 +17,7 @@ class Domain {
   void rebalance();
   void exchangeGhostParticles();
   void resizeDomain();
-  void printProgress(int current_iteration, int total_iterations, double colony_radius) const;
+  void printProgress(int current_iteration, double colony_radius) const;
 
   std::unique_ptr<vtk::DomainDecompositionState> createDomainDecompositionState() const;
   std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
@@ -72,5 +72,11 @@ class Domain {
   std::array<double, 3> max_bounds_;
 
   double current_dt_;
+  double elapsed_time_seconds_ = 0.0;
+  double start_time_ = 0.0;
   int global_particle_count = 0;
+
+  // For ETA calculation
+  double last_eta_check_time_ = 0.0;
+  double last_eta_check_sim_time_ = 0.0;
 };

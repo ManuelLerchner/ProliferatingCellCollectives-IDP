@@ -6,12 +6,6 @@
 #include "Config.h"
 #include "PetscRaii.h"
 
-size_t vecSize(const VecWrapper& vec) {
-  PetscInt size;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(vec, &size));
-  return size;
-}
-
 class DynamicVecWrapper {
  private:
   VecWrapper vec;
@@ -69,6 +63,38 @@ class DynamicVecWrapper {
   void copyTo(VecWrapper& other) const {
     PetscCallAbort(PETSC_COMM_WORLD, VecCopy(vec, other));
   }
+
+  VecWrapper getSubVector() const {
+    Vec sub_vec_view;
+    IS is;
+    PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, global_size, 0, 1, &is));
+    PetscCallAbort(PETSC_COMM_WORLD, VecGetSubVector(this->vec, is, &sub_vec_view));
+
+    VecWrapper new_vec;
+    PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(sub_vec_view, new_vec.get_ref()));
+    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(sub_vec_view, new_vec));
+
+    PetscCallAbort(PETSC_COMM_WORLD, VecRestoreSubVector(this->vec, is, &sub_vec_view));
+    PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is));
+    return new_vec;
+  }
+
+  void restoreSubVector(const VecWrapper& sub_vec) {
+    Vec sub_vec_view;
+    IS is;
+    PetscInt sub_vec_size;
+    PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(sub_vec, &sub_vec_size));
+    if (sub_vec_size > global_size) {
+      throw std::runtime_error("Sub-vector is larger than the allocated size in DynamicVecWrapper.");
+    }
+    PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, sub_vec_size, 0, 1, &is));
+    PetscCallAbort(PETSC_COMM_WORLD, VecGetSubVector(this->vec, is, &sub_vec_view));
+
+    PetscCallAbort(PETSC_COMM_WORLD, VecCopy(sub_vec, sub_vec_view));
+
+    PetscCallAbort(PETSC_COMM_WORLD, VecRestoreSubVector(this->vec, is, &sub_vec_view));
+    PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is));
+  }
 };
 
 class DynamicMatWrapper {
@@ -85,11 +111,7 @@ class DynamicMatWrapper {
     min_local_col_buffer = min_local_col_preallocation;
     global_ncols = 0;
 
-    int mpi_size;
-    MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size);
-    PetscInt initial_global_col_capacity = min_local_col_buffer * mpi_size;
-
-    mat = MatWrapper::CreateAIJ(local_rows, min_local_col_buffer, initial_global_col_capacity);
+    mat = MatWrapper::CreateAIJ(local_rows, min_local_col_buffer);
 
     PetscCallAbort(PETSC_COMM_WORLD, MatGetSize(mat, NULL, &global_col_capacity));
   }
@@ -107,11 +129,33 @@ class DynamicMatWrapper {
       MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size);
       PetscInt new_local_ncols = (new_global_col_capacity + mpi_size - 1) / mpi_size;
 
-      MatWrapper new_mat = MatWrapper::CreateAIJ(m_local, new_local_ncols, new_global_col_capacity);
+      MatWrapper new_mat = MatWrapper::CreateAIJ(m_local, new_local_ncols);
 
       if (global_ncols > 0) {
+        // Preallocate memory for the new matrix to avoid costly reallocations
         PetscInt Istart, Iend;
         MatGetOwnershipRange(mat, &Istart, &Iend);
+        PetscInt m_local_rows = Iend - Istart;
+        std::vector<PetscInt> d_nnz(m_local_rows, 0);
+        std::vector<PetscInt> o_nnz(m_local_rows, 0);
+
+        for (PetscInt i = 0; i < m_local_rows; ++i) {
+          PetscInt row = Istart + i;
+          PetscInt ncols_in_row;
+          const PetscInt* cols;
+          PetscCallAbort(PETSC_COMM_WORLD, MatGetRow(mat, row, &ncols_in_row, &cols, NULL));
+          for (PetscInt j = 0; j < ncols_in_row; ++j) {
+            if (cols[j] >= Istart && cols[j] < Iend) {
+              d_nnz[i]++;
+            } else {
+              o_nnz[i]++;
+            }
+          }
+          PetscCallAbort(PETSC_COMM_WORLD, MatRestoreRow(mat, row, &ncols_in_row, &cols, NULL));
+        }
+
+        PetscCallAbort(PETSC_COMM_WORLD, MatMPIAIJSetPreallocation(new_mat, 0, d_nnz.data(), 0, o_nnz.data()));
+
         for (PetscInt i = Istart; i < Iend; ++i) {
           PetscInt ncols_in_row;
           const PetscInt* cols;
@@ -139,5 +183,21 @@ class DynamicMatWrapper {
 
   void updateSize(PetscInt ncols_delta) {
     global_ncols += ncols_delta;
+  }
+
+  MatWrapper getSubMatrix() const {
+    IS is_row, is_col;
+    PetscInt rstart, rend;
+    PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(this->mat, &rstart, &rend));
+    PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, rend - rstart, rstart, 1, &is_row));
+    PetscCallAbort(PETSC_COMM_WORLD, ISCreateStride(PETSC_COMM_WORLD, this->global_ncols, 0, 1, &is_col));
+
+    Mat sub_mat_ptr;
+    PetscCallAbort(PETSC_COMM_WORLD, MatCreateSubMatrix(this->mat, is_row, is_col, MAT_INITIAL_MATRIX, &sub_mat_ptr));
+
+    PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is_row));
+    PetscCallAbort(PETSC_COMM_WORLD, ISDestroy(&is_col));
+
+    return MatWrapper(sub_mat_ptr);
   }
 };

@@ -18,6 +18,8 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
       current_dt_(sim_config.dt) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
+  start_time_ = MPI_Wtime();
+  last_eta_check_time_ = start_time_;
 
   int log_every_n_steps = 1;
   if (sim_config.log_frequency_seconds > 0) {
@@ -71,9 +73,9 @@ void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
 
 void Domain::run() {
   using namespace utils::ArrayMath;
-  int num_steps = sim_config_.end_time / current_dt_;
 
-  for (int i = 0; i < num_steps; i++) {
+  int i = 0;
+  while (elapsed_time_seconds_ < sim_config_.end_time) {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);
     commitNewParticles();
@@ -91,10 +93,10 @@ void Domain::run() {
 
     auto particles_before_step = particle_manager_->local_particles;
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
+    elapsed_time_seconds_ += current_dt_;
 
     if (sim_config_.enable_adaptive_dt && i % sim_config_.dt_adjust_frequency == 0) {
       adjustDt(solver_solution);
-      num_steps = sim_config_.end_time / current_dt_;
     }
 
     if (vtk_logger_) {
@@ -118,9 +120,10 @@ void Domain::run() {
 
       double colony_radius_global = globalReduce(colony_radius_local, MPI_MAX);
 
-      printProgress(i + 1, num_steps, colony_radius_global);
+      printProgress(i + 1, colony_radius_global);
     }
     PetscPrintf(PETSC_COMM_WORLD, "\n");
+    i++;
   }
 }
 
@@ -182,15 +185,37 @@ void Domain::resizeDomain() {
   particle_manager_->updateDomainBounds(min_bounds_, max_bounds_);
 }
 
-void Domain::printProgress(int current_iteration, int total_iterations, double colony_radius) const {
-  double time_elapsed = (double)current_iteration * current_dt_ / 60;
-  double time_total = sim_config_.end_time / 60;
+void Domain::printProgress(int current_iteration, double colony_radius) const {
+  double time_elapsed_minutes = elapsed_time_seconds_ / 60.0;
+  double time_total_minutes = sim_config_.end_time / 60.0;
+  double progress_percent = (elapsed_time_seconds_ / sim_config_.end_time) * 100.0;
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f min / %3.1f min | Iteration: %3d / %d (%5.1f%%) | dt: %3.1f | Particles: %4d | Colony radius: %3.1f",
-              time_elapsed,
-              time_total,
-              current_iteration, total_iterations,
-              (double)current_iteration / total_iterations * 100,
+  std::string eta_str = "N/A";
+  if (elapsed_time_seconds_ > 1.0) {
+    double current_wall_time = MPI_Wtime();
+    double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
+    double sim_time_since_last_check = elapsed_time_seconds_ - last_eta_check_sim_time_;
+
+    if (sim_time_since_last_check > 1e-9) {
+      double wall_seconds_per_sim_seconds = wall_time_since_last_check / sim_time_since_last_check;
+      double estimated_remaining_wall_time_seconds = (sim_config_.end_time - elapsed_time_seconds_) * wall_seconds_per_sim_seconds;
+
+      char buffer[100];
+      snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
+      eta_str = buffer;
+
+      // Update for next ETA calculation
+      const_cast<Domain*>(this)->last_eta_check_time_ = current_wall_time;
+      const_cast<Domain*>(this)->last_eta_check_sim_time_ = elapsed_time_seconds_;
+    }
+  }
+
+  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f / %3.1f min (%5.1f%%) | ETA: %s | Iter: %d | dt: %.2e | Particles: %d | Colony radius: %.1f",
+              time_elapsed_minutes,
+              time_total_minutes,
+              progress_percent,
+              eta_str.c_str(),
+              current_iteration,
               current_dt_,
               global_particle_count,
               colony_radius);

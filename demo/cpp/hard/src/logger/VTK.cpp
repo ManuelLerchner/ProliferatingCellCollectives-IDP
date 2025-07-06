@@ -379,10 +379,27 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   std::vector<std::array<double, 3>> directions;
   directions.reserve(n_particles);
 
+  std::vector<double> anglesXY;
+  std::vector<double> anglesXZ;
+  std::vector<double> anglesYZ;
+
+  anglesXY.reserve(n_particles);
+  anglesXZ.reserve(n_particles);
+  anglesYZ.reserve(n_particles);
+
   for (const auto& particle : sim_state->particles) {
     auto quat = particle.getQuaternion();
     auto dir = utils::Quaternion::getDirectionVector(quat);
     directions.push_back(dir);
+
+    // euler angles in degrees
+    double angleXY = std::atan2(dir[1], dir[0]) * 180.0 / M_PI;
+    double angleXZ = std::atan2(dir[2], dir[0]) * 180.0 / M_PI;
+    double angleYZ = std::atan2(dir[2], dir[1]) * 180.0 / M_PI;
+
+    anglesXY.push_back(angleXY);
+    anglesXZ.push_back(angleXZ);
+    anglesYZ.push_back(angleYZ);
   }
 
   // Extract lengths (particle length, diameter/2, diameter/2)
@@ -441,6 +458,9 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
   fields.emplace_back("ids", ids, DataType::Int32);
   fields.emplace_back("gIDs", gIDs, DataType::Int32);
   fields.emplace_back("num_constraints", num_constraints, DataType::Int32);
+  fields.emplace_back("angleXY", anglesXY);
+  fields.emplace_back("angleXZ", anglesXZ);
+  fields.emplace_back("angleYZ", anglesYZ);
 
   // Add rank information as point data
   fields.emplace_back("rank", ranks, DataType::Int32);
@@ -459,6 +479,9 @@ std::vector<VTKField> ParticleDataExtractor::getEmptyPointFields() {
   fields.emplace_back("directions", std::vector<double>{}, 1, DataType::Float64);
   fields.emplace_back("impedance", std::vector<double>{}, 1, DataType::Float64);
   fields.emplace_back("forces", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("angleXY", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("angleXZ", std::vector<double>{}, 1, DataType::Float64);
+  fields.emplace_back("angleYZ", std::vector<double>{}, 1, DataType::Float64);
   return fields;
 }
 

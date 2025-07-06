@@ -238,17 +238,6 @@ inline VecWrapper VecWrapper::CreateWithGlobalSize(PetscInt global_size) {
   return new_obj;
 }
 
-inline MatWrapper MatWrapper::CreateEmpty(PetscInt local_rows) {
-  MatWrapper new_obj;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, 0, PETSC_DETERMINE, PETSC_DETERMINE));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATMPIAIJ));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
-  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyBegin(new_obj, MAT_FINAL_ASSEMBLY));
-  PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(new_obj, MAT_FINAL_ASSEMBLY));
-  return new_obj;
-}
-
 inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols) {
   MatWrapper new_obj;
   PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
@@ -259,12 +248,8 @@ inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols
   return new_obj;
 }
 
-inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols, PetscInt global_cols) {
-  MatWrapper new_obj;
-  PetscCallAbort(PETSC_COMM_WORLD, MatCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, local_cols, PETSC_DETERMINE, global_cols));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATAIJ));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetUp(new_obj));
-  return new_obj;
+inline size_t vecSize(const VecWrapper& vec) {
+  PetscInt size;
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(vec, &size));
+  return size;
 }

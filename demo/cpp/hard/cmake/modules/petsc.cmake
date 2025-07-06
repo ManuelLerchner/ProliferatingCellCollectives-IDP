@@ -4,7 +4,14 @@ cmake_minimum_required(VERSION 3.20.3)
 include(ExternalProject)
 
 set(PETSC_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/petsc")
-set(PETSC_ARCH "arch-linux-c-opt") # Change if your arch is different
+
+# if debug is true, set PETSC_ARCH to arch-linux-c-debug
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(PETSC_ARCH "arch-linux-c-debug")
+else()
+    set(PETSC_ARCH "arch-linux-c-opt")
+endif()
+
 set(PETSC_LIB_DIR "${PETSC_BUILD_DIR}/${PETSC_ARCH}/lib")
 set(PETSC_LIBRARIES "${PETSC_LIB_DIR}/libpetsc.so") # or .a if static
 
@@ -16,6 +23,9 @@ else()
     set(PETSC_ALREADY_BUILT FALSE)
 endif()
 
+# print if library exists
+message(STATUS "PETSc library exists: ${PETSC_LIBRARIES}")
+
 # Download, configure, and build PETSc only if not already built
 if(NOT PETSC_ALREADY_BUILT)
     ExternalProject_Add(petsc_external
@@ -23,7 +33,7 @@ if(NOT PETSC_ALREADY_BUILT)
         GIT_TAG release
         SOURCE_DIR "${PETSC_BUILD_DIR}"
         PREFIX "petsc"
-        CONFIGURE_COMMAND ./configure --with-debugging=0
+        CONFIGURE_COMMAND ./configure --with-debugging=$<IF:$<CONFIG:Debug>,1,0>
         BUILD_COMMAND make all check
         INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
