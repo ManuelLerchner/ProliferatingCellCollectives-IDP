@@ -48,6 +48,6 @@ struct SolverConfig {
   int getMinPreallocationSize(int n) const {
     int total_ranks;
     MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
-    return std::max(min_preallocation_size, n * 12) / total_ranks;
+    return std::max(min_preallocation_size, n * 8) / total_ranks;
   }
 };

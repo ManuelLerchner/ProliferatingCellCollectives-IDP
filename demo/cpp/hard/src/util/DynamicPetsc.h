@@ -27,7 +27,6 @@ class DynamicVecWrapper {
     PetscInt required_global_size = global_size + additional_items;
     if (global_capacity < required_global_size) {
       PetscInt new_global_capacity = std::max(required_global_size, static_cast<PetscInt>(global_capacity * growth_factor));
-      PetscPrintf(PETSC_COMM_WORLD, "\nLOG: DynamicVecWrapper reallocating from capacity %d to %d (size: %d, required: %d)\n", global_capacity, new_global_capacity, global_size, required_global_size);
 
       int mpi_size;
       MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size);
@@ -120,7 +119,6 @@ class DynamicMatWrapper {
     PetscInt required_global_cols = global_ncols + additional_cols;
     if (global_col_capacity < required_global_cols) {
       PetscInt new_global_col_capacity = std::max(required_global_cols, static_cast<PetscInt>(global_col_capacity * growth_factor));
-      PetscPrintf(PETSC_COMM_WORLD, "\nLOG: DynamicMatWrapper reallocating from capacity %d to %d (cols: %d, required: %d )\n", global_col_capacity, new_global_col_capacity, global_ncols, required_global_cols);
 
       PetscInt m_local;
       MatGetLocalSize(mat, &m_local, NULL);
@@ -131,6 +129,8 @@ class DynamicMatWrapper {
 
       MatWrapper new_mat = MatWrapper::CreateAIJ(m_local, new_local_ncols);
 
+      MatSetOption(new_mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+
       if (global_ncols > 0) {
         // Preallocate memory for the new matrix to avoid costly reallocations
         PetscInt Istart, Iend;
@@ -139,13 +139,16 @@ class DynamicMatWrapper {
         std::vector<PetscInt> d_nnz(m_local_rows, 0);
         std::vector<PetscInt> o_nnz(m_local_rows, 0);
 
+        PetscInt cstart, cend;
+        PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(new_mat, &cstart, &cend));
+
         for (PetscInt i = 0; i < m_local_rows; ++i) {
           PetscInt row = Istart + i;
           PetscInt ncols_in_row;
           const PetscInt* cols;
           PetscCallAbort(PETSC_COMM_WORLD, MatGetRow(mat, row, &ncols_in_row, &cols, NULL));
           for (PetscInt j = 0; j < ncols_in_row; ++j) {
-            if (cols[j] >= Istart && cols[j] < Iend) {
+            if (cols[j] >= cstart && cols[j] < cend) {
               d_nnz[i]++;
             } else {
               o_nnz[i]++;
@@ -172,6 +175,8 @@ class DynamicMatWrapper {
       PetscCallAbort(PETSC_COMM_WORLD, MatAssemblyEnd(new_mat, MAT_FINAL_ASSEMBLY));
 
       mat = std::move(new_mat);
+
+      MatSetOption(mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
       PetscCallAbort(PETSC_COMM_WORLD, MatGetSize(mat, NULL, &global_col_capacity));
     }
   }

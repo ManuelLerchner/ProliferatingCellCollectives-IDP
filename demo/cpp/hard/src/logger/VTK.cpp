@@ -393,9 +393,9 @@ std::vector<VTKField> ParticleDataExtractor::extractPointData(const void* state)
     directions.push_back(dir);
 
     // euler angles in degrees
-    double angleXY = std::atan2(dir[1], dir[0]) * 180.0 / M_PI;
-    double angleXZ = std::atan2(dir[2], dir[0]) * 180.0 / M_PI;
-    double angleYZ = std::atan2(dir[2], dir[1]) * 180.0 / M_PI;
+    double angleXY = std::fmod(std::abs(std::atan2(dir[1], dir[0]) * 180.0 / M_PI), 180.0);
+    double angleXZ = std::fmod(std::abs(std::atan2(dir[2], dir[0]) * 180.0 / M_PI), 180.0);
+    double angleYZ = std::fmod(std::abs(std::atan2(dir[2], dir[1]) * 180.0 / M_PI), 180.0);
 
     anglesXY.push_back(angleXY);
     anglesXZ.push_back(angleXZ);

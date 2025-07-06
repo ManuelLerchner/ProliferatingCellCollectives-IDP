@@ -336,9 +336,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
-    double future_collision_factor = constraint_iterations == 0 ? 0.3 : 0;
+    double future_colission_tolerance = constraint_iterations == 0 ? 0 : solver_config.tolerance;
     auto new_constraints = collision_detector.detectCollisions(
-        particle_manager, constraint_iterations, future_collision_factor);
+        particle_manager, constraint_iterations, future_colission_tolerance);
 
     // Filter constraints to include at most `max_constraints_per_pair` constraints per particle pair.
     std::vector<Constraint> filtered_constraints;
