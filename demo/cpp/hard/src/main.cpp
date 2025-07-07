@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
 
     PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-    double DT = 30;
-    double END_TIME = 300 * 60;
+    double DT = 10;
+    double END_TIME = 500 * 60;
     double LOG_FREQUENCY = 1 * 60;
 
     PhysicsConfig physic_config = {
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         .min_box_size = {physic_config.l0 + 5, physic_config.l0 + 5, 0},
         .domain_resize_frequency = 50,
 
-        .enable_adaptive_dt = true,
+        .enable_adaptive_dt = false,
         .target_bbpgd_iterations = 100,
         .dt_adjust_frequency = 10,
         .dt_adjust_factor = 0.1,
@@ -48,11 +48,11 @@ int main(int argc, char** argv) {
     SolverConfig solver_config = {
         .tolerance = physic_config.l0 / 1e3,
         .max_bbpgd_iterations = 10000,
-        .max_recursive_iterations = 500,
+        .max_recursive_iterations = 1000,
         .linked_cell_size = physic_config.l0 * 2.2,
         .min_preallocation_size = 0,
         .growth_factor = 2,
-        .max_constraints_per_pair = 6,
+        .max_constraints_per_pair = 500,
     };
 
     Domain domain(sim_config, physic_config, solver_config);

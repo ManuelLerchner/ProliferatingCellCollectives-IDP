@@ -26,13 +26,11 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
     log_every_n_steps = std::max(1, static_cast<int>(sim_config.log_frequency_seconds / current_dt_));
   }
 
-  vtk_logger_ = vtk::createParticleLogger("./vtk_output", log_every_n_steps);
-  constraint_loggers_ = vtk::createConstraintLogger("./vtk_output", log_every_n_steps);
-  domain_decomposition_logger_ = vtk::createDomainDecompositionLogger("./vtk_output", log_every_n_steps);
-  ghost_logger_ = vtk::createParticleLogger("./vtk_output/ghost", log_every_n_steps);
+  particle_logger_ = std::make_unique<vtk::ParticleLogger>("./vtk_output", "particles");
+  constraint_logger_ = std::make_unique<vtk::ConstraintLogger>("./vtk_output", "constraints");
   createParticleMPIType(&mpi_particle_type_);
 
-  particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *vtk_logger_, *constraint_loggers_);
+  particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_);
 }
 
 void Domain::queueNewParticles(std::vector<Particle> particles) {
@@ -91,7 +89,6 @@ void Domain::run() {
 
     auto update_ghosts_fn = [this]() { this->exchangeGhostParticles(); };
 
-    auto particles_before_step = particle_manager_->local_particles;
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
     elapsed_time_seconds_ += current_dt_;
 
@@ -99,17 +96,9 @@ void Domain::run() {
       adjustDt(solver_solution);
     }
 
-    if (vtk_logger_) {
-      auto sim_state = createSimulationState(solver_solution, particles_before_step);
-      auto dd_state = createDomainDecompositionState();
-
-      auto ghost_state = createSimulationState(solver_solution, particle_manager_->ghost_particles);
-
-      vtk_logger_->logTimestepComplete(current_dt_, sim_state.get());
-      // ghost_logger_->logTimestepComplete(sim_config_.dt, ghost_state.get());
-      constraint_loggers_->logTimestepComplete(current_dt_, sim_state.get());
-
-      domain_decomposition_logger_->logTimestepComplete(current_dt_, dd_state.get());
+    if (particle_logger_) {
+      particle_logger_->log(particle_manager_->local_particles);
+      constraint_logger_->log(solver_solution.constraints);
 
       // Determine colony radius
       double colony_radius_local = 0;
@@ -283,60 +272,6 @@ void Domain::padGlobalBounds(double& global_min_x, double& global_max_x, double&
     global_min_z -= padding;
     global_max_z += padding;
   }
-}
-
-std::unique_ptr<vtk::DomainDecompositionState> Domain::createDomainDecompositionState() const {
-  std::unique_ptr<vtk::DomainDecompositionState> state = std::make_unique<vtk::DomainDecompositionState>();
-
-  auto spatial_grid = particle_manager_->physics_engine->getCollisionDetectorSpatialGrid();
-
-  state->domain_min = {min_bounds_[0], min_bounds_[1], min_bounds_[2]};
-  state->domain_max = {max_bounds_[0], max_bounds_[1], max_bounds_[2]};
-  state->rank = rank_;
-
-  state->link_cells_min = spatial_grid.getDomainMin();
-  state->link_cells_max = spatial_grid.getDomainMax();
-  state->link_cells_grid_dims = spatial_grid.getGridDims();
-
-  return state;
-}
-
-std::unique_ptr<vtk::ParticleSimulationState> Domain::createSimulationState(
-    const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>& particles) const {
-  auto state = std::make_unique<vtk::ParticleSimulationState>();
-
-  auto& local_particles = particle_manager_->local_particles;
-
-  state->particles = particles;
-  state->constraints = std::move(solver_solution.constraints);
-
-  // Initialize empty force/torque vectors (would be populated by physics engine in full implementation)
-  state->forces.resize(local_particles.size());
-  state->torques.resize(local_particles.size());
-  state->velocities_linear.resize(local_particles.size());
-  state->velocities_angular.resize(local_particles.size());
-
-  for (int i = 0; i < local_particles.size(); i++) {
-    state->forces[i] = local_particles[i].getForce();
-    state->torques[i] = local_particles[i].getTorque();
-    state->velocities_linear[i] = local_particles[i].getVelocityLinear();
-    state->velocities_angular[i] = local_particles[i].getVelocityAngular();
-  }
-
-  // Calculate max overlap from constraints
-  state->residual = solver_solution.residual;
-
-  state->num_constraints.resize(local_particles.size());
-  for (int i = 0; i < local_particles.size(); i++) {
-    state->num_constraints[i] = local_particles[i].getNumConstraints();
-  }
-
-  // Set other state values
-  state->constraint_iterations = solver_solution.constraint_iterations;
-  state->bbpgd_iterations = solver_solution.bbpgd_iterations;
-  state->l0 = physics_config_.l0;
-
-  return state;
 }
 
 void Domain::groupParticlesForExchange(std::vector<std::vector<ParticleData>>& particles_to_send,

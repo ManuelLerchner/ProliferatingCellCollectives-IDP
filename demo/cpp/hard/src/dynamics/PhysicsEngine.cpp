@@ -10,7 +10,7 @@
 
 #include "Constraint.h"
 #include "Physics.h"
-#include "logger/VTK.h"
+#include "logger/ParticleLogger.h"
 #include "simulation/Particle.h"
 #include "simulation/ParticleManager.h"
 #include "solver/BBPGD.h"
@@ -304,7 +304,7 @@ struct pair_hash {
   }
 };
 
-PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::SimulationLogger& vtk_logger, vtk::SimulationLogger& constraint_logger) {
+PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
@@ -336,7 +336,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
-    double future_colission_tolerance = constraint_iterations == 0 ? 0 : solver_config.tolerance;
+    double future_colission_tolerance = constraint_iterations == 0 ? 0.1 : 0;
     auto new_constraints = collision_detector.detectCollisions(
         particle_manager, constraint_iterations, future_colission_tolerance);
 
@@ -376,7 +376,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
                 constraint_iterations, global_total_constraints, global_new_constraints_count, logged_overlap, res, bbpgd_iterations_this_step, memory_usage / 1024 / 1024);
 
     // Check convergence
-    if (max_overlap < solver_config.tolerance && constraint_iterations > 0) {
+    if (max_overlap < 5 * solver_config.tolerance && constraint_iterations > 0) {
       solver_state = SolverState::CONVERGED;
       break;
     }
@@ -446,6 +446,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     gradient(GAMMA, PHI);
 
     std::swap(workspaces->ldot_curr_workspace, workspaces->ldot_prev);
+
+    // log substep
+    particle_logger.log(particle_manager.local_particles);
+    constraint_logger.log(all_constraints);
 
     constraint_iterations++;
   }

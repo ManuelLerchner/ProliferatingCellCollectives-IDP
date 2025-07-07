@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logger/VTK.h"
+#include "logger/ParticleLogger.h"
 #include "simulation/ParticleData.h"
 #include "simulation/ParticleManager.h"
 #include "util/Config.h"
@@ -18,10 +18,6 @@ class Domain {
   void exchangeGhostParticles();
   void resizeDomain();
   void printProgress(int current_iteration, double colony_radius) const;
-
-  std::unique_ptr<vtk::DomainDecompositionState> createDomainDecompositionState() const;
-  std::unique_ptr<vtk::ParticleSimulationState> createSimulationState(
-      const PhysicsEngine::SolverSolution& solver_solution, const std::vector<Particle>& particles) const;
 
   std::pair<std::array<double, 3>, std::array<double, 3>> calculateLocalBoundingBox() const;
   void calculateGlobalBounds();
@@ -59,10 +55,8 @@ class Domain {
   std::unique_ptr<ParticleManager> particle_manager_;
   std::vector<Particle> new_particle_buffer;
 
-  std::unique_ptr<vtk::SimulationLogger> vtk_logger_;
-  std::unique_ptr<vtk::SimulationLogger> ghost_logger_;
-  std::unique_ptr<vtk::SimulationLogger> constraint_loggers_;
-  std::unique_ptr<vtk::SimulationLogger> domain_decomposition_logger_;
+  std::unique_ptr<vtk::ParticleLogger> particle_logger_;
+  std::unique_ptr<vtk::ConstraintLogger> constraint_logger_;
 
   MPI_Datatype mpi_particle_type_;
 

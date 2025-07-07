@@ -8,7 +8,7 @@ class Constraint {
   // Constructor with local IDs and ownership
   Constraint(double delta0, int gidI, int gidJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
-             double stressI, double stressJ, int gid);
+             double stressI, double stressJ, int gid, int iteration);
 
   Constraint();
 
@@ -33,6 +33,8 @@ class Constraint {
   double stressJ;
   // global index of the constraint
   int gid;
+  // iteration of the constraint
+  int iteration;
 
   void print() const;
 };

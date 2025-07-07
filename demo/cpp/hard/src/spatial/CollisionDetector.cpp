@@ -44,15 +44,6 @@ CollisionDetails CollisionDetector::checkSpherocylinderCollision(
     const Particle& p1, const Particle& p2, double future_colission_tolerance) {
   using namespace utils::ArrayMath;
 
-  double sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
-
-  double sum_lengths = p1.getLength() + p2.getLength();
-  double dist_centers_sq = magnitude_squared(p1.getPosition() - p2.getPosition());
-
-  if (dist_centers_sq > sum_lengths * sum_lengths) {
-    return CollisionDetails{false, false, 0.0, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-  }
-
   CollisionDetails details;
 
   // Get the line segments (cylindrical cores) of both particles
@@ -71,19 +62,18 @@ CollisionDetails CollisionDetector::checkSpherocylinderCollision(
   details.closest_p2 = closest_p2;
 
   // Calculate radii and overlap
+  double sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
+
   details.overlap = sum_radii - result.distance;
 
-  details.future_collision = -details.overlap < future_colission_tolerance;
-
   details.collision_detected = details.overlap > collision_tolerance_;
+  details.future_collision = !details.collision_detected && std::abs(details.overlap) < future_colission_tolerance;
 
-  if (details.collision_detected || details.future_collision) {
-    // Calculate contact point and normal using ArrayMath
-    details.contact_point = 0.5 * (closest_p1 + closest_p2);
+  // Calculate contact point and normal using ArrayMath
+  details.contact_point = 0.5 * (closest_p1 + closest_p2);
 
-    std::array<double, 3> direction = closest_p1 - closest_p2;
-    details.normal = normalize(direction);
-  }
+  details.normal = normalize(closest_p1 - closest_p2);
+
   return details;
 }
 
@@ -255,7 +245,8 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       rPos1, rPos2,
       details.contact_point,
       stress1, stress2,
-      -1);
+      -1,
+      constraint_iterations);
 
   return constraint;
 }
