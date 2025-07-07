@@ -24,7 +24,8 @@ inline BBPGDResult BBPGD(
     GradientFunc&& gradient,
     ResidualFunc&& residual,
     VecWrapper& gamma,  // in-out parameter
-    const SolverConfig& config) {
+    double allowed_residual,
+    int max_bbpgd_iterations) {
   auto phi_curr = VecWrapper::Like(gamma);
 
   // Compute initial gradient and residual
@@ -32,7 +33,7 @@ inline BBPGDResult BBPGD(
   gradient(gamma, phi_curr);
   double res = residual(phi_curr, gamma);
 
-  if (res <= config.tolerance) {
+  if (res <= allowed_residual) {
     return {.bbpgd_iterations = 0, .residual = res};
   }
 
@@ -51,7 +52,7 @@ inline BBPGDResult BBPGD(
 
   long long iteration = 0;
 
-  for (iteration = 0; iteration < config.max_bbpgd_iterations; iteration++) {
+  for (iteration = 0; iteration < max_bbpgd_iterations; iteration++) {
     // We compute the next gamma into a temporary, then swap.
     auto gamma_next = VecWrapper::Like(gamma);
 
@@ -66,7 +67,7 @@ inline BBPGDResult BBPGD(
     res = residual(g_next, gamma_next);
 
     // Step 9-11: Check convergence
-    if (res <= config.tolerance) {
+    if (res <= allowed_residual) {
       gamma = std::move(gamma_next);
       break;
     }
@@ -112,7 +113,7 @@ inline BBPGDResult BBPGD(
     std::swap(phi_curr, g_next);
   }
 
-  if (iteration == config.max_bbpgd_iterations) {
+  if (iteration == max_bbpgd_iterations) {
     PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %lld iterations. Residual: %f", iteration, res);
   }
 

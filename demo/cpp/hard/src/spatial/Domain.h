@@ -57,6 +57,7 @@ class Domain {
 
   std::unique_ptr<vtk::ParticleLogger> particle_logger_;
   std::unique_ptr<vtk::ConstraintLogger> constraint_logger_;
+  std::unique_ptr<vtk::DomainLogger> domain_logger_;
 
   MPI_Datatype mpi_particle_type_;
 
@@ -73,4 +74,5 @@ class Domain {
   // For ETA calculation
   double last_eta_check_time_ = 0.0;
   double last_eta_check_sim_time_ = 0.0;
+  double time_last_log_ = 0.0;
 };

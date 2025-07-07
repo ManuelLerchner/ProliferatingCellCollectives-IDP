@@ -51,7 +51,7 @@ void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& loc
 
   for (int i = 0; i < local_num_constraints; ++i) {
     PetscInt c_global_idx = col_offset + i;
-    VecSetValue(phi, c_global_idx, local_constraints[i].delta0, INSERT_VALUES);
+    VecSetValue(phi, c_global_idx, local_constraints[i].signed_distance, INSERT_VALUES);
   }
 }
 

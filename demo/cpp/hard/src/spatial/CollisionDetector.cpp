@@ -40,47 +40,6 @@ std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getPa
   return {start_point, end_point};
 }
 
-CollisionDetails CollisionDetector::checkSpherocylinderCollision(
-    const Particle& p1, const Particle& p2, double future_colission_tolerance) {
-  using namespace utils::ArrayMath;
-
-  CollisionDetails details;
-
-  // Get the line segments (cylindrical cores) of both particles
-  auto [p1_start, p1_end] = getParticleEndpoints(p1);
-  auto [p2_start, p2_end] = getParticleEndpoints(p2);
-
-  // Use DCPQuery for accurate segment-segment distance calculation
-
-  std::array<double, 3> closest_p1, closest_p2;
-  auto result = distance_query(p1_start, p1_end, p2_start, p2_end);
-  closest_p1 = result.closest[0];
-  closest_p2 = result.closest[1];
-
-  // Store closest points
-  details.closest_p1 = closest_p1;
-  details.closest_p2 = closest_p2;
-
-  // Calculate radii and overlap
-  double sum_radii = (p1.getDiameter() + p2.getDiameter()) / 2.0;
-
-  details.overlap = sum_radii - result.distance;
-
-  details.collision_detected = details.overlap > collision_tolerance_;
-  details.future_collision = !details.collision_detected && std::abs(details.overlap) < future_colission_tolerance;
-
-  // Calculate contact point and normal using ArrayMath
-  details.contact_point = 0.5 * (closest_p1 + closest_p2);
-
-  details.normal = normalize(closest_p1 - closest_p2);
-
-  return details;
-}
-
-std::array<double, 3> CollisionDetector::getParticleDirection(const Particle& p) {
-  return utils::Quaternion::getDirectionVector(p.getQuaternion());
-}
-
 void CollisionDetector::updateBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
   double padding = 3.0;
   std::array<double, 3> padded_min = {min_bounds[0] - padding, min_bounds[1] - padding, min_bounds[2] - padding};
@@ -91,11 +50,11 @@ void CollisionDetector::updateBounds(const std::array<double, 3>& min_bounds, co
 std::vector<Constraint> CollisionDetector::detectCollisions(
     ParticleManager& particle_manager,
     int constraint_iterations,
-    double future_colission_tolerance) {
+    std::function<bool(const Constraint&)> filter_constraints) {
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairs(particle_manager, constraints, constraint_iterations, future_colission_tolerance);
+  checkParticlePairs(particle_manager, constraints, constraint_iterations, filter_constraints);
 
   // Sort constraints by their contact point's x-position to group them spatially.
   std::sort(constraints.begin(), constraints.end(), [](const Constraint& a, const Constraint& b) {
@@ -152,7 +111,7 @@ void CollisionDetector::checkParticlePairs(
     ParticleManager& particle_manager,
     std::vector<Constraint>& constraints,
     int constraint_iterations,
-    double future_colission_tolerance) {
+    std::function<bool(const Constraint&)> filter_constraints) {
   // Create ghost lookup map for efficiency
   std::unordered_map<PetscInt, const Particle*> ghost_map;
   for (const auto& ghost : particle_manager.ghost_particles) {
@@ -167,14 +126,14 @@ void CollisionDetector::checkParticlePairs(
 
     auto constraint = tryCreateConstraint(
         p1, p2,
-        future_colission_tolerance,
         pair.is_localI,
         pair.is_localJ,
-        collision_tolerance_,
         constraint_iterations);
 
     if (constraint.has_value()) {
-      constraints.push_back(constraint.value());
+      if (filter_constraints(constraint.value())) {
+        constraints.push_back(constraint.value());
+      }
     }
   }
 }
@@ -197,27 +156,47 @@ Particle& CollisionDetector::getParticle(
 
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     Particle& p1, Particle& p2,
-    double future_colission_tolerance,
-    bool p1_local, bool p2_local, double tolerance,
+    bool p1_local, bool p2_local,
     int constraint_iterations) {
-  CollisionDetails details = checkSpherocylinderCollision(p1, p2, future_colission_tolerance);
+  using namespace utils::ArrayMath;
+  // Get the line segments (cylindrical cores) of both particles
+  auto [p1_start, p1_end] = getParticleEndpoints(p1);
+  auto [p2_start, p2_end] = getParticleEndpoints(p2);
 
-  if (!details.collision_detected && !details.future_collision) {
-    return std::nullopt;
-  }
+  // Use DCPQuery for accurate segment-segment distance calculation
+
+  std::array<double, 3> closest_p1, closest_p2;
+  double distance;
+  auto result = distance_query(p1_start, p1_end, p2_start, p2_end);
+  closest_p1 = result.closest[0];
+  closest_p2 = result.closest[1];
+  distance = result.distance;
+
+  // Calculate radii and overlap
+  // getDiameter() returns the full diameter, so this is the radius
+  double r1 = p1.getDiameter();
+  double r2 = p2.getDiameter();
+  double sum_radii = (r1 + r2) / 2.0;  // Average of diameters = sum of radii
+
+  double signed_distance = distance - sum_radii;
+
+  // Calculate contact point at the midpoint of the overlap region
+  std::array<double, 3> contact_point = 0.5 * (closest_p1 + closest_p2);
 
   using namespace utils::ArrayMath;
 
   const auto& pos1 = p1.getPosition();
   const auto& pos2 = p2.getPosition();
-  std::array<double, 3> rPos1 = details.contact_point - pos1;
-  std::array<double, 3> rPos2 = details.contact_point - pos2;
+  std::array<double, 3> rPos1 = contact_point - pos1;
+  std::array<double, 3> rPos2 = contact_point - pos2;
 
   auto orientation1 = utils::Quaternion::getDirectionVector(p1.getQuaternion());
   auto orientation2 = utils::Quaternion::getDirectionVector(p2.getQuaternion());
 
-  auto stress1 = 0.5 * abs(dot(details.normal, orientation1));
-  auto stress2 = 0.5 * abs(dot(details.normal, orientation2));
+  std::array<double, 3> contact_normal = normalize(closest_p1 - closest_p2);
+
+  auto stress1 = 0.5 * abs(dot(contact_normal, orientation1));
+  auto stress2 = 0.5 * abs(dot(contact_normal, orientation2));
 
   bool owned_by_me;
   if (p1_local && p2_local) {
@@ -239,11 +218,11 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   }
 
   auto constraint = Constraint(
-      -details.overlap,
+      signed_distance,  // Now penetration is positive for overlap
       p1.getGID(), p2.getGID(),
-      details.normal,
+      contact_normal,
       rPos1, rPos2,
-      details.contact_point,
+      contact_point,
       stress1, stress2,
       -1,
       constraint_iterations);

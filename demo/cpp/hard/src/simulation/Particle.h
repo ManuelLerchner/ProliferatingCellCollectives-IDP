@@ -27,13 +27,13 @@ class Particle {
 
   void updateLength(double ldot, double dt);
 
-  void addForce(const PetscScalar* df, int offset);
+  void setForce(const PetscScalar* df, int offset);
 
-  void addTorque(const PetscScalar* df, int offset);
+  void setTorque(const PetscScalar* df, int offset);
 
-  void addVelocityLinear(const PetscScalar* dU);
+  void setVelocityLinear(const PetscScalar* dU);
 
-  void addVelocityAngular(const PetscScalar* dU);
+  void setVelocityAngular(const PetscScalar* dU);
 
   void eulerStepPosition(const double* dC, double dt);
 
@@ -41,9 +41,9 @@ class Particle {
 
   void reset();
 
-  void addForceAndTorque(const PetscScalar* f);
+  void setForceAndTorque(const PetscScalar* f);
 
-  void addVelocity(const PetscScalar* dU);
+  void setVelocity(const PetscScalar* dU);
 
   void printState() const;
 

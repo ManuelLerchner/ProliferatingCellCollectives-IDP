@@ -21,13 +21,9 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   start_time_ = MPI_Wtime();
   last_eta_check_time_ = start_time_;
 
-  int log_every_n_steps = 1;
-  if (sim_config.log_frequency_seconds > 0) {
-    log_every_n_steps = std::max(1, static_cast<int>(sim_config.log_frequency_seconds / current_dt_));
-  }
-
   particle_logger_ = std::make_unique<vtk::ParticleLogger>("./vtk_output", "particles");
   constraint_logger_ = std::make_unique<vtk::ConstraintLogger>("./vtk_output", "constraints");
+  domain_logger_ = std::make_unique<vtk::DomainLogger>("./vtk_output", "domain");
   createParticleMPIType(&mpi_particle_type_);
 
   particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_);
@@ -92,25 +88,27 @@ void Domain::run() {
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
     elapsed_time_seconds_ += current_dt_;
 
+    if (elapsed_time_seconds_ - time_last_log_ > sim_config_.log_frequency_seconds) {
+      particle_logger_->log(particle_manager_->local_particles);
+      constraint_logger_->log(solver_solution.constraints);
+      domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
+      time_last_log_ = elapsed_time_seconds_;
+    }
+
     if (sim_config_.enable_adaptive_dt && i % sim_config_.dt_adjust_frequency == 0) {
       adjustDt(solver_solution);
     }
 
-    if (particle_logger_) {
-      particle_logger_->log(particle_manager_->local_particles);
-      constraint_logger_->log(solver_solution.constraints);
-
-      // Determine colony radius
-      double colony_radius_local = 0;
-      for (const auto& p : particle_manager_->local_particles) {
-        double distance = utils::ArrayMath::magnitude(p.getPosition());
-        colony_radius_local = std::max(colony_radius_local, distance);
-      }
-
-      double colony_radius_global = globalReduce(colony_radius_local, MPI_MAX);
-
-      printProgress(i + 1, colony_radius_global);
+    // Determine colony radius
+    double colony_radius_local = 0;
+    for (const auto& p : particle_manager_->local_particles) {
+      double distance = utils::ArrayMath::magnitude(p.getPosition());
+      colony_radius_local = std::max(colony_radius_local, distance);
     }
+
+    double colony_radius_global = globalReduce(colony_radius_local, MPI_MAX);
+
+    printProgress(i + 1, colony_radius_global);
     PetscPrintf(PETSC_COMM_WORLD, "\n");
     i++;
   }

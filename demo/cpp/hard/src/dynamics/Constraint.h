@@ -6,15 +6,15 @@
 class Constraint {
  public:
   // Constructor with local IDs and ownership
-  Constraint(double delta0, int gidI, int gidJ,
+  Constraint(double signed_distance, int gidI, int gidJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
              double stressI, double stressJ, int gid, int iteration);
 
   Constraint();
 
  public:
-  // current overlap of the constraint
-  double delta0;
+  // current signed_distance of the constraint
+  double signed_distance;
   // unique global ID of particle I
   int gidI;
   // unique global ID of particle J

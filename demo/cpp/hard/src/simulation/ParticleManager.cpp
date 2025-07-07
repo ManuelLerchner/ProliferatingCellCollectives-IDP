@@ -99,9 +99,9 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
     const PetscScalar* velocity_values = &dU_array[i * 6];
 
     local_particles[i].eulerStepPosition(particle_values, dt);
-    local_particles[i].addForceAndTorque(force_values);
+    local_particles[i].setForceAndTorque(force_values);
 
-    local_particles[i].addVelocity(velocity_values);
+    local_particles[i].setVelocity(velocity_values);
   }
 
   // Clean up

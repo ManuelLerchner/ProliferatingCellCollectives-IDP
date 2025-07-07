@@ -321,7 +321,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   // Create length mapping for consistent indexing
   VecWrapper l = getLengthVector(particle_manager.local_particles);
 
-  std::vector<Constraint> all_constraints;
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
 
@@ -332,40 +331,67 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   // hash map counting constraints betwen pairs of particles
   std::unordered_map<std::pair<int, int>, int, pair_hash> global_constraint_count;
 
+  std::vector<Constraint> all_constraints_set;
+
+  particle_logger.log(particle_manager.local_particles);
+  constraint_logger.log(all_constraints_set);
+
   SolverState solver_state = SolverState::RUNNING;
+  double bbpgd_allowed_tolerance = solver_config.tolerance;
+
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
-    double future_colission_tolerance = constraint_iterations == 0 ? 0.1 : 0;
-    auto new_constraints = collision_detector.detectCollisions(
-        particle_manager, constraint_iterations, future_colission_tolerance);
+    if (constraint_iterations % 100 == 0 && constraint_iterations > 0) {
+      bbpgd_allowed_tolerance *= 0.5;
+    }
 
-    // Filter constraints to include at most `max_constraints_per_pair` constraints per particle pair.
-    std::vector<Constraint> filtered_constraints;
-    for (const auto& constraint : new_constraints) {
+    auto filter_constraints = [&](const Constraint& constraint) {
+      // at the first iteration, allow a small overlap to avoid numerical issues
+      if (constraint_iterations == 0 && constraint.signed_distance < 0.1) {
+        return true;
+      }
+
+      if (constraint.signed_distance > 0) {
+        return false;
+      }
+
+      double overlap = -constraint.signed_distance;
+
+      if (overlap < solver_config.tolerance) {
+        return false;
+      }
+
       auto pair = std::make_pair(constraint.gidI, constraint.gidJ);
       if (pair.first > pair.second) std::swap(pair.first, pair.second);
       global_constraint_count[pair]++;
-      if (global_constraint_count[pair] <= solver_config.max_constraints_per_pair) {
-        filtered_constraints.push_back(constraint);
-      } else {
-        solver_state = SolverState::TOO_MANY_CONSTRAINTS;
+      return global_constraint_count[pair] <= solver_config.max_constraints_per_pair;
+    };
+
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, filter_constraints);
+
+    double max_overlap_local = 0;
+    for (const auto& constraint : new_constraints) {
+      if (constraint.signed_distance < 0) {
+        max_overlap_local = std::max(max_overlap_local, -constraint.signed_distance);
       }
     }
+    max_overlap = globalReduce<double>(max_overlap_local, MPI_MAX);
 
-    all_constraints.insert(all_constraints.end(), filtered_constraints.begin(), filtered_constraints.end());
+    // Check convergence
 
-    auto global_total_constraints = globalReduce<size_t>(all_constraints.size(), MPI_SUM);
-    auto global_new_constraints_count = globalReduce<size_t>(filtered_constraints.size(), MPI_SUM);
+    if (max_overlap < 100 * solver_config.tolerance && constraint_iterations > 1) {
+      solver_state = SolverState::CONVERGED;
+      break;
+    }
+
+    all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
+
+    auto global_total_constraints = globalReduce<size_t>(all_constraints_set.size(), MPI_SUM);
+    auto global_new_constraints_count = globalReduce<size_t>(new_constraints.size(), MPI_SUM);
 
     // Calculate matrices only for the newly identified constraints
-    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, filtered_constraints, global_new_constraints_count);
-
-    double min;
-    VecMin(PHI, NULL, &min);
-
-    // Logging
-    max_overlap = -min;
+    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, global_new_constraints_count);
 
     // memory
     PetscLogDouble memory_usage;
@@ -374,12 +400,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     double logged_overlap = std::max(0.0, max_overlap);
     PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4lld | Memory: %4.2f MB",
                 constraint_iterations, global_total_constraints, global_new_constraints_count, logged_overlap, res, bbpgd_iterations_this_step, memory_usage / 1024 / 1024);
-
-    // Check convergence
-    if (max_overlap < 5 * solver_config.tolerance && constraint_iterations > 0) {
-      solver_state = SolverState::CONVERGED;
-      break;
-    }
 
     // Recreate workspaces if needed
     bool local_need_to_recreate_workspaces = !workspaces.has_value() || vecSize(GAMMA) != vecSize(workspaces->gamma_diff_workspace);
@@ -427,7 +447,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     };
 
     // Solver
-    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, solver_config);
+    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, bbpgd_allowed_tolerance, solver_config.max_bbpgd_iterations);
 
     res = bbpgd_result_recursive.residual;
     bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
@@ -449,7 +469,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     // log substep
     particle_logger.log(particle_manager.local_particles);
-    constraint_logger.log(all_constraints);
+    constraint_logger.log(all_constraints_set);
 
     constraint_iterations++;
   }
@@ -459,7 +479,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       PetscPrintf(PETSC_COMM_WORLD, "\n  \033[92mConverged in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
       break;
     case SolverState::TOO_MANY_CONSTRAINTS:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mToo many constraints: %ld | Constraints per particle: %4.2f\033[0m | Residual: %4.2e | Overlap: %8.2e", globalReduce<size_t>(all_constraints.size(), MPI_SUM), globalReduce<size_t>(all_constraints.size(), MPI_SUM) / (double)global_num_particles, res, max_overlap);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mToo many constraints: %ld | Constraints per particle: %4.2f\033[0m | Residual: %4.2e | Overlap: %8.2e", globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(all_constraints_set.size(), MPI_SUM) / (double)global_num_particles, res, max_overlap);
       break;
     case SolverState::NOT_CONVERGED:
       PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
@@ -471,7 +491,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
 
-  return {.constraints = all_constraints, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
+  return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }
 
 void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {

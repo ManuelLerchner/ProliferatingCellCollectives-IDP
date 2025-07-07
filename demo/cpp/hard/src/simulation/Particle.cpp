@@ -55,28 +55,28 @@ void Particle::updateLength(double ldot, double dt) {
   }
 }
 
-void Particle::addForce(const PetscScalar* df, int offset) {
-  force_[0] += PetscRealPart(df[offset + 0]);
-  force_[1] += PetscRealPart(df[offset + 1]);
-  force_[2] += PetscRealPart(df[offset + 2]);
+void Particle::setForce(const PetscScalar* df, int offset) {
+  force_[0] = PetscRealPart(df[offset + 0]);
+  force_[1] = PetscRealPart(df[offset + 1]);
+  force_[2] = PetscRealPart(df[offset + 2]);
 }
 
-void Particle::addTorque(const PetscScalar* df, int offset) {
-  torque_[0] += PetscRealPart(df[offset + 0]);
-  torque_[1] += PetscRealPart(df[offset + 1]);
-  torque_[2] += PetscRealPart(df[offset + 2]);
+void Particle::setTorque(const PetscScalar* df, int offset) {
+  torque_[0] = PetscRealPart(df[offset + 0]);
+  torque_[1] = PetscRealPart(df[offset + 1]);
+  torque_[2] = PetscRealPart(df[offset + 2]);
 }
 
-void Particle::addVelocityLinear(const PetscScalar* dU) {
-  velocityLinear_[0] += PetscRealPart(dU[0]);
-  velocityLinear_[1] += PetscRealPart(dU[1]);
-  velocityLinear_[2] += PetscRealPart(dU[2]);
+void Particle::setVelocityLinear(const PetscScalar* dU) {
+  velocityLinear_[0] = PetscRealPart(dU[0]);
+  velocityLinear_[1] = PetscRealPart(dU[1]);
+  velocityLinear_[2] = PetscRealPart(dU[2]);
 }
 
-void Particle::addVelocityAngular(const PetscScalar* dU) {
-  velocityAngular_[0] += PetscRealPart(dU[0]);
-  velocityAngular_[1] += PetscRealPart(dU[1]);
-  velocityAngular_[2] += PetscRealPart(dU[2]);
+void Particle::setVelocityAngular(const PetscScalar* dU) {
+  velocityAngular_[0] = PetscRealPart(dU[0]);
+  velocityAngular_[1] = PetscRealPart(dU[1]);
+  velocityAngular_[2] = PetscRealPart(dU[2]);
 }
 
 void Particle::eulerStepPosition(const double* dC, double dt) {
@@ -104,17 +104,17 @@ void Particle::reset() {
   impedance_ = 0.0;
 }
 
-void Particle::addForceAndTorque(const PetscScalar* f) {
-  addForce(f, 0);
-  addTorque(f, 3);
+void Particle::setForceAndTorque(const PetscScalar* f) {
+  setForce(f, 0);
+  setTorque(f, 3);
 
   // Final validation after complete state update
   validateAndWarn();
 }
 
-void Particle::addVelocity(const PetscScalar* dU) {
-  addVelocityLinear(dU);
-  addVelocityAngular(dU + 3);
+void Particle::setVelocity(const PetscScalar* dU) {
+  setVelocityLinear(dU);
+  setVelocityAngular(dU + 3);
 }
 
 void Particle::normalizeQuaternion() {

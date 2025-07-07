@@ -7,11 +7,11 @@
 
 Constraint::Constraint() = default;
 
-Constraint::Constraint(double delta0, int gidI, int gidJ, std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint, double stressI, double stressJ, int gid, int iteration)
-    : delta0(delta0), gidI(gidI), gidJ(gidJ), normI(normI), rPosI(posI), rPosJ(posJ), contactPoint(contactPoint), stressI(stressI), stressJ(stressJ), gid(gid), iteration(iteration) {}
+Constraint::Constraint(double signed_distance, int gidI, int gidJ, std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint, double stressI, double stressJ, int gid, int iteration)
+    : signed_distance(signed_distance), gidI(gidI), gidJ(gidJ), normI(normI), rPosI(posI), rPosJ(posJ), contactPoint(contactPoint), stressI(stressI), stressJ(stressJ), gid(gid), iteration(iteration) {}
 
 void Constraint::print() const {
-  std::cout << "delta0: " << delta0 << std::endl;
+  std::cout << "signed_distance: " << signed_distance << std::endl;
   std::cout << "gidI: " << gidI << std::endl;
   std::cout << "gidJ: " << gidJ << std::endl;
   std::cout << "normI: " << normI[0] << ", " << normI[1] << ", " << normI[2] << std::endl;

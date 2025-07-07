@@ -9,16 +9,6 @@
 #include "simulation/Particle.h"
 #include "spatial/SpatialGrid.h"
 
-struct CollisionDetails {
-  bool collision_detected;  // Actual penetration/overlap
-  bool future_collision;    // Early warning: separation < 0.3 * diameter
-  double overlap;
-  std::array<double, 3> contact_point;
-  std::array<double, 3> normal;
-  std::array<double, 3> closest_p1;
-  std::array<double, 3> closest_p2;
-};
-
 class ParticleManager;
 
 class CollisionDetector {
@@ -30,7 +20,7 @@ class CollisionDetector {
   std::vector<Constraint> detectCollisions(
       ParticleManager& particle_manager,
       int constraint_iterations,
-      double future_colission_factor);
+      std::function<bool(const Constraint&)> filter_constraints);
 
   // Simplified helper methods
   void updateSpatialGrid(ParticleManager& particle_manager);
@@ -42,9 +32,6 @@ class CollisionDetector {
   double cell_size_;
   SpatialGrid spatial_grid_;
 
-  CollisionDetails checkSpherocylinderCollision(
-      const Particle& p1, const Particle& p2, double future_colission_factor);
-
   std::array<double, 3> getParticleDirection(const Particle& p);
   std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
 
@@ -52,7 +39,7 @@ class CollisionDetector {
       ParticleManager& particle_manager,
       std::vector<Constraint>& constraints,
       int constraint_iterations,
-      double future_colission_factor);
+      std::function<bool(const Constraint&)> filter_constraints);
 
   Particle& getParticle(
       int global_id,
@@ -60,7 +47,6 @@ class CollisionDetector {
 
   std::optional<Constraint> tryCreateConstraint(
       Particle& p1, Particle& p2,
-      double future_colission_factor,
-      bool p1_local, bool p2_local, double tolerance,
+      bool p1_local, bool p2_local,
       int constraint_iterations);
 };
