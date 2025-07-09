@@ -33,6 +33,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
 
     gids[i] = particles[i].getGID();
     impedances[i] = particles[i].getImpedance();
+
     number_of_constraints[i] = particles[i].getNumConstraints();
     ages[i] = particles[i].getAge();
     forces[i] = particles[i].getForce();

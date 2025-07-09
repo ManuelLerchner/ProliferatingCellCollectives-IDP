@@ -39,8 +39,6 @@ class Particle {
 
   void eulerStepLength(double ldot, double dt);
 
-  void reset();
-
   void setForceAndTorque(const PetscScalar* f);
 
   void setVelocity(const PetscScalar* dU);

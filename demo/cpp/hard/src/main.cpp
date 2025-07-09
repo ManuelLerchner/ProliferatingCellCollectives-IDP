@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
     double DT = 10;
-    double END_TIME = 600 * 60;
+    double END_TIME = 800 * 60;
     double LOG_FREQUENCY = 1 * 60;
 
     PhysicsConfig physic_config = {
@@ -26,7 +26,6 @@ int main(int argc, char** argv) {
         .LAMBDA = 2.44e-3,
         .temperature = 0.01,
         .monolayer = true,
-        .gravity = {0.0, 0.0, 0.0},
     };
 
     SimulationConfig sim_config = {
@@ -34,7 +33,6 @@ int main(int argc, char** argv) {
         .end_time = END_TIME,
         .log_frequency_seconds = LOG_FREQUENCY,
         .min_box_size = {physic_config.l0 + 2, physic_config.l0 + 2, 0},
-        .domain_resize_frequency = 50,
 
         .enable_adaptive_dt = true,
         .target_bbpgd_iterations = 500,
@@ -45,12 +43,12 @@ int main(int argc, char** argv) {
 
     SolverConfig solver_config = {
         .tolerance = physic_config.l0 / 1e3,
+        .allowed_overlap = physic_config.l0 / 1e2,
         .max_bbpgd_iterations = 10000,
         .max_recursive_iterations = 50,
         .linked_cell_size = physic_config.l0 * 2.2,
-        .min_preallocation_size = 0,
-        .growth_factor = 0,
-        .max_constraints_per_pair = 500,
+        .growth_factor = 1.1,
+        .particle_preallocation_factor = 10,
     };
 
     Domain domain(sim_config, physic_config, solver_config);

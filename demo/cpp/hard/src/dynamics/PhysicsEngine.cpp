@@ -363,7 +363,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     MPI_Barrier(PETSC_COMM_WORLD);
 
-    if (max_overlap < 0.01 && constraint_iterations > 1) {
+    if (max_overlap < solver_config.allowed_overlap && constraint_iterations > 1) {
       MPI_Barrier(PETSC_COMM_WORLD);
       solver_state = SolverState::CONVERGED;
       break;
@@ -455,8 +455,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     updateConstraintsFromSolution(all_constraints_set, GAMMA, PHI);
 
     // log substep
-    particle_logger.log(particle_manager.local_particles);
-    constraint_logger.log(all_constraints_set);
+    // particle_logger.log(particle_manager.local_particles);
+    // constraint_logger.log(all_constraints_set);
 
     constraint_iterations++;
   }

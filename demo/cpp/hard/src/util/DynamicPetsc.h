@@ -28,6 +28,8 @@ class DynamicVecWrapper {
     if (global_capacity < required_global_size) {
       PetscInt new_global_capacity = std::max(required_global_size, static_cast<PetscInt>(global_capacity * growth_factor));
 
+      PetscPrintf(PETSC_COMM_WORLD, "Resizing vec from %d to %d\n", global_capacity, new_global_capacity);
+
       int mpi_size;
       MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size);
       PetscInt new_local_capacity = (new_global_capacity + mpi_size - 1) / mpi_size;
@@ -119,6 +121,8 @@ class DynamicMatWrapper {
     PetscInt required_global_cols = global_ncols + additional_cols;
     if (global_col_capacity < required_global_cols) {
       PetscInt new_global_col_capacity = std::max(required_global_cols, static_cast<PetscInt>(global_col_capacity * growth_factor));
+
+      PetscPrintf(PETSC_COMM_WORLD, "Resizing mat from %d to %d\n", global_col_capacity, new_global_col_capacity);
 
       PetscInt m_local;
       MatGetLocalSize(mat, &m_local, NULL);

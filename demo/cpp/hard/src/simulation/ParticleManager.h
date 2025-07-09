@@ -19,7 +19,6 @@ class ParticleManager {
 
   void queueNewParticles(Particle p);
   void commitNewParticles();
-  void resetLocalParticles();
 
   void moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution);
   void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);

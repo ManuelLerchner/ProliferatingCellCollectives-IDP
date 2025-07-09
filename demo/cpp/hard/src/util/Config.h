@@ -11,7 +11,6 @@ struct SimulationConfig {
   double end_time;
   double log_frequency_seconds = 0;
   Vec3d min_box_size;
-  int domain_resize_frequency;
 
   // Adaptive timestepping parameters
   bool enable_adaptive_dt;
@@ -29,7 +28,6 @@ struct PhysicsConfig {
   double LAMBDA;
   double temperature;
   bool monolayer;
-  Vec3d gravity;
 
   double getLambdaDimensionless() const {
     return (TAU / (xi * l0 * l0)) * LAMBDA;
@@ -38,16 +36,16 @@ struct PhysicsConfig {
 
 struct SolverConfig {
   double tolerance;
+  double allowed_overlap;
   long long max_bbpgd_iterations;
   int max_recursive_iterations;
   double linked_cell_size;
-  int min_preallocation_size;
   double growth_factor;
-  int max_constraints_per_pair;
+  double particle_preallocation_factor;
 
   int getMinPreallocationSize(int n) const {
     int total_ranks;
     MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
-    return std::max(min_preallocation_size, n * 8) / total_ranks;
+    return n * particle_preallocation_factor / total_ranks;
   }
 };

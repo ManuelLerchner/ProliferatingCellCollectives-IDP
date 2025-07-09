@@ -25,15 +25,6 @@ ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig phys
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 }
 
-void ParticleManager::resetLocalParticles() {
-  const PetscScalar* gamma_array;
-  PetscInt local_size;
-
-  for (int i = 0; i < local_particles.size(); i++) {
-    local_particles[i].reset();
-  }
-}
-
 // Updated move function using helpers
 void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
   double dt = sim_config_.dt;
@@ -149,8 +140,6 @@ std::vector<Particle> ParticleManager::divideParticles() {
 }
 
 PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()> exchangeGhostParticles) {
-  resetLocalParticles();
-
   std::vector<Particle> particles_before_step = local_particles;
   auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
 
