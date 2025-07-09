@@ -52,10 +52,8 @@ void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
     return;
   }
 
-  auto bbpgd_iterations_per_step = solver_solution.bbpgd_iterations / (double)solver_solution.constraint_iterations;
-
   // Adjust dt based on the number of BBPGD iterations
-  if (bbpgd_iterations_per_step > sim_config_.target_bbpgd_iterations) {
+  if (solver_solution.bbpgd_iterations > sim_config_.target_bbpgd_iterations) {
     current_dt_ *= (1.0 - sim_config_.dt_adjust_factor);  // Decrease dt
   } else {
     current_dt_ *= (1.0 + sim_config_.dt_adjust_factor);  // Increase dt
@@ -67,17 +65,16 @@ void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
 
 void Domain::run() {
   using namespace utils::ArrayMath;
-
   int i = 0;
   while (elapsed_time_seconds_ < sim_config_.end_time) {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);
     commitNewParticles();
+    assignGlobalIDs();
 
     resizeDomain();
-    rebalance();
-
     auto update_ghosts_fn = [this]() {
+      rebalance();
       this->exchangeGhostParticles();
     };
 
@@ -121,9 +118,6 @@ void Domain::rebalance() {
 
   // 3. Update local particles
   updateParticlesAfterExchange(particles_to_keep, recv_buffer);
-
-  // 4. Re-assign global IDs to all particles to keep them contiguous
-  // assignGlobalIDs();
 }
 
 void Domain::exchangeGhostParticles() {
@@ -366,7 +360,7 @@ void Domain::updateParticlesAfterExchange(std::vector<Particle>& particles_to_ke
                                           const std::vector<ParticleData>& received_particles) {
   particle_manager_->local_particles = std::move(particles_to_keep);
 
-  for (const auto& pd : received_particles) {
+  for (auto& pd : received_particles) {
     particle_manager_->local_particles.emplace_back(pd);
   }
 
@@ -384,7 +378,7 @@ void Domain::assignGlobalIDs() {
 
   PetscInt local_particle_count = particle_manager_->local_particles.size();
 
-  PetscInt first_id_for_this_rank;
+  PetscInt first_id_for_this_rank = 0;
   MPI_Scan(&local_particle_count, &first_id_for_this_rank, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
   first_id_for_this_rank -= local_particle_count;
 
@@ -396,7 +390,7 @@ void Domain::assignGlobalIDs() {
 void Domain::assignGlobalIDsToNewParticles() {
   PetscInt num_to_add_local = new_particle_buffer.size();
 
-  PetscInt first_id_for_this_rank;
+  PetscInt first_id_for_this_rank = 0;
   MPI_Scan(&num_to_add_local, &first_id_for_this_rank, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD);
   first_id_for_this_rank -= num_to_add_local;
 

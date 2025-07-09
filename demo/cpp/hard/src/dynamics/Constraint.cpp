@@ -5,10 +5,32 @@
 #include <array>
 #include <iostream>
 
+#include "util/ArrayMath.h"
+
 Constraint::Constraint() = default;
 
-Constraint::Constraint(double signed_distance, int gidI, int gidJ, std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint, double stressI, double stressJ, int gid, int iteration)
-    : signed_distance(signed_distance), gidI(gidI), gidJ(gidJ), normI(normI), rPosI(posI), rPosJ(posJ), contactPoint(contactPoint), stressI(stressI), stressJ(stressJ), gid(gid), iteration(iteration) {}
+Constraint::Constraint(double signed_distance, int gidI, int gidJ, std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint, double stressI, double stressJ, int gid, int iteration) {
+  using namespace utils::ArrayMath;
+  // normalize such that gidI < gidJ
+  if (gidI > gidJ) {
+    std::swap(gidI, gidJ);
+    normI = -1.0 * normI;
+    std::swap(posI, posJ);
+    std::swap(stressI, stressJ);
+  }
+
+  this->signed_distance = signed_distance;
+  this->gidI = gidI;
+  this->gidJ = gidJ;
+  this->normI = normI;
+  this->rPosI = posI;
+  this->rPosJ = posJ;
+  this->contactPoint = contactPoint;
+  this->stressI = stressI;
+  this->stressJ = stressJ;
+  this->gid = gid;
+  this->iteration = iteration;
+}
 
 void Constraint::print() const {
   std::cout << "signed_distance: " << signed_distance << std::endl;

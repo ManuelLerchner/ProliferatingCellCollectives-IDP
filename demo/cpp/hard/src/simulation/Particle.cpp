@@ -229,7 +229,9 @@ std::array<double, 3> Particle::calculateGravitationalForce(const std::array<dou
   return {vol * gravity[0], vol * gravity[1], vol * gravity[2]};
 }
 
-std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, double xi, double dt, std::normal_distribution<double>& dist, std::mt19937& gen) const {
+std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, bool monolayer, double xi, double dt, std::mt19937& gen) const {
+  std::normal_distribution<double> dist(0.0, 1.0);
+
   const double L = getLength();
   const double r = getDiameter() / 2.0;
   const double aspect_ratio = L / getDiameter();
@@ -260,8 +262,8 @@ std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, do
   return {
       trans_coeff * dist(gen),
       trans_coeff * dist(gen),
-      trans_coeff * dist(gen),
-      rot_coeff * dist(gen),
-      rot_coeff * dist(gen),
+      monolayer ? 0.0 : trans_coeff * dist(gen),
+      monolayer ? 0.0 : rot_coeff * dist(gen),
+      monolayer ? 0.0 : rot_coeff * dist(gen),
       rot_coeff * dist(gen)};
 }

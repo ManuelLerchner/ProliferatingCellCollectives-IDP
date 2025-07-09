@@ -46,12 +46,9 @@ void calculate_jacobian_local(
 }
 
 void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
-  PetscInt local_num_constraints = local_constraints.size();
-  if (local_num_constraints == 0) return;
-
-  for (int i = 0; i < local_num_constraints; ++i) {
+  for (int i = 0; i < local_constraints.size(); ++i) {
     PetscInt c_global_idx = col_offset + i;
-    VecSetValue(phi, c_global_idx, local_constraints[i].signed_distance, INSERT_VALUES);
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(phi, c_global_idx, local_constraints[i].signed_distance, INSERT_VALUES));
   }
 }
 

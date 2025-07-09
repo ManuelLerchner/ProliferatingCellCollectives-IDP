@@ -253,3 +253,20 @@ inline size_t vecSize(const VecWrapper& vec) {
   PetscCallAbort(PETSC_COMM_WORLD, VecGetSize(vec, &size));
   return size;
 }
+
+// Helper function to scatter values from a parallel vector to a local array
+inline void scatterVectorToLocal(Vec global_vec, const std::vector<PetscInt>& indices,
+                                 Vec& local_vec, VecScatter& scatter, IS& is) {
+  ISCreateGeneral(PETSC_COMM_SELF, indices.size(), indices.data(), PETSC_COPY_VALUES, &is);
+  VecCreateSeq(PETSC_COMM_SELF, indices.size(), &local_vec);
+  VecScatterCreate(global_vec, is, local_vec, NULL, &scatter);
+  VecScatterBegin(scatter, global_vec, local_vec, INSERT_VALUES, SCATTER_FORWARD);
+  VecScatterEnd(scatter, global_vec, local_vec, INSERT_VALUES, SCATTER_FORWARD);
+}
+
+// Helper function to clean up scattered resources
+inline void cleanupScatteredResources(Vec& local_vec, VecScatter& scatter, IS& is) {
+  VecScatterDestroy(&scatter);
+  VecDestroy(&local_vec);
+  ISDestroy(&is);
+}

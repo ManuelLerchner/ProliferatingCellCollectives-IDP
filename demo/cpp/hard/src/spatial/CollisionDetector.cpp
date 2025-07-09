@@ -98,7 +98,7 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
   // Get the number of locally owned constraints.
   int local_num_constraints = constraints.size();
 
-  int first_gid;
+  int first_gid = 0;
   MPI_Scan(&local_num_constraints, &first_gid, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
   first_gid -= local_num_constraints;
 
@@ -246,14 +246,18 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
 
   bool owned_by_me;
   if (p1_local && p2_local) {
-    owned_by_me = true;   // Owned if both particles are local
-  } else if (p1_local) {  // p2 is a ghost
-    owned_by_me = p1.getGID() < p2.getGID();
-  } else if (p2_local) {  // p1 is a ghost
-    owned_by_me = p2.getGID() < p1.getGID();
+    owned_by_me = true;
+  } else if (p1_local || p2_local) {
+    const auto gid1 = p1.getGID();
+    const auto gid2 = p2.getGID();
+
+    owned_by_me = (gid1 < gid2) ? p1_local : p2_local;
   } else {
-    owned_by_me = false;  // Should not happen if collision detection is correct
     throw std::runtime_error("Both particles are ghosts");
+  }
+
+  if (!owned_by_me) {
+    return std::nullopt;
   }
 
   auto constraint = Constraint(

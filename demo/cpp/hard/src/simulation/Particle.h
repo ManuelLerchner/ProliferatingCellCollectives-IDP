@@ -135,7 +135,7 @@ class Particle {
   }
 
   std::array<double, 3> calculateGravitationalForce(const std::array<double, 3>& gravity) const;
-  std::array<double, 6> calculateBrownianVelocity(double temperature, double xi, double dt, std::normal_distribution<double>& dist, std::mt19937& gen) const;
+  std::array<double, 6> calculateBrownianVelocity(double temperature, bool monolayer, double xi, double dt, std::mt19937& gen) const;
 
  private:
   void normalizeQuaternion();

@@ -35,6 +35,8 @@ class Constraint {
   int gid;
   // iteration of the constraint
   int iteration;
+  // Lagrange multiplier for this constraint
+  double gamma = 0.0;
 
   void print() const;
 };

@@ -69,6 +69,7 @@ void ConstraintLogger::log(const std::vector<Constraint>& constraints) {
   std::vector<int> gids(constraints.size());
   std::vector<double> signed_distances(constraints.size());
   std::vector<double> iteration(constraints.size());
+  std::vector<double> gamma(constraints.size());
 
   std::vector<std::array<double, 3>> normals(constraints.size());
 
@@ -85,6 +86,7 @@ void ConstraintLogger::log(const std::vector<Constraint>& constraints) {
     signed_distances[i] = constraint.signed_distance;
     normals[i] = constraint.normI;
     iteration[i] = constraint.iteration;
+    gamma[i] = constraint.gamma;
     ranks[i] = rank;
     i++;
   }
@@ -96,6 +98,7 @@ void ConstraintLogger::log(const std::vector<Constraint>& constraints) {
   logger_.addPointData("signed_distance", signed_distances);
   logger_.addPointData("normals", normals);
   logger_.addPointData("iteration", iteration);
+  logger_.addPointData("gamma", gamma);
   logger_.addPointData("rank", ranks);
 
   logger_.write();

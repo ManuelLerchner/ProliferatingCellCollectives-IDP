@@ -30,9 +30,10 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   L_PREV.ensureCapacity(global_new_constraints_count);
 
   // Calculate offset for new data
-  PetscInt col_offset = PHI_PREV.getSize();
+  PetscInt col_offset = 0;
   size_t local_new_constraints_count = new_constraints.size();
-  PetscCallAbort(PETSC_COMM_WORLD, MPI_Exscan(&local_new_constraints_count, &col_offset, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD));
+  MPI_Exscan(&local_new_constraints_count, &col_offset, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+  col_offset += PHI_PREV.getSize();
 
   // Populate matrices and vectors with new data
   create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
@@ -78,52 +79,27 @@ VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
 }
 
 void PhysicsEngine::calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt) {
-  // Create a vector for external forces
-  PetscCallAbort(PETSC_COMM_WORLD, VecSet(F_ext_workspace, 0.0));
+  PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(U_ext));
 
-  // Add gravity
-  if (physics_config.gravity.x != 0.0 || physics_config.gravity.y != 0.0 || physics_config.gravity.z != 0.0) {
-    for (size_t i = 0; i < local_particles.size(); ++i) {
-      PetscInt idx[3] = {static_cast<PetscInt>(i * 6 + 0), static_cast<PetscInt>(i * 6 + 1), static_cast<PetscInt>(i * 6 + 2)};
-      auto [grav_force_x, grav_force_y, grav_force_z] = local_particles[i].calculateGravitationalForce({physics_config.gravity.x, physics_config.gravity.y, physics_config.gravity.z});
-      PetscScalar vals[3] = {grav_force_x, grav_force_y, grav_force_z};
-      PetscCallAbort(PETSC_COMM_WORLD, VecSetValuesLocal(F_ext_workspace, 3, idx, vals, ADD_VALUES));
-    }
-    PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(F_ext_workspace));
-    PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(F_ext_workspace));
-  }
-  // U_ext = M * F_ext
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F_ext_workspace, U_ext));
+  // Create a vector for external forces
+  // PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(F_ext_workspace));
+
+  // // U_ext = M * F_ext
+  // PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F_ext_workspace, U_ext));
 
   // Add Brownian motion
   if (physics_config.temperature > 0) {
-    PetscScalar* u_ext_array;
-    PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(U_ext, &u_ext_array));
+    for (const auto& particle : local_particles) {
+      auto brownian_vel = particle.calculateBrownianVelocity(physics_config.temperature, physics_config.monolayer, physics_config.xi, dt, gen);
 
-    std::normal_distribution<double> dist(0.0, 1.0);
+      PetscInt ix[] = {particle.getGID() * 6, particle.getGID() * 6 + 1, particle.getGID() * 6 + 2, particle.getGID() * 6 + 3, particle.getGID() * 6 + 4, particle.getGID() * 6 + 5};
 
-    for (size_t i = 0; i < local_particles.size(); ++i) {
-      auto brownian_vel = local_particles[i].calculateBrownianVelocity(physics_config.temperature, physics_config.xi, dt, dist, gen);
-      for (int j = 0; j < 6; ++j) {
-        u_ext_array[i * 6 + j] += brownian_vel[j];
-      }
+      PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(U_ext, 6, ix, brownian_vel.data(), ADD_VALUES));
     }
-
-    PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(U_ext, &u_ext_array));
   }
 
-  if (physics_config.monolayer) {
-    PetscScalar* u_array;
-    PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(U_ext, &u_array));
-
-    for (int i = 0; i < local_particles.size(); i++) {
-      u_array[i * 6 + 2] = 0;  // vz
-      u_array[i * 6 + 3] = 0;  // omegax
-      u_array[i * 6 + 4] = 0;  // omegay
-    }
-
-    PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(U_ext, &u_array));
-  }
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(U_ext));
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(U_ext));
 }
 
 void estimate_phi_dot_movement_inplace(
@@ -294,6 +270,43 @@ enum class SolverState {
   NOT_CONVERGED,
 };
 
+void PhysicsEngine::updateConstraintsFromSolution(std::vector<Constraint>& constraints, const VecWrapper& gamma, const VecWrapper& phi) {
+  std::vector<PetscInt> indices;
+  for (auto& c : constraints) {
+    indices.push_back(c.gid);
+  }
+
+  // Scatter the dC vector
+  Vec gamma_local;
+  VecScatter gamma_scatter;
+  IS gamma_is;
+  scatterVectorToLocal(gamma, indices, gamma_local, gamma_scatter, gamma_is);
+
+  // Get array pointer
+  const PetscScalar* gamma_array;
+  VecGetArrayRead(gamma_local, &gamma_array);
+
+  Vec phi_local;
+  VecScatter phi_scatter;
+  IS phi_is;
+  scatterVectorToLocal(phi, indices, phi_local, phi_scatter, phi_is);
+
+  const PetscScalar* phi_array;
+  VecGetArrayRead(phi_local, &phi_array);
+
+  // Process each particle (7 values per particle)
+  for (int i = 0; i < constraints.size(); ++i) {
+    constraints[i].gamma = PetscRealPart(gamma_array[i]);
+    constraints[i].signed_distance = PetscRealPart(phi_array[i]);
+  }
+
+  // Clean up
+  VecRestoreArrayRead(gamma_local, &gamma_array);
+  VecRestoreArrayRead(phi_local, &phi_array);
+  cleanupScatteredResources(gamma_local, gamma_scatter, gamma_is);
+  cleanupScatteredResources(phi_local, phi_scatter, phi_is);
+}
+
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
@@ -335,7 +348,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     exchangeGhostParticles();
 
     // Use a larger tolerance for initial collision detection
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, -solver_config.tolerance);
+    double tolerance = iter == 0 ? 0.5 : 0.01;
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, tolerance);
 
     double max_overlap_local = 0;
     for (const auto& constraint : new_constraints) {
@@ -347,7 +361,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     // Check convergence
 
+    MPI_Barrier(PETSC_COMM_WORLD);
+
     if (max_overlap < 0.01 && constraint_iterations > 1) {
+      MPI_Barrier(PETSC_COMM_WORLD);
       solver_state = SolverState::CONVERGED;
       break;
     }
@@ -434,6 +451,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     std::swap(workspaces->ldot_curr_workspace, workspaces->ldot_prev);
 
+    // Update constraints with current solution values
+    updateConstraintsFromSolution(all_constraints_set, GAMMA, PHI);
+
     // log substep
     particle_logger.log(particle_manager.local_particles);
     constraint_logger.log(all_constraints_set);
@@ -443,22 +463,20 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   switch (solver_state) {
     case SolverState::CONVERGED:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[92mConverged in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[92mConverged in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", constraint_iterations, res, max_overlap, bbpgd_iterations);
       break;
     case SolverState::TOO_MANY_CONSTRAINTS:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mToo many constraints: %ld | Constraints per particle: %4.2f\033[0m | Residual: %4.2e | Overlap: %8.2e", globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(all_constraints_set.size(), MPI_SUM) / (double)global_num_particles, res, max_overlap);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mToo many constraints: %ld | Constraints per particle: %4.2f\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(all_constraints_set.size(), MPI_SUM) / (double)global_num_particles, res, max_overlap, bbpgd_iterations);
       break;
     case SolverState::NOT_CONVERGED:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e", constraint_iterations, res, max_overlap);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", constraint_iterations, res, max_overlap, bbpgd_iterations);
       break;
     case SolverState::RUNNING:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mRunning\033[0m | Residual: %4.2e | Overlap: %8.2e", res, max_overlap);
+      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mRunning\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", res, max_overlap, bbpgd_iterations);
       break;
   }
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
-
-  exchangeGhostParticles();
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }
