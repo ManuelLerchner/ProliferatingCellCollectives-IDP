@@ -24,6 +24,40 @@ CollisionDetector::CollisionDetector(double collision_tolerance, double cell_siz
     : collision_tolerance_(collision_tolerance), cell_size_(cell_size), spatial_grid_(cell_size, {-1, -1, -1}, {1, 1, 1}) {
 }
 
+void CollisionDetector::reset() {
+  existing_contact_points_.clear();
+}
+
+bool CollisionDetector::isNewContactPoint(int gid1, int gid2, const std::array<double, 3>& contact_point) {
+  using namespace utils::ArrayMath;
+
+  // Ensure gid1 < gid2 for consistent lookup
+  if (gid1 > gid2) {
+    std::swap(gid1, gid2);
+  }
+
+  auto pair = std::make_pair(gid1, gid2);
+  auto it = existing_contact_points_.find(pair);
+
+  if (it == existing_contact_points_.end()) {
+    // No existing contact points for this pair
+    existing_contact_points_[pair].push_back(contact_point);
+    return true;
+  }
+
+  // Check if the new contact point is too close to any existing ones
+  for (const auto& existing_point : it->second) {
+    double dist = distance(contact_point, existing_point);
+    if (dist < CONTACT_POINT_TOLERANCE) {
+      return false;
+    }
+  }
+
+  // No close points found, add this one
+  it->second.push_back(contact_point);
+  return true;
+}
+
 std::pair<std::array<double, 3>, std::array<double, 3>> CollisionDetector::getParticleEndpoints(const Particle& p) {
   using namespace utils::ArrayMath;
   const auto& pos = p.getPosition();
@@ -50,11 +84,11 @@ void CollisionDetector::updateBounds(const std::array<double, 3>& min_bounds, co
 std::vector<Constraint> CollisionDetector::detectCollisions(
     ParticleManager& particle_manager,
     int constraint_iterations,
-    std::function<bool(const Constraint&)> filter_constraints) {
+    double collision_tolerance) {
   std::vector<Constraint> constraints;
 
   // Simple approach: check all local-local pairs directly
-  checkParticlePairs(particle_manager, constraints, constraint_iterations, filter_constraints);
+  checkParticlePairs(particle_manager, constraints, constraint_iterations, collision_tolerance);
 
   // Sort constraints by their contact point's x-position to group them spatially.
   std::sort(constraints.begin(), constraints.end(), [](const Constraint& a, const Constraint& b) {
@@ -111,7 +145,7 @@ void CollisionDetector::checkParticlePairs(
     ParticleManager& particle_manager,
     std::vector<Constraint>& constraints,
     int constraint_iterations,
-    std::function<bool(const Constraint&)> filter_constraints) {
+    double collision_tolerance) {
   // Create ghost lookup map for efficiency
   std::unordered_map<PetscInt, const Particle*> ghost_map;
   for (const auto& ghost : particle_manager.ghost_particles) {
@@ -128,12 +162,11 @@ void CollisionDetector::checkParticlePairs(
         p1, p2,
         pair.is_localI,
         pair.is_localJ,
-        constraint_iterations);
+        constraint_iterations,
+        collision_tolerance);
 
     if (constraint.has_value()) {
-      if (filter_constraints(constraint.value())) {
-        constraints.push_back(constraint.value());
-      }
+      constraints.push_back(constraint.value());
     }
   }
 }
@@ -157,14 +190,14 @@ Particle& CollisionDetector::getParticle(
 std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     Particle& p1, Particle& p2,
     bool p1_local, bool p2_local,
-    int constraint_iterations) {
+    int constraint_iterations,
+    double collision_tolerance) {
   using namespace utils::ArrayMath;
   // Get the line segments (cylindrical cores) of both particles
   auto [p1_start, p1_end] = getParticleEndpoints(p1);
   auto [p2_start, p2_end] = getParticleEndpoints(p2);
 
   // Use DCPQuery for accurate segment-segment distance calculation
-
   std::array<double, 3> closest_p1, closest_p2;
   double distance;
   auto result = distance_query(p1_start, p1_end, p2_start, p2_end);
@@ -173,15 +206,28 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   distance = result.distance;
 
   // Calculate radii and overlap
-  // getDiameter() returns the full diameter, so this is the radius
   double r1 = p1.getDiameter();
   double r2 = p2.getDiameter();
   double sum_radii = (r1 + r2) / 2.0;  // Average of diameters = sum of radii
 
   double signed_distance = distance - sum_radii;
 
+  if (signed_distance > collision_tolerance) {
+    return std::nullopt;
+  }
+
   // Calculate contact point at the midpoint of the overlap region
   std::array<double, 3> contact_point = 0.5 * (closest_p1 + closest_p2);
+
+  // After first iteration, only accept new contact points
+  if (constraint_iterations > 0) {
+    if (!isNewContactPoint(p1.getGID(), p2.getGID(), contact_point)) {
+      return std::nullopt;
+    }
+  }
+
+  p1.incrementNumConstraints();
+  p2.incrementNumConstraints();
 
   using namespace utils::ArrayMath;
 
@@ -208,13 +254,6 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   } else {
     owned_by_me = false;  // Should not happen if collision detection is correct
     throw std::runtime_error("Both particles are ghosts");
-  }
-
-  p1.incrementNumConstraints();
-  p2.incrementNumConstraints();
-
-  if (!owned_by_me) {
-    return std::nullopt;
   }
 
   auto constraint = Constraint(

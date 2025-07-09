@@ -21,6 +21,10 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
   std::vector<int> number_of_constraints(particles.size());
   std::vector<int> ages(particles.size());
   std::vector<std::array<double, 3>> velocity_linear(particles.size());
+  std::vector<int> ranks(particles.size());
+
+  int rank;
+  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
   for (int i = 0; i < particles.size(); i++) {
     positions[i] = particles[i].getPosition();
@@ -33,6 +37,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
     ages[i] = particles[i].getAge();
     forces[i] = particles[i].getForce();
     velocity_linear[i] = particles[i].getVelocityLinear();
+    ranks[i] = rank;
   }
 
   // Add data to logger
@@ -46,6 +51,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
   logger_.addPointData("age", ages);
   logger_.addPointData("forces", forces);
   logger_.addPointData("velocity_linear", velocity_linear);
+  logger_.addPointData("rank", ranks);
 
   // Write to file
   logger_.write();
@@ -66,6 +72,10 @@ void ConstraintLogger::log(const std::vector<Constraint>& constraints) {
 
   std::vector<std::array<double, 3>> normals(constraints.size());
 
+  int rank;
+  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+  std::vector<int> ranks(constraints.size());
+
   int i = 0;
   for (const auto& constraint : constraints) {
     positions[i] = constraint.contactPoint;
@@ -75,6 +85,7 @@ void ConstraintLogger::log(const std::vector<Constraint>& constraints) {
     signed_distances[i] = constraint.signed_distance;
     normals[i] = constraint.normI;
     iteration[i] = constraint.iteration;
+    ranks[i] = rank;
     i++;
   }
 
@@ -85,6 +96,7 @@ void ConstraintLogger::log(const std::vector<Constraint>& constraints) {
   logger_.addPointData("signed_distance", signed_distances);
   logger_.addPointData("normals", normals);
   logger_.addPointData("iteration", iteration);
+  logger_.addPointData("rank", ranks);
 
   logger_.write();
 }

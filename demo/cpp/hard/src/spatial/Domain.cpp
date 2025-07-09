@@ -74,16 +74,12 @@ void Domain::run() {
     queueNewParticles(new_particles);
     commitNewParticles();
 
-    auto [local_min, local_max] = calculateLocalBoundingBox();
-    int needs_resize_local = infinity_norm(local_max - min_bounds_) > physics_config_.l0 * 2 || infinity_norm(local_min - min_bounds_) > physics_config_.l0 * 2 ? 1 : 0;
-    bool needs_resize_global = globalReduce(needs_resize_local, MPI_SUM) > 0;
+    resizeDomain();
+    rebalance();
 
-    if (needs_resize_global || i % sim_config_.domain_resize_frequency == 0) {
-      resizeDomain();
-      rebalance();
-    }
-
-    auto update_ghosts_fn = [this]() { this->exchangeGhostParticles(); };
+    auto update_ghosts_fn = [this]() {
+      this->exchangeGhostParticles();
+    };
 
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
     elapsed_time_seconds_ += current_dt_;
@@ -127,7 +123,7 @@ void Domain::rebalance() {
   updateParticlesAfterExchange(particles_to_keep, recv_buffer);
 
   // 4. Re-assign global IDs to all particles to keep them contiguous
-  assignGlobalIDs();
+  // assignGlobalIDs();
 }
 
 void Domain::exchangeGhostParticles() {

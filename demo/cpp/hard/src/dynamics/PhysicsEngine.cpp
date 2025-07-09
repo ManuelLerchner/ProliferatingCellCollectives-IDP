@@ -19,7 +19,7 @@
 
 PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_config) : physics_config(physics_config), solver_config(solver_config), collision_detector(CollisionDetector(solver_config.tolerance, solver_config.linked_cell_size)) {
   std::random_device rd;
-  gen = std::mt19937(rd());
+  gen = std::mt19937(42);
 }
 
 void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, PetscMPIInt global_new_constraints_count) {
@@ -294,16 +294,6 @@ enum class SolverState {
   NOT_CONVERGED,
 };
 
-struct pair_hash {
-  template <class T1, class T2>
-  std::size_t operator()(const std::pair<T1, T2>& p) const {
-    auto h1 = std::hash<T1>{}(p.first);
-    auto h2 = std::hash<T2>{}(p.second);
-
-    return h1 ^ h2;
-  }
-};
-
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
@@ -328,6 +318,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   double max_overlap = 0;
   long long bbpgd_iterations_this_step = 0;
 
+  // Reset collision detector state
+  collision_detector.reset();
+
   // hash map counting constraints betwen pairs of particles
   std::unordered_map<std::pair<int, int>, int, pair_hash> global_constraint_count;
 
@@ -337,38 +330,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   constraint_logger.log(all_constraints_set);
 
   SolverState solver_state = SolverState::RUNNING;
-  double bbpgd_allowed_tolerance = solver_config.tolerance;
 
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
-    if (constraint_iterations % 100 == 0 && constraint_iterations > 0) {
-      bbpgd_allowed_tolerance *= 0.5;
-    }
-
-    auto filter_constraints = [&](const Constraint& constraint) {
-      // at the first iteration, allow a small overlap to avoid numerical issues
-      if (constraint_iterations == 0 && constraint.signed_distance < 0.1) {
-        return true;
-      }
-
-      if (constraint.signed_distance > 0) {
-        return false;
-      }
-
-      double overlap = -constraint.signed_distance;
-
-      if (overlap < solver_config.tolerance) {
-        return false;
-      }
-
-      auto pair = std::make_pair(constraint.gidI, constraint.gidJ);
-      if (pair.first > pair.second) std::swap(pair.first, pair.second);
-      global_constraint_count[pair]++;
-      return global_constraint_count[pair] <= solver_config.max_constraints_per_pair;
-    };
-
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, filter_constraints);
+    // Use a larger tolerance for initial collision detection
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, -solver_config.tolerance);
 
     double max_overlap_local = 0;
     for (const auto& constraint : new_constraints) {
@@ -380,7 +347,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     // Check convergence
 
-    if (max_overlap < 100 * solver_config.tolerance && constraint_iterations > 1) {
+    if (max_overlap < 0.01 && constraint_iterations > 1) {
       solver_state = SolverState::CONVERGED;
       break;
     }
@@ -447,7 +414,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     };
 
     // Solver
-    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, bbpgd_allowed_tolerance, solver_config.max_bbpgd_iterations);
+    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, solver_config.tolerance, solver_config.max_bbpgd_iterations);
 
     res = bbpgd_result_recursive.residual;
     bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
@@ -490,6 +457,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   }
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
+
+  exchangeGhostParticles();
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
 }

@@ -2,8 +2,6 @@
 #include <petsc.h>
 #include <petscconf.h>
 
-#include <random>
-
 #include "spatial/Domain.h"
 #include "util/Config.h"
 
@@ -69,7 +67,7 @@ int main(int argc, char** argv) {
 
     domain.run();
 
-    PetscLogView(PETSC_VIEWER_STDOUT_WORLD);
+    // PetscLogView(PETSC_VIEWER_STDOUT_WORLD);
   }
   PetscFinalize();
   return EXIT_SUCCESS;
