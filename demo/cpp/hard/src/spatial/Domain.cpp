@@ -10,6 +10,7 @@
 #include "simulation/Particle.h"
 #include "simulation/ParticleData.h"
 #include "util/ArrayMath.h"
+#include "util/MetricsUtil.h"
 
 Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config)
     : sim_config_(sim_config),
@@ -81,8 +82,20 @@ void Domain::run() {
       this->exchangeGhostParticles();
     };
 
+    double mpi_start_time = MPI_Wtime();
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
+    double mpi_end_time = MPI_Wtime();
+    double mpi_comm_time = mpi_end_time - mpi_start_time;
+
     simulation_time_seconds_ += current_dt_s;
+
+    // Determine colony radius
+    double colony_radius = globalReduce(
+        std::accumulate(particle_manager_->local_particles.begin(), particle_manager_->local_particles.end(), 0.0,
+                        [](double acc, const Particle& p) {
+                          return std::max(acc, utils::ArrayMath::magnitude(p.getPosition()));
+                        }),
+        MPI_MAX);
 
     if (simulation_time_seconds_ - time_last_log_ > sim_config_.log_frequency_seconds) {
       step_start_time_ = MPI_Wtime();
@@ -91,22 +104,37 @@ void Domain::run() {
       domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
       time_last_log_ = simulation_time_seconds_;
 
-      auto run_time_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count();
+      // Get performance metrics
+      double memory_usage_mb = utils::getCurrentMemoryUsageMB();
+      double peak_memory_mb = utils::getPeakMemoryUsageMB();
+      double cpu_time_s = utils::getCPUTimeSeconds();
+      double load_imbalance = utils::calculateLoadImbalance(particle_manager_->local_particles.size());
 
-      // Log simulation parameters
+      size_t total_constraints = globalReduce(solver_solution.constraints.size(), MPI_SUM);
+
+      // Log simulation parameters with performance metrics
       vtk::SimulationStep step_data{
           .simulation_time_s = simulation_time_seconds_,
           .step_duration_s = MPI_Wtime() - step_start_time_,
-          .run_time_s = run_time_seconds,
+          .step = i,
 
           .num_particles = global_particle_count,
-          .num_constraints = static_cast<int>(solver_solution.constraints.size()),
+          .num_constraints = total_constraints,
+          .colony_radius = colony_radius,
 
+          // Solver metrics
           .recursive_iterations = solver_solution.constraint_iterations,
           .bbpgd_iterations = solver_solution.bbpgd_iterations,
           .max_overlap = solver_solution.max_overlap,
           .residual = solver_solution.residual,
-          .dt_s = current_dt_s};
+          .dt_s = current_dt_s,
+
+          // Add performance metrics
+          .memory_usage_mb = memory_usage_mb,
+          .peak_memory_mb = peak_memory_mb,
+          .cpu_time_s = cpu_time_s,
+          .mpi_comm_time_s = mpi_comm_time,
+          .load_imbalance = load_imbalance};
 
       simulation_logger_->log(step_data);
     }
@@ -115,16 +143,7 @@ void Domain::run() {
       adjustDt(solver_solution);
     }
 
-    // Determine colony radius
-    double colony_radius_local = 0;
-    for (const auto& p : particle_manager_->local_particles) {
-      double distance = utils::ArrayMath::magnitude(p.getPosition());
-      colony_radius_local = std::max(colony_radius_local, distance);
-    }
-
-    double colony_radius_global = globalReduce(colony_radius_local, MPI_MAX);
-
-    printProgress(i + 1, colony_radius_global);
+    printProgress(i + 1, colony_radius);
     PetscPrintf(PETSC_COMM_WORLD, "\n");
     i++;
   }

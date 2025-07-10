@@ -7,14 +7,26 @@ namespace vtk {
 struct SimulationStep {
   double simulation_time_s;
   double step_duration_s;
-  double run_time_s;
+  long long step;
+
+  // Particle metrics
   int num_particles;
-  int num_constraints;
+  size_t num_constraints;
+  double colony_radius;
+
+  // Solver metrics
   int recursive_iterations;
-  int bbpgd_iterations;
+  long long bbpgd_iterations;
   double max_overlap;
   double residual;
   double dt_s;
+
+  // New metrics
+  double memory_usage_mb;  // Current memory usage in MB
+  double peak_memory_mb;   // Peak memory usage in MB
+  double cpu_time_s;       // CPU time in seconds
+  double mpi_comm_time_s;  // Time spent in MPI communication in seconds
+  double load_imbalance;   // Load imbalance ratio (max/avg particles per rank)
 };
 
 class SimulationLogger {

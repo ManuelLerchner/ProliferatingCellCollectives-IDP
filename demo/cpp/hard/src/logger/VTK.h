@@ -59,8 +59,14 @@ class VTKTypedDataArray : public VTKDataArray {
       return "Float64";
     else if constexpr (std::is_same_v<T, uint8_t>)
       return "UInt8";
+    else if constexpr (std::is_same_v<T, long long>)
+      return "Int64";
+    else if constexpr (std::is_same_v<T, size_t>)
+      return "UInt64";
+    else if constexpr (std::is_same_v<T, long>)
+      return "Int64";
     else
-      return "Unknown";
+      throw std::runtime_error("VTKTypedDataArray: Unsupported data type: " + std::string(typeid(T).name()));
   }
 
   std::string GetDataAsString() const override {
@@ -98,8 +104,14 @@ class VTKTypedDataArray<std::array<T, N>> : public VTKDataArray {
       return "Float64";
     else if constexpr (std::is_same_v<T, uint8_t>)
       return "UInt8";
+    else if constexpr (std::is_same_v<T, long long>)
+      return "Int64";
+    else if constexpr (std::is_same_v<T, size_t>)
+      return "UInt64";
+    else if constexpr (std::is_same_v<T, long>)
+      return "Int64";
     else
-      return "Unknown";
+      throw std::runtime_error("GetDataType: Unsupported data type: " + std::string(typeid(T).name()));
   }
 
   std::string GetDataAsString() const override {

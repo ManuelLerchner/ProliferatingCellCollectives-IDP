@@ -349,20 +349,14 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     double tolerance = iter == 0 ? 0.5 : 0.01;
     auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, tolerance);
 
-    double max_overlap_local = 0;
-    for (const auto& constraint : new_constraints) {
-      if (constraint.signed_distance < 0) {
-        max_overlap_local = std::max(max_overlap_local, -constraint.signed_distance);
-      }
-    }
-    max_overlap = globalReduce<double>(max_overlap_local, MPI_MAX);
+    max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
+                                               [](double acc, const Constraint& c) {
+                                                 return std::max(acc, c.signed_distance < 0 ? -c.signed_distance : 0);
+                                               }),
+                               MPI_MAX);
 
     // Check convergence
-
-    MPI_Barrier(PETSC_COMM_WORLD);
-
-    if (max_overlap < solver_config.allowed_overlap && constraint_iterations > 1) {
-      MPI_Barrier(PETSC_COMM_WORLD);
+    if (max_overlap < solver_config.allowed_overlap && constraint_iterations > 0) {
       solver_state = SolverState::CONVERGED;
       break;
     }
