@@ -17,22 +17,4 @@ class ParticleLogger {
   VTKDataLogger<std::vector<Particle>> logger_;
 };
 
-class ConstraintLogger {
- public:
-  ConstraintLogger(const std::string& outputDirectory, const std::string& baseFilename);
-  void log(const std::vector<Constraint>& constraints);
-
- private:
-  VTKDataLogger<std::vector<Constraint>> logger_;
-};
-
-class DomainLogger {
- public:
-  DomainLogger(const std::string& outputDirectory, const std::string& baseFilename);
-  void log(const std::pair<std::array<double, 3>, std::array<double, 3>>& domain);
-
- private:
-  VTKDataLogger<std::pair<std::array<double, 3>, std::array<double, 3>>> logger_;
-};
-
 }  // namespace vtk

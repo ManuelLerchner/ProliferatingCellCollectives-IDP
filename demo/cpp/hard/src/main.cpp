@@ -29,12 +29,12 @@ int main(int argc, char** argv) {
     };
 
     SimulationConfig sim_config = {
-        .dt = DT,
+        .dt_s = DT,
         .end_time = END_TIME,
         .log_frequency_seconds = LOG_FREQUENCY,
         .min_box_size = {physic_config.l0 + 2, physic_config.l0 + 2, 0},
 
-        .enable_adaptive_dt = true,
+        .enable_adaptive_dt = false,
         .target_bbpgd_iterations = 500,
         .dt_adjust_frequency = 10,
         .dt_adjust_factor = 0.1,

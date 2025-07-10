@@ -84,13 +84,6 @@ class Particle {
     impedance_ = impedance;
   }
 
-  bool getToDelete() const {
-    return toDelete;
-  }
-  void setToDelete(bool toDelete) {
-    this->toDelete = toDelete;
-  }
-
   const std::array<double, 3>& getForce() const {
     return force_;
   }
@@ -132,14 +125,20 @@ class Particle {
     num_constraints_++;
   }
 
+  void reset() {
+    num_constraints_ = 0;
+    impedance_ = -1;
+    force_ = {-1, -1, -1};
+    torque_ = {-1, -1, -1};
+    velocityLinear_ = {-1, -1, -1};
+  }
+
   std::array<double, 3> calculateGravitationalForce(const std::array<double, 3>& gravity) const;
   std::array<double, 6> calculateBrownianVelocity(double temperature, bool monolayer, double xi, double dt, std::mt19937& gen) const;
 
  private:
   void normalizeQuaternion();
   ParticleData data_;
-
-  bool toDelete = false;
 
   // Fields not needed for MPI communication
   std::array<double, 3> force_;

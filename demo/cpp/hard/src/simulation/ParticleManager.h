@@ -9,7 +9,8 @@
 #include <vector>
 
 #include "dynamics/PhysicsEngine.h"
-#include "logger/VTK.h"
+#include "logger/ConstraintLogger.h"
+#include "logger/ParticleLogger.h"
 #include "simulation/Particle.h"
 #include "util/Config.h"
 

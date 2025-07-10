@@ -27,7 +27,7 @@ ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig phys
 
 // Updated move function using helpers
 void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
-  double dt = sim_config_.dt;
+  double dt = sim_config_.dt_s;
 
   // Collect all needed global indices (7 per particle)
   std::vector<PetscInt> indicesConfig;
@@ -89,7 +89,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
 }
 
 void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
-  double dt = sim_config_.dt;
+  double dt = sim_config_.dt_s;
 
   // Collect needed global indices and maintain mapping
   std::vector<PetscInt> indices;
@@ -140,8 +140,7 @@ std::vector<Particle> ParticleManager::divideParticles() {
 }
 
 PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()> exchangeGhostParticles) {
-  std::vector<Particle> particles_before_step = local_particles;
-  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
 
   return solver_solution;
 }
@@ -154,7 +153,7 @@ void ParticleManager::printProgress(int current_iteration, int total_iterations)
   PetscPrintf(PETSC_COMM_WORLD, "\rProgress: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d",
               current_iteration, total_iterations,
               (double)current_iteration / total_iterations * 100,
-              (double)current_iteration * sim_config_.dt / 60,
-              (double)total_iterations * sim_config_.dt / 60,
+              (double)current_iteration * sim_config_.dt_s / 60,
+              (double)total_iterations * sim_config_.dt_s / 60,
               global_particle_count);
 }

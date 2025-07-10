@@ -1,6 +1,9 @@
 #pragma once
 
+#include "logger/ConstraintLogger.h"
+#include "logger/DomainLogger.h"
 #include "logger/ParticleLogger.h"
+#include "logger/SimulationLogger.h"
 #include "simulation/ParticleData.h"
 #include "simulation/ParticleManager.h"
 #include "util/Config.h"
@@ -58,6 +61,7 @@ class Domain {
   std::unique_ptr<vtk::ParticleLogger> particle_logger_;
   std::unique_ptr<vtk::ConstraintLogger> constraint_logger_;
   std::unique_ptr<vtk::DomainLogger> domain_logger_;
+  std::unique_ptr<vtk::SimulationLogger> simulation_logger_;
 
   MPI_Datatype mpi_particle_type_;
 
@@ -66,8 +70,8 @@ class Domain {
   std::array<double, 3> min_bounds_;
   std::array<double, 3> max_bounds_;
 
-  double current_dt_;
-  double elapsed_time_seconds_ = 0.0;
+  double current_dt_s;
+  double simulation_time_seconds_ = 0.0;
   double start_time_ = 0.0;
   int global_particle_count = 0;
 
@@ -75,4 +79,6 @@ class Domain {
   double last_eta_check_time_ = 0.0;
   double last_eta_check_sim_time_ = 0.0;
   double time_last_log_ = 0.0;
+  double step_start_time_ = 0.0;
+  std::chrono::steady_clock::time_point sim_start_time_;
 };

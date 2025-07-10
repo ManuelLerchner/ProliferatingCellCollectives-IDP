@@ -7,7 +7,7 @@ struct Vec3d {
 };
 
 struct SimulationConfig {
-  double dt;
+  double dt_s;
   double end_time;
   double log_frequency_seconds = 0;
   Vec3d min_box_size;

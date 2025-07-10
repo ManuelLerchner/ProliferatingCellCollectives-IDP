@@ -171,8 +171,9 @@ class VTKDataLogger {
   int mpiRank;
   int mpiSize;
   int step = 0;
+  bool onlyRankZero = false;
 
-  std::map<std::string, std::function<std::unique_ptr<VTKDataArray>(const std::string&, const T&)>> converters;
+  std::map<std::string, std::function<std::vector<std::unique_ptr<VTKDataArray>>(const std::string&, const T&)>> converters;
 
   // Private helper functions for writing VTK files
   void writeFieldData(std::ofstream& out);
@@ -185,9 +186,10 @@ class VTKDataLogger {
   void writePVTUFile(const std::string& pfilename, const std::string& step_basename);
 
  public:
-  VTKDataLogger(const std::string& outputDirectory, const std::string& filePrefix)
+  VTKDataLogger(const std::string& outputDirectory, const std::string& filePrefix, bool onlyRankZero = false)
       : outputDirectory(outputDirectory),
-        filePrefix(filePrefix) {
+        filePrefix(filePrefix),
+        onlyRankZero(onlyRankZero) {
     MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
     MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
 
@@ -214,8 +216,6 @@ class VTKDataLogger {
       clear_files(dir, ".pvtu");
       clear_files(dataDir, ".vtu");
     }
-    // In a true MPI application, a barrier (e.g., MPI_Barrier) would be advisable here
-    // to ensure rank 0 finishes cleaning before other ranks proceed to write.
   }
 
   // Add point data
@@ -234,7 +234,10 @@ class VTKDataLogger {
           std::make_unique<VTKTypedDataArray<DataType>>(name, 1, vec));
     } else {
       if (converters.find(typeid(DataType).name()) != converters.end()) {
-        grid.GetFieldData().AddArray(converters[typeid(DataType).name()](name, value));
+        auto arrays = converters[typeid(DataType).name()](name, value);
+        for (auto& array : arrays) {
+          grid.GetFieldData().AddArray(std::move(array));
+        }
       }
     }
   }
@@ -256,15 +259,12 @@ class VTKDataLogger {
   // Register converter
   template <typename CustomType>
   void registerConverter(const std::string& namePrefix,
-                         std::function<std::unique_ptr<VTKDataArray>(const std::string&, const CustomType&)> converter) {
+                         std::function<std::vector<std::unique_ptr<VTKDataArray>>(const std::string&, const CustomType&)> converter) {
     converters[typeid(CustomType).name()] = converter;
   }
 
   // Write to file
   void write() {
-    addFieldData("mpi_rank", mpiRank);
-    addFieldData("mpi_size", mpiSize);
-
     // --- Filename Construction ---
     // Base name for this step (e.g., "my_sim_0000000")
     std::ostringstream step_basename_ss;
@@ -298,14 +298,18 @@ class VTKDataLogger {
 // Implementation of VTKDataLogger member functions
 template <typename T>
 void VTKDataLogger<T>::writeVTUFile(const std::string& filename) {
+  if (onlyRankZero && mpiRank != 0) {
+    return;
+  }
+
   std::ofstream out(filename);
   out << "<?xml version=\"1.0\"?>\n";
   out << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n";
   out << "  <UnstructuredGrid>\n";
+  writeFieldData(out);
   out << "    <Piece NumberOfPoints=\"" << grid.GetPoints().GetPositions().size()
       << "\" NumberOfCells=\"" << grid.GetCells().GetConnectivity().size() << "\">\n";
 
-  writeFieldData(out);
   writePoints(out);
   writeCells(out);
   writePointData(out);
@@ -329,7 +333,7 @@ void VTKDataLogger<T>::writePVTUFile(const std::string& pfilename, const std::st
   out << "      <PDataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\"/>\n";
   out << "    </PPoints>\n";
 
-  for (int i = 0; i < mpiSize; ++i) {
+  for (int i = 0; i < (onlyRankZero ? 1 : mpiSize); ++i) {
     std::ostringstream piece_source_ss;
     // Path is relative to the .pvtu file, which is in the parent directory of the .vtu files.
     piece_source_ss << "data/" << step_basename << "_rank_" << std::setw(4) << std::setfill('0') << i
@@ -345,16 +349,16 @@ template <typename T>
 void VTKDataLogger<T>::writeFieldData(std::ofstream& out) {
   const auto& arrays = grid.GetFieldData().GetArrays();
   if (!arrays.empty()) {
-    out << "      <FieldData>\n";
+    out << "    <FieldData>\n";
     for (const auto& array : arrays) {
-      out << "        <DataArray type=\"" << array->GetDataType()
+      out << "      <DataArray type=\"" << array->GetDataType()
           << "\" Name=\"" << array->GetName()
           << "\" NumberOfTuples=\"" << array->GetNumberOfTuples()
           << "\" format=\"ascii\">\n";
-      out << "          " << array->GetDataAsString() << "\n";
-      out << "        </DataArray>\n";
+      out << "        " << array->GetDataAsString() << "\n";
+      out << "      </DataArray>\n";
     }
-    out << "      </FieldData>\n";
+    out << "    </FieldData>\n";
   }
 }
 
@@ -423,7 +427,6 @@ void VTKDataLogger<T>::writePointData(std::ofstream& out) {
     out << "      </PointData>\n";
   }
 }
-
 template <typename T>
 void VTKDataLogger<T>::writePFieldData(std::ofstream& out) {
   const auto& arrays = grid.GetFieldData().GetArrays();

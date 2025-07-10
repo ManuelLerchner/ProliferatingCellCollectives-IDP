@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Constraint.h"
+#include "logger/ConstraintLogger.h"
 #include "logger/ParticleLogger.h"
 #include "simulation/Particle.h"
 #include "spatial/CollisionDetector.h"
@@ -41,6 +42,7 @@ class PhysicsEngine {
     int constraint_iterations;
     long long bbpgd_iterations;
     double residual;
+    double max_overlap;
   };
 
   SolverSolution solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger);

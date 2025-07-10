@@ -334,13 +334,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   // Reset collision detector state
   collision_detector.reset();
 
-  // hash map counting constraints betwen pairs of particles
-  std::unordered_map<std::pair<int, int>, int, pair_hash> global_constraint_count;
+  for (auto& p : particle_manager.local_particles) {
+    p.reset();
+  }
 
   std::vector<Constraint> all_constraints_set;
-
-  particle_logger.log(particle_manager.local_particles);
-  constraint_logger.log(all_constraints_set);
 
   SolverState solver_state = SolverState::RUNNING;
 
@@ -478,7 +476,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
 
-  return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res};
+  return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
 }
 
 void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {

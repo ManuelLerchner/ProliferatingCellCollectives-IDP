@@ -15,7 +15,7 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
     : sim_config_(sim_config),
       physics_config_(physics_config),
       solver_config_(solver_config),
-      current_dt_(sim_config.dt) {
+      current_dt_s(sim_config.dt_s) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
   start_time_ = MPI_Wtime();
@@ -24,9 +24,12 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   particle_logger_ = std::make_unique<vtk::ParticleLogger>("./vtk_output", "particles");
   constraint_logger_ = std::make_unique<vtk::ConstraintLogger>("./vtk_output", "constraints");
   domain_logger_ = std::make_unique<vtk::DomainLogger>("./vtk_output", "domain");
+  simulation_logger_ = std::make_unique<vtk::SimulationLogger>("./vtk_output", "simulation");
   createParticleMPIType(&mpi_particle_type_);
 
   particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_);
+  step_start_time_ = MPI_Wtime();
+  sim_start_time_ = std::chrono::steady_clock::now();
 }
 
 void Domain::queueNewParticles(std::vector<Particle> particles) {
@@ -54,19 +57,19 @@ void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
 
   // Adjust dt based on the number of BBPGD iterations
   if (solver_solution.bbpgd_iterations > sim_config_.target_bbpgd_iterations) {
-    current_dt_ *= (1.0 - sim_config_.dt_adjust_factor);  // Decrease dt
+    current_dt_s *= (1.0 - sim_config_.dt_adjust_factor);  // Decrease dt
   } else {
-    current_dt_ *= (1.0 + sim_config_.dt_adjust_factor);  // Increase dt
+    current_dt_s *= (1.0 + sim_config_.dt_adjust_factor);  // Increase dt
   }
 
   // Clamp dt to the min/max values
-  current_dt_ = std::max(sim_config_.min_dt, std::min(sim_config_.max_dt, current_dt_));
+  current_dt_s = std::max(sim_config_.min_dt, std::min(sim_config_.max_dt, current_dt_s));
 }
 
 void Domain::run() {
   using namespace utils::ArrayMath;
   int i = 0;
-  while (elapsed_time_seconds_ < sim_config_.end_time) {
+  while (simulation_time_seconds_ < sim_config_.end_time) {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);
     commitNewParticles();
@@ -79,13 +82,33 @@ void Domain::run() {
     };
 
     auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
-    elapsed_time_seconds_ += current_dt_;
+    simulation_time_seconds_ += current_dt_s;
 
-    if (elapsed_time_seconds_ - time_last_log_ > sim_config_.log_frequency_seconds) {
+    if (simulation_time_seconds_ - time_last_log_ > sim_config_.log_frequency_seconds) {
+      step_start_time_ = MPI_Wtime();
       particle_logger_->log(particle_manager_->local_particles);
       constraint_logger_->log(solver_solution.constraints);
       domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
-      time_last_log_ = elapsed_time_seconds_;
+      time_last_log_ = simulation_time_seconds_;
+
+      auto run_time_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count();
+
+      // Log simulation parameters
+      vtk::SimulationStep step_data{
+          .simulation_time_s = simulation_time_seconds_,
+          .step_duration_s = MPI_Wtime() - step_start_time_,
+          .run_time_s = run_time_seconds,
+
+          .num_particles = global_particle_count,
+          .num_constraints = static_cast<int>(solver_solution.constraints.size()),
+
+          .recursive_iterations = solver_solution.constraint_iterations,
+          .bbpgd_iterations = solver_solution.bbpgd_iterations,
+          .max_overlap = solver_solution.max_overlap,
+          .residual = solver_solution.residual,
+          .dt_s = current_dt_s};
+
+      simulation_logger_->log(step_data);
     }
 
     if (sim_config_.enable_adaptive_dt && i % sim_config_.dt_adjust_frequency == 0) {
@@ -163,19 +186,19 @@ void Domain::resizeDomain() {
 }
 
 void Domain::printProgress(int current_iteration, double colony_radius) const {
-  double time_elapsed_minutes = elapsed_time_seconds_ / 60.0;
+  double time_elapsed_minutes = simulation_time_seconds_ / 60.0;
   double time_total_minutes = sim_config_.end_time / 60.0;
-  double progress_percent = (elapsed_time_seconds_ / sim_config_.end_time) * 100.0;
+  double progress_percent = (simulation_time_seconds_ / sim_config_.end_time) * 100.0;
 
   std::string eta_str = "N/A";
-  if (elapsed_time_seconds_ > 1.0) {
+  if (simulation_time_seconds_ > 1.0) {
     double current_wall_time = MPI_Wtime();
     double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
-    double sim_time_since_last_check = elapsed_time_seconds_ - last_eta_check_sim_time_;
+    double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
 
     if (sim_time_since_last_check > 1e-9) {
       double wall_seconds_per_sim_seconds = wall_time_since_last_check / sim_time_since_last_check;
-      double estimated_remaining_wall_time_seconds = (sim_config_.end_time - elapsed_time_seconds_) * wall_seconds_per_sim_seconds;
+      double estimated_remaining_wall_time_seconds = (sim_config_.end_time - simulation_time_seconds_) * wall_seconds_per_sim_seconds;
 
       char buffer[100];
       snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
@@ -183,7 +206,7 @@ void Domain::printProgress(int current_iteration, double colony_radius) const {
 
       // Update for next ETA calculation
       const_cast<Domain*>(this)->last_eta_check_time_ = current_wall_time;
-      const_cast<Domain*>(this)->last_eta_check_sim_time_ = elapsed_time_seconds_;
+      const_cast<Domain*>(this)->last_eta_check_sim_time_ = simulation_time_seconds_;
     }
   }
 
@@ -193,7 +216,7 @@ void Domain::printProgress(int current_iteration, double colony_radius) const {
               progress_percent,
               eta_str.c_str(),
               current_iteration,
-              current_dt_,
+              current_dt_s,
               global_particle_count,
               colony_radius);
 }
