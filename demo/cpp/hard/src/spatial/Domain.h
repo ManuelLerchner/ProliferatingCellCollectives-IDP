@@ -1,20 +1,27 @@
 #pragma once
 
+#include <chrono>
+#include <memory>
+#include <vector>
+
+#include "dynamics/PhysicsEngine.h"
 #include "logger/ConstraintLogger.h"
 #include "logger/DomainLogger.h"
 #include "logger/ParticleLogger.h"
 #include "logger/SimulationLogger.h"
-#include "simulation/ParticleData.h"
 #include "simulation/ParticleManager.h"
 #include "util/Config.h"
 
 class Domain {
  public:
-  Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config);
+  Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing = false, size_t step = 0);
 
   void queueNewParticles(std::vector<Particle> particles);
   void commitNewParticles();
   void run();
+
+  // Initialize simulation state from VTK file/directory
+  static Domain initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path);
 
  private:
   void rebalance();
@@ -35,50 +42,41 @@ class Domain {
   void updateParticlesAfterExchange(std::vector<Particle>& particles_to_keep,
                                     const std::vector<ParticleData>& received_particles);
   void assignGlobalIDsToNewParticles();
-
-  /**
-   * @brief Re-assigns global IDs to all particles in the domain to ensure they are contiguous.
-   * This is typically called after a rebalance operation.
-   */
   void assignGlobalIDs();
 
-  /**
-   * @brief Adjusts the timestep `dt` based on solver performance.
-   * @param solver_solution The solution from the physics engine for the last step.
-   */
   void adjustDt(const PhysicsEngine::SolverSolution& solver_solution);
 
-  const SimulationConfig& sim_config_;
-  const PhysicsConfig& physics_config_;
-  const SolverConfig& solver_config_;
-
-  int rank_;
-  int size_;
+  SimulationConfig sim_config_;
+  PhysicsConfig physics_config_;
+  SolverConfig solver_config_;
 
   std::unique_ptr<ParticleManager> particle_manager_;
-  std::vector<Particle> new_particle_buffer;
-
   std::unique_ptr<vtk::ParticleLogger> particle_logger_;
   std::unique_ptr<vtk::ConstraintLogger> constraint_logger_;
   std::unique_ptr<vtk::DomainLogger> domain_logger_;
   std::unique_ptr<vtk::SimulationLogger> simulation_logger_;
 
+  std::vector<Particle> new_particle_buffer;
   MPI_Datatype mpi_particle_type_;
 
-  std::array<double, 3> global_min_bounds_;
-  std::array<double, 3> global_max_bounds_;
-  std::array<double, 3> min_bounds_;
-  std::array<double, 3> max_bounds_;
+  size_t iter = 0;
 
-  double current_dt_s;
-  double simulation_time_seconds_ = 0.0;
-  double start_time_ = 0.0;
+  int rank_;
+  int size_;
   int global_particle_count = 0;
 
-  // For ETA calculation
-  double last_eta_check_time_ = 0.0;
-  double last_eta_check_sim_time_ = 0.0;
+  double simulation_time_seconds_ = 0.0;
   double time_last_log_ = 0.0;
-  double step_start_time_ = 0.0;
+  double current_dt_s;
+
+  double start_time_;
+  double step_start_time_;
+  double last_eta_check_time_;
+  double last_eta_check_sim_time_ = 0.0;
   std::chrono::steady_clock::time_point sim_start_time_;
+
+  std::array<double, 3> min_bounds_ = {0, 0, 0};
+  std::array<double, 3> max_bounds_ = {0, 0, 0};
+  std::array<double, 3> global_min_bounds_ = {0, 0, 0};
+  std::array<double, 3> global_max_bounds_ = {0, 0, 0};
 };

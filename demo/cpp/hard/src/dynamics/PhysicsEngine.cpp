@@ -390,6 +390,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     VecWrapper gamma_old = VecWrapper::Like(GAMMA);
     GAMMA.copyTo(gamma_old);
 
+
     // Calculate external velocities
     calculate_external_velocities(workspaces->U_ext, workspaces->F_ext_workspace, particle_manager.local_particles, M, dt);
 
@@ -415,11 +416,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       // Start with the base violation: phi_next_out = phi
       PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI, phi_next_out));
 
-      // Add movement term: phi_next_out += dt * phi_dot_movement
-      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out, dt, workspaces->phi_dot_movement_workspace));
-
-      // Add growth term: phi_next_out -= dt * phi_dot_growth
-      PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(phi_next_out, -dt, workspaces->phi_dot_growth_result));
+      Vec vecs_to_add[] = {workspaces->phi_dot_movement_workspace, workspaces->phi_dot_growth_result};
+      PetscScalar scales[] = {dt, -dt};
+      PetscCallAbort(PETSC_COMM_WORLD, VecMAXPY(phi_next_out, 2, scales, vecs_to_add));
     };
 
     // Solver

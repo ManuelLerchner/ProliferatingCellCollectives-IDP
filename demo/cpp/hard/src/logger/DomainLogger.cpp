@@ -5,8 +5,8 @@
 
 namespace vtk {
 
-DomainLogger::DomainLogger(const std::string& outputDirectory, const std::string& baseFilename)
-    : logger_(outputDirectory, baseFilename) {
+DomainLogger::DomainLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing, size_t step)
+    : logger_(outputDirectory, baseFilename, false, preserve_existing, step) {
 }
 
 void DomainLogger::log(const std::pair<std::array<double, 3>, std::array<double, 3>>& domain) {

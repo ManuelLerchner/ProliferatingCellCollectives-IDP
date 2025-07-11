@@ -10,7 +10,7 @@ namespace vtk {
 
 class DomainLogger {
  public:
-  DomainLogger(const std::string& outputDirectory, const std::string& baseFilename);
+  DomainLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing = false, size_t step = 0);
   void log(const std::pair<std::array<double, 3>, std::array<double, 3>>& domain);
 
  private:

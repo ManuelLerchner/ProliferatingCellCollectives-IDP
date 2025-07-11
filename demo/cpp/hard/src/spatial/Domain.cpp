@@ -4,28 +4,32 @@
 #include <petsc.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <numeric>
 
+#include "loader/VTKStateLoader.h"
 #include "simulation/Particle.h"
 #include "simulation/ParticleData.h"
 #include "util/ArrayMath.h"
 #include "util/MetricsUtil.h"
 
-Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config)
+Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing, size_t iter)
     : sim_config_(sim_config),
       physics_config_(physics_config),
       solver_config_(solver_config),
-      current_dt_s(sim_config.dt_s) {
+      current_dt_s(sim_config.dt_s),
+      iter(iter) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
   start_time_ = MPI_Wtime();
   last_eta_check_time_ = start_time_;
 
-  particle_logger_ = std::make_unique<vtk::ParticleLogger>("./vtk_output", "particles");
-  constraint_logger_ = std::make_unique<vtk::ConstraintLogger>("./vtk_output", "constraints");
-  domain_logger_ = std::make_unique<vtk::DomainLogger>("./vtk_output", "domain");
-  simulation_logger_ = std::make_unique<vtk::SimulationLogger>("./vtk_output", "simulation");
+  particle_logger_ = std::make_unique<vtk::ParticleLogger>("./vtk_output", "particles", preserve_existing, iter);
+  constraint_logger_ = std::make_unique<vtk::ConstraintLogger>("./vtk_output", "constraints", preserve_existing, iter);
+  domain_logger_ = std::make_unique<vtk::DomainLogger>("./vtk_output", "domain", preserve_existing, iter);
+  simulation_logger_ = std::make_unique<vtk::SimulationLogger>("./vtk_output", "simulation", preserve_existing, iter);
+
   createParticleMPIType(&mpi_particle_type_);
 
   particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_);
@@ -69,7 +73,6 @@ void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
 
 void Domain::run() {
   using namespace utils::ArrayMath;
-  int i = 0;
   while (simulation_time_seconds_ < sim_config_.end_time) {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);
@@ -83,7 +86,7 @@ void Domain::run() {
     };
 
     double mpi_start_time = MPI_Wtime();
-    auto solver_solution = particle_manager_->step(i, update_ghosts_fn);
+    auto solver_solution = particle_manager_->step(iter, update_ghosts_fn);
     double mpi_end_time = MPI_Wtime();
     double mpi_comm_time = mpi_end_time - mpi_start_time;
 
@@ -116,7 +119,7 @@ void Domain::run() {
       vtk::SimulationStep step_data{
           .simulation_time_s = simulation_time_seconds_,
           .step_duration_s = MPI_Wtime() - step_start_time_,
-          .step = i,
+          .step = iter,
 
           .num_particles = global_particle_count,
           .num_constraints = total_constraints,
@@ -139,13 +142,13 @@ void Domain::run() {
       simulation_logger_->log(step_data);
     }
 
-    if (sim_config_.enable_adaptive_dt && i % sim_config_.dt_adjust_frequency == 0) {
+    if (sim_config_.enable_adaptive_dt && iter % sim_config_.dt_adjust_frequency == 0) {
       adjustDt(solver_solution);
     }
 
-    printProgress(i + 1, colony_radius);
+    printProgress(iter + 1, colony_radius);
     PetscPrintf(PETSC_COMM_WORLD, "\n");
-    i++;
+    iter++;
   }
 }
 
@@ -443,4 +446,48 @@ void Domain::assignGlobalIDsToNewParticles() {
   for (PetscInt i = 0; i < num_to_add_local; ++i) {
     new_particle_buffer[i].setGID(new_ids[i]);
   }
+}
+
+Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path) {
+  std::filesystem::path path(vtk_path);
+  std::string vtk_dir;
+
+  // If path is a file, use its parent directory
+  if (std::filesystem::is_regular_file(path)) {
+    vtk_dir = path.parent_path().string();
+  } else if (std::filesystem::is_directory(path)) {
+    vtk_dir = vtk_path;
+  } else {
+    throw std::runtime_error("VTK path must be a file or directory");
+  }
+
+  // Queue particles for initialization
+  vtk::VTKStateLoader loader(vtk_dir);
+  auto state = loader.loadLatestState();
+
+  PetscPrintf(PETSC_COMM_WORLD, "Loading %zu particles from VTK state at time %.2f s (iter %zu)\n",
+              state.particles.size(), state.simulation_time_s, state.step);
+
+  Domain domain(sim_config, physics_config, solver_config, true, state.step);
+
+  // Update simulation time
+  domain.simulation_time_seconds_ = state.simulation_time_s;
+  domain.current_dt_s = state.dt_s;
+
+  int rank;
+  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+
+  if (rank == 0) {
+    domain.queueNewParticles(state.particles);
+  }
+
+  // Commit particles and update state
+  domain.commitNewParticles();
+  domain.resizeDomain();
+
+  // Exchange ghost particles to ensure proper initialization
+  domain.rebalance();
+  domain.exchangeGhostParticles();
+
+  return domain;
 }

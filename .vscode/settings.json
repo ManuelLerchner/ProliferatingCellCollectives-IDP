@@ -68,7 +68,9 @@
     "iomanip": "cpp",
     "cfenv": "cpp",
     "any": "cpp",
-    "list": "cpp"
+    "list": "cpp",
+    "bitset": "cpp",
+    "regex": "cpp"
   },
   "cmake.sourceDirectory": "/home/manuel/MicrobeGrowthSim-IDP/demo/cpp/hard"
 }

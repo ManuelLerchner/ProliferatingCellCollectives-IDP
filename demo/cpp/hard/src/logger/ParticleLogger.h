@@ -10,7 +10,7 @@ namespace vtk {
 
 class ParticleLogger {
  public:
-  ParticleLogger(const std::string& outputDirectory, const std::string& baseFilename);
+  ParticleLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing = false, size_t step = 0);
   void log(const std::vector<Particle>& particles);
 
  private:

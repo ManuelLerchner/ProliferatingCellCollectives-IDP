@@ -2,8 +2,8 @@
 
 namespace vtk {
 
-SimulationLogger::SimulationLogger(const std::string& outputDirectory, const std::string& baseFilename)
-    : logger_(outputDirectory, baseFilename, true) {
+SimulationLogger::SimulationLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing, size_t step)
+    : logger_(outputDirectory, baseFilename, true, preserve_existing, step) {
 }
 
 void SimulationLogger::log(const SimulationStep& step) {

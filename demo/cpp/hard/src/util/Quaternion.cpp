@@ -1,5 +1,7 @@
 #include "Quaternion.h"
 
+#include <cmath>
+
 namespace utils::Quaternion {
 
 std::array<double, 3> rotateVectorOfPositions(const std::array<double, 4>& q, const std::array<double, 3>& v) {
@@ -33,6 +35,25 @@ std::array<double, 3> rotateVectorOfPositions(const std::array<double, 4>& q, co
 
 std::array<double, 3> getDirectionVector(const std::array<double, 4>& q) {
   return rotateVectorOfPositions(q, {1.0, 0.0, 0.0});
+}
+
+std::array<double, 4> quaternionFromEuler(const std::array<double, 3>& euler) {
+  double roll = euler[0];
+  double pitch = euler[1];
+  double yaw = euler[2];
+
+  double cy = std::cos(yaw * 0.5);
+  double sy = std::sin(yaw * 0.5);
+  double cp = std::cos(pitch * 0.5);
+  double sp = std::sin(pitch * 0.5);
+  double cr = std::cos(roll * 0.5);
+  double sr = std::sin(roll * 0.5);
+
+  return {
+      cr * cp * cy + sr * sp * sy,
+      sr * cp * cy - cr * sp * sy,
+      cr * sp * cy + sr * cp * sy,
+      cr * cp * sy - sr * sp * cy};
 }
 
 std::array<double, 4> qmul(const std::array<double, 4>& q1, const std::array<double, 4>& q2) {

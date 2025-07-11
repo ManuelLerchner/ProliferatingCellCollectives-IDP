@@ -2,11 +2,21 @@
 #include <petsc.h>
 #include <petscconf.h>
 
+#include <filesystem>
+#include <string>
+
+#include "loader/VTKStateLoader.h"
 #include "spatial/Domain.h"
 #include "util/Config.h"
 
+void printUsage(const char* program) {
+  PetscPrintf(PETSC_COMM_WORLD, "Usage: %s [--starter-vtk <path>]\n", program);
+  PetscPrintf(PETSC_COMM_WORLD, "  --starter-vtk: Path to VTK directory or PVTU file to initialize from\n");
+}
+
 int main(int argc, char** argv) {
   PetscInitialize(&argc, &argv, 0, 0);
+
   {
     PetscLogDefaultBegin();
 
@@ -51,19 +61,38 @@ int main(int argc, char** argv) {
         .particle_preallocation_factor = 10,
     };
 
-    Domain domain(sim_config, physic_config, solver_config);
+    // Use PETSc's option system
+    char starter_vtk_cstr[PETSC_MAX_PATH_LEN];
+    PetscBool starter_vtk_set;
 
-    int rank;
-    MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+    PetscOptionsGetString(NULL, NULL, "-starter_vtk", starter_vtk_cstr,
+                          sizeof(starter_vtk_cstr), &starter_vtk_set);
 
-    if (rank == 0) {
-      double angle = 0;
-      Particle p1 = Particle(0, {rank * 3.0, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)}, physic_config.l0, physic_config.l0, physic_config.l0 / 2);
-
-      domain.queueNewParticles({p1});
+    std::string starter_vtk;
+    if (starter_vtk_set) {
+      starter_vtk = std::string(starter_vtk_cstr);
     }
 
-    domain.run();
+    std::optional<Domain> domain;
+
+    if (starter_vtk.empty()) {
+      domain = Domain(sim_config, physic_config, solver_config, !starter_vtk.empty());
+    } else {
+      domain = Domain::initializeFromVTK(sim_config, physic_config, solver_config, starter_vtk);
+    }
+
+    if (starter_vtk.empty()) {
+      int rank;
+      MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+      if (rank == 0) {
+        double angle = 0;
+        Particle p1 = Particle(0, {rank * 3.0, 0, 0}, {cos(angle / 2), 0, 0, sin(angle / 2)},
+                               physic_config.l0, physic_config.l0, physic_config.l0 / 2);
+        domain->queueNewParticles({p1});
+      }
+    }
+
+    domain->run();
 
     // PetscLogView(PETSC_VIEWER_STDOUT_WORLD);
   }

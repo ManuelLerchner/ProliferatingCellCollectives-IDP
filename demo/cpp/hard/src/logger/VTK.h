@@ -198,14 +198,15 @@ class VTKDataLogger {
   void writePVTUFile(const std::string& pfilename, const std::string& step_basename);
 
  public:
-  VTKDataLogger(const std::string& outputDirectory, const std::string& filePrefix, bool onlyRankZero = false)
+  VTKDataLogger(const std::string& outputDirectory, const std::string& filePrefix, bool onlyRankZero = false, bool preserve_existing = false, size_t step = 0)
       : outputDirectory(outputDirectory),
         filePrefix(filePrefix),
-        onlyRankZero(onlyRankZero) {
+        onlyRankZero(onlyRankZero),
+        step(step) {
     MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
     MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
 
-    // On rank 0, create directories and clear any previous output for this prefix.
+    // On rank 0, create directories and optionally clear previous output for this prefix.
     if (mpiRank == 0) {
       std::filesystem::path dir(outputDirectory);
       std::filesystem::path dataDir = dir / "data";
@@ -213,20 +214,22 @@ class VTKDataLogger {
       // Create directories. This is safe to call even if they exist.
       std::filesystem::create_directories(dataDir);
 
-      // Clear previous output related to this filePrefix.
-      auto clear_files = [&](const std::filesystem::path& path_to_clear, const std::string& extension) {
-        if (!std::filesystem::exists(path_to_clear)) return;
-        for (const auto& entry : std::filesystem::directory_iterator(path_to_clear)) {
-          const std::string filename = entry.path().filename().string();
-          if (entry.is_regular_file() && entry.path().extension() == extension &&
-              filename.rfind(filePrefix, 0) == 0) {  // C++17 equivalent of starts_with
-            std::filesystem::remove(entry.path());
+      // Only clear previous output if preserve_existing is false
+      if (!preserve_existing) {
+        auto clear_files = [&](const std::filesystem::path& path_to_clear, const std::string& extension) {
+          if (!std::filesystem::exists(path_to_clear)) return;
+          for (const auto& entry : std::filesystem::directory_iterator(path_to_clear)) {
+            const std::string filename = entry.path().filename().string();
+            if (entry.is_regular_file() && entry.path().extension() == extension &&
+                filename.rfind(filePrefix, 0) == 0) {  // C++17 equivalent of starts_with
+              std::filesystem::remove(entry.path());
+            }
           }
-        }
-      };
+        };
 
-      clear_files(dir, ".pvtu");
-      clear_files(dataDir, ".vtu");
+        clear_files(dir, ".pvtu");
+        clear_files(dataDir, ".vtu");
+      }
     }
   }
 

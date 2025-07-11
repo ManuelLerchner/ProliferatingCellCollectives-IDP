@@ -14,8 +14,7 @@ inline MPI_Datatype getMpiDataType() {
   if (std::is_same<T, double>::value) return MPI_DOUBLE;
   if (std::is_same<T, size_t>::value) return MPI_LONG_LONG;
 
-  std::cout << "Unsupported type: " << typeid(T).name() << std::endl;
-
+  throw std::runtime_error("Unsupported type: " + std::string(typeid(T).name()));
   PetscCallAbort(PETSC_COMM_WORLD, MPI_Abort(PETSC_COMM_WORLD, 1));
   return MPI_DATATYPE_NULL;  // Should not be reached
 }

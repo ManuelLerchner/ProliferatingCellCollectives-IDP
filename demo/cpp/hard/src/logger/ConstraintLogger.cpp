@@ -5,8 +5,8 @@
 
 namespace vtk {
 
-ConstraintLogger::ConstraintLogger(const std::string& outputDirectory, const std::string& baseFilename)
-    : logger_(outputDirectory, baseFilename) {
+ConstraintLogger::ConstraintLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing, size_t step)
+    : logger_(outputDirectory, baseFilename, false, preserve_existing, step) {
 }
 
 void ConstraintLogger::log(const std::vector<Constraint>& constraints) {

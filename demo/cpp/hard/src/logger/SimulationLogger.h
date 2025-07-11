@@ -7,7 +7,7 @@ namespace vtk {
 struct SimulationStep {
   double simulation_time_s;
   double step_duration_s;
-  long long step;
+  size_t step;
 
   // Particle metrics
   int num_particles;
@@ -31,7 +31,7 @@ struct SimulationStep {
 
 class SimulationLogger {
  public:
-  SimulationLogger(const std::string& outputDirectory, const std::string& baseFilename);
+  SimulationLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing = false, size_t step = 0);
   void log(const SimulationStep& step);
 
  private:

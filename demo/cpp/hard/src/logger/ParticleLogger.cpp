@@ -5,8 +5,8 @@
 
 namespace vtk {
 
-ParticleLogger::ParticleLogger(const std::string& outputDirectory, const std::string& baseFilename)
-    : logger_(outputDirectory, baseFilename) {
+ParticleLogger::ParticleLogger(const std::string& outputDirectory, const std::string& baseFilename, bool preserve_existing, size_t step)
+    : logger_(outputDirectory, baseFilename, false, preserve_existing, step) {
 }
 
 void ParticleLogger::log(const std::vector<Particle>& particles) {
