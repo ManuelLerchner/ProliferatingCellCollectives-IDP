@@ -23,12 +23,12 @@ class DynamicVecWrapper {
   }
 
   bool ensureCapacity(PetscInt additional_items) {
-    PetscInt required_local_capacity = local_capacity + additional_items;
+    PetscInt required_local_capacity = size + additional_items;
 
-    auto max_local_capacity = globalReduce(local_capacity, MPI_MAX);
+    auto max_required_capacity = globalReduce(required_local_capacity, MPI_MAX);
 
-    if (local_capacity < max_local_capacity) {
-      PetscInt new_local_capacity = std::max(max_local_capacity, static_cast<PetscInt>(local_capacity * growth_factor));
+    if (local_capacity < max_required_capacity) {
+      PetscInt new_local_capacity = max_required_capacity * growth_factor;
 
       PetscPrintf(PETSC_COMM_WORLD, "Resizing vec from %d to %d\n", local_capacity, new_local_capacity);
 
@@ -65,27 +65,27 @@ class DynamicMatWrapper {
   double growth_factor;
 
  public:
-  DynamicMatWrapper(PetscInt local_rows, int capacity, double growth_factor_) {
+  DynamicMatWrapper(PetscInt local_rows_, int capacity_, double growth_factor_) {
     growth_factor = growth_factor_;
-    local_capacity = capacity;
-    local_rows = local_rows;
+    local_capacity = capacity_;
+    local_rows = local_rows_;
     size = 0;
 
-    mat = MatWrapper::CreateAIJ(local_rows, capacity);
-    MatMPIAIJSetPreallocation(mat, capacity, NULL, 10 * capacity, NULL);
+    mat = MatWrapper::CreateAIJ(local_rows, capacity_);
+    MatMPIAIJSetPreallocation(mat, 16, NULL, 16, NULL);
     MatSetOption(mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
   }
 
   bool ensureCapacity(PetscInt additional_cols) {
-    PetscInt required_local_capacity = local_capacity + additional_cols;
+    PetscInt required_local_capacity = size + additional_cols;
 
-    auto max_local_capacity = globalReduce(local_capacity, MPI_MAX);
+    auto max_required_capacity = globalReduce(required_local_capacity, MPI_MAX);
 
-    if (local_capacity < max_local_capacity) {
-      PetscInt new_local_capacity = std::max(max_local_capacity, static_cast<PetscInt>(local_capacity * growth_factor));
+    if (local_capacity < max_required_capacity) {
+      PetscInt new_local_capacity = max_required_capacity * growth_factor;
 
       MatWrapper new_mat = MatWrapper::CreateAIJ(local_rows, new_local_capacity);
-      MatMPIAIJSetPreallocation(new_mat, new_local_capacity, NULL, 10 * new_local_capacity, NULL);
+      MatMPIAIJSetPreallocation(new_mat, 16, NULL, 16, NULL);
       MatSetOption(new_mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
       mat = std::move(new_mat);

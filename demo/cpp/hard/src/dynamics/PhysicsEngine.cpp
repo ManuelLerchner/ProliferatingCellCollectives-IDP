@@ -332,7 +332,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
   int global_num_particles = globalReduce<int>(particle_manager.local_particles.size(), MPI_SUM);
-  int alloc_size = solver_config.getMinPreallocationSize(global_num_particles);
+
+  int global_max_particles = globalReduce<int>(particle_manager.local_particles.size(), MPI_MAX);
+
+  int alloc_size = solver_config.getMinPreallocationSize(global_max_particles);
 
   DynamicVecWrapper GAMMA = DynamicVecWrapper(alloc_size, solver_config.growth_factor);
   DynamicVecWrapper PHI = DynamicVecWrapper(alloc_size, solver_config.growth_factor);

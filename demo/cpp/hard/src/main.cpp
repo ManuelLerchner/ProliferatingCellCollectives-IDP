@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
         .max_bbpgd_iterations = 10000,
         .max_recursive_iterations = 50,
         .linked_cell_size = physic_config.l0 * 2.2,
-        .growth_factor = 1.1,
+        .growth_factor = 2,
         .particle_preallocation_factor = 10,
     };
 

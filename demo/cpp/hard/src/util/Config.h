@@ -44,8 +44,6 @@ struct SolverConfig {
   double particle_preallocation_factor;
 
   int getMinPreallocationSize(int n) const {
-    int total_ranks;
-    MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
-    return std::max(2 * n, static_cast<int>(n * particle_preallocation_factor / total_ranks));
+    return std::max(1, static_cast<int>(n * particle_preallocation_factor));
   }
 };
