@@ -418,7 +418,7 @@ void Domain::assignGlobalIDs() {
   // Sort particles by their x-position to group close particles.
   std::sort(particle_manager_->local_particles.begin(), particle_manager_->local_particles.end(),
             [](const Particle& a, const Particle& b) {
-              return a.getPosition()[1] < b.getPosition()[1];
+              return a.getPosition()[0] < b.getPosition()[0];
             });
 
   PetscInt local_particle_count = particle_manager_->local_particles.size();
@@ -465,7 +465,7 @@ Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const Physi
   vtk::VTKStateLoader loader(vtk_dir);
   auto state = loader.loadLatestState();
 
-  PetscPrintf(PETSC_COMM_WORLD, "Loading %zu particles from VTK state at time %.2f s (iter %zu)\n",
+  PetscPrintf(PETSC_COMM_WORLD, "Loading %zu particles from VTK state at time %.2f s (iter %u)\n",
               state.particles.size(), state.simulation_time_s, state.step);
 
   Domain domain(sim_config, physics_config, solver_config, true, state.step);
@@ -478,7 +478,7 @@ Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const Physi
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
   if (rank == 0) {
-    domain.queueNewParticles(state.particles);
+     domain.queueNewParticles(state.particles);
   }
 
   // Commit particles and update state

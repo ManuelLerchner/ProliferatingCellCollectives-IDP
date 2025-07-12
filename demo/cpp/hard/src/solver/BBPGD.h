@@ -77,6 +77,10 @@ inline BBPGDResult BBPGD(
     VecWAXPY(delta_phi, -1.0, phi_curr, g_next);
 
     PetscScalar s_dot_y;
+
+    VecView(delta_gamma, PETSC_VIEWER_DRAW_WORLD);
+    VecView(delta_phi, PETSC_VIEWER_DRAW_WORLD);
+
     VecDot(delta_gamma, delta_phi, &s_dot_y);
 
     double numerator_val;

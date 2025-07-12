@@ -12,6 +12,7 @@ ParticleLogger::ParticleLogger(const std::string& outputDirectory, const std::st
 void ParticleLogger::log(const std::vector<Particle>& particles) {
   std::vector<std::array<double, 3>> positions(particles.size());
 
+  std::vector<std::array<double, 4>> quaternions(particles.size());
   std::vector<std::array<double, 3>> orientation(particles.size());
   std::vector<std::array<double, 3>> lengths(particles.size());
   std::vector<std::array<double, 3>> forces(particles.size());
@@ -28,7 +29,8 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
 
   for (int i = 0; i < particles.size(); i++) {
     positions[i] = particles[i].getPosition();
-    orientation[i] = utils::Quaternion::getDirectionVector(particles[i].getQuaternion());
+    quaternions[i] = particles[i].getQuaternion();
+    orientation[i] = utils::Quaternion::getDirectionVector(quaternions[i]);
     lengths[i] = {particles[i].getLength(), particles[i].getDiameter(), particles[i].getDiameter()};
 
     gids[i] = particles[i].getGID();
@@ -45,6 +47,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
   logger_.addPoints(positions);
 
   logger_.addPointData("gid", gids);
+  logger_.addPointData("quaternion", quaternions);
   logger_.addPointData("orientation", orientation);
   logger_.addPointData("lengths", lengths);
   logger_.addPointData("impedance", impedances);

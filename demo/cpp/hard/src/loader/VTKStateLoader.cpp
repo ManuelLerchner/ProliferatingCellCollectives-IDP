@@ -110,7 +110,7 @@ std::vector<Particle> VTKStateLoader::loadParticles(int timestep) {
     const auto& positions = data_arrays["Points"].data;
 
     const auto& gids = data_arrays["gid"].data;
-    const auto& orientation = data_arrays["orientation"].data;
+    const auto& quaternions = data_arrays["quaternion"].data;
     const auto& lengths = data_arrays["lengths"].data;
     const auto& forces = data_arrays["forces"].data;
     const auto& velocity_linear = data_arrays["velocity_linear"].data;
@@ -121,10 +121,7 @@ std::vector<Particle> VTKStateLoader::loadParticles(int timestep) {
       std::array<double, 3> position = {
           positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]};
 
-      std::array<double, 3> euler = {
-          orientation[i * 3], orientation[i * 3 + 1], orientation[i * 3 + 2]};
-
-      std::array<double, 4> quaternion = utils::Quaternion::quaternionFromEuler(euler);
+      std::array<double, 4> quaternion = {quaternions[i * 4], quaternions[i * 4 + 1], quaternions[i * 4 + 2], quaternions[i * 4 + 3]};
 
       // Create particle with basic properties
       Particle p(static_cast<PetscInt>(gids[i]),

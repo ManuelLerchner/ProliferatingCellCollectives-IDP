@@ -52,6 +52,13 @@ void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& loc
   }
 }
 
+void create_gamma_vector_local(VecWrapper& gamma, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
+  for (int i = 0; i < local_constraints.size(); ++i) {
+    PetscInt c_global_idx = col_offset + i;
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(gamma, c_global_idx, local_constraints[i].gamma, INSERT_VALUES));
+  }
+}
+
 void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>& local_constraints, PetscInt offset) {
   using namespace utils::ArrayMath;
 

@@ -22,18 +22,38 @@ PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_c
   gen = std::mt19937(42);
 }
 
-void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, PetscMPIInt global_new_constraints_count) {
+void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, const std::vector<Constraint>& old_constraints) {
   // Ensure capacity for new constraints
-  PHI_PREV.ensureCapacity(global_new_constraints_count);
-  GAMMA_PREV.ensureCapacity(global_new_constraints_count);
-  D_PREV.ensureCapacity(global_new_constraints_count);
-  L_PREV.ensureCapacity(global_new_constraints_count);
+  bool PHI_PREV_cleared = PHI_PREV.ensureCapacity(new_constraints.size());
+  bool GAMMA_PREV_cleared = GAMMA_PREV.ensureCapacity(new_constraints.size());
+  bool D_PREV_cleared = D_PREV.ensureCapacity(new_constraints.size());
+  bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
+
+  int ownership_start, ownership_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(D_PREV, &ownership_start, &ownership_end));
+
+  if (PHI_PREV_cleared) {
+    create_phi_vector_local(PHI_PREV, old_constraints, ownership_start);
+    PHI_PREV.incrementSize(old_constraints.size());
+  }
+
+  if (GAMMA_PREV_cleared) {
+    create_gamma_vector_local(GAMMA_PREV, old_constraints, ownership_start);
+    GAMMA_PREV.incrementSize(old_constraints.size());
+  }
+
+  if (D_PREV_cleared) {
+    calculate_jacobian_local(D_PREV, old_constraints, ownership_start);
+    D_PREV.incrementSize(old_constraints.size());
+  }
+
+  if (L_PREV_cleared) {
+    calculate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
+    L_PREV.incrementSize(old_constraints.size());
+  }
 
   // Calculate offset for new data
-  PetscInt col_offset = 0;
-  size_t local_new_constraints_count = new_constraints.size();
-  MPI_Exscan(&local_new_constraints_count, &col_offset, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
-  col_offset += PHI_PREV.getSize();
+  PetscInt col_offset = ownership_start + PHI_PREV.getSize();
 
   // Populate matrices and vectors with new data
   create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
@@ -43,10 +63,10 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
 
   // Update sizes
-  PHI_PREV.updateSize(global_new_constraints_count);
-  GAMMA_PREV.updateSize(global_new_constraints_count);
-  D_PREV.updateSize(global_new_constraints_count);
-  L_PREV.updateSize(global_new_constraints_count);
+  PHI_PREV.incrementSize(new_constraints.size());
+  GAMMA_PREV.incrementSize(new_constraints.size());
+  D_PREV.incrementSize(new_constraints.size());
+  L_PREV.incrementSize(new_constraints.size());
 
   // Finalize assembly
   VecAssemblyBegin(PHI_PREV);
@@ -361,13 +381,13 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
       break;
     }
 
+    // Calculate matrices only for the newly identified constraints
+    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, all_constraints_set);
+
     all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
 
     auto global_total_constraints = globalReduce<size_t>(all_constraints_set.size(), MPI_SUM);
     auto global_new_constraints_count = globalReduce<size_t>(new_constraints.size(), MPI_SUM);
-
-    // Calculate matrices only for the newly identified constraints
-    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, global_new_constraints_count);
 
     // memory
     PetscLogDouble memory_usage;
@@ -388,8 +408,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // initialize solver
 
     VecWrapper gamma_old = VecWrapper::Like(GAMMA);
-    GAMMA.copyTo(gamma_old);
-
+    VecCopy(GAMMA, gamma_old);
 
     // Calculate external velocities
     calculate_external_velocities(workspaces->U_ext, workspaces->F_ext_workspace, particle_manager.local_particles, M, dt);
