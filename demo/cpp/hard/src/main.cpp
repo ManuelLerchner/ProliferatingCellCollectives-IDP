@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
     PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-    double DT = 60;
+    double DT = 10;
     double END_TIME = 1000 * 60;
     double LOG_FREQUENCY = 1 * 60;
 
@@ -44,8 +44,8 @@ int main(int argc, char** argv) {
         .log_frequency_seconds = LOG_FREQUENCY,
         .min_box_size = {physic_config.l0 + 2, physic_config.l0 + 2, 0},
 
-        .enable_adaptive_dt = false,
-        .target_bbpgd_iterations = 500,
+        .enable_adaptive_dt = true,
+        .target_bbpgd_iterations = 10000,
         .dt_adjust_frequency = 10,
         .dt_adjust_factor = 0.1,
         .min_dt = 1e-6,

@@ -7,6 +7,26 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
+void dotProduct(const VecWrapper& a, const VecWrapper& b, double& res, int N) {
+  // Get local size and pointers to vector data
+  PetscInt n_local;
+  const PetscScalar *a_array, *b_array;
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(a, &a_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(b, &b_array));
+
+  double res_local = 0.0;
+
+  for (PetscInt i = 0; i < N; ++i) {
+    res_local += (a_array[i]) * (b_array[i]);
+  }
+
+  // Restore arrays
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(a, &a_array));
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(b, &b_array));
+
+  res = globalReduce(res_local, MPI_SUM);
+}
+
 struct BBPGDResult {
   long long bbpgd_iterations;
   double residual;
@@ -25,13 +45,14 @@ inline BBPGDResult BBPGD(
     ResidualFunc&& residual,
     VecWrapper& gamma,  // in-out parameter
     double allowed_residual,
-    int max_bbpgd_iterations) {
+    int max_bbpgd_iterations,
+    int N) {
   auto phi_curr = VecWrapper::Like(gamma);
 
   // Compute initial gradient and residual
 
   gradient(gamma, phi_curr);
-  double res = residual(phi_curr, gamma);
+  double res = residual(phi_curr, gamma, N);
 
   if (res <= allowed_residual) {
     return {.bbpgd_iterations = 0, .residual = res};
@@ -64,7 +85,7 @@ inline BBPGDResult BBPGD(
     gradient(gamma_next, g_next);
 
     // Step 8: res_next := res(γ_next)
-    res = residual(g_next, gamma_next);
+    res = residual(g_next, gamma_next, N);
 
     // Step 9-11: Check convergence
     if (res <= allowed_residual) {
@@ -78,22 +99,19 @@ inline BBPGDResult BBPGD(
 
     PetscScalar s_dot_y;
 
-    VecView(delta_gamma, PETSC_VIEWER_DRAW_WORLD);
-    VecView(delta_phi, PETSC_VIEWER_DRAW_WORLD);
-
-    VecDot(delta_gamma, delta_phi, &s_dot_y);
+    dotProduct(delta_gamma, delta_phi, s_dot_y, N);
 
     double numerator_val;
     double denominator_val;
 
     if (iteration % 2 == 0) {
       PetscScalar s_dot_s;
-      VecDot(delta_gamma, delta_gamma, &s_dot_s);
+      dotProduct(delta_gamma, delta_gamma, s_dot_s, N);
       numerator_val = PetscRealPart(s_dot_s);
       denominator_val = PetscRealPart(s_dot_y);
     } else {
       PetscScalar y_dot_y;
-      VecDot(delta_phi, delta_phi, &y_dot_y);
+      dotProduct(delta_phi, delta_phi, y_dot_y, N);
       numerator_val = PetscRealPart(s_dot_y);
       denominator_val = PetscRealPart(y_dot_y);
     }

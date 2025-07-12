@@ -197,47 +197,40 @@ void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const Ma
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U, deltaC));
 }
 
-double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
+double residual(const VecWrapper& gradient_val, const VecWrapper& gamma, int N) {
   // This function computes the infinity norm of the projected gradient.
   // The projection is defined as:
   //   projected_gradient_i = gradient_val_i, if gamma_i > 0
   //   projected_gradient_i = min(0, gradient_val_i), if gamma_i <= 0
 
-  Vec projected_gradient;
-  PetscCallAbort(PETSC_COMM_WORLD, VecDuplicate(gradient_val, &projected_gradient));
-
   // Get local size and pointers to vector data
   PetscInt n_local;
   const PetscScalar *grad_array, *gamma_array;
-  PetscScalar* pg_array;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gradient_val, &n_local));
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val, &grad_array));
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma, &gamma_array));
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(projected_gradient, &pg_array));
 
   // Compute projected gradient component-wise
-  for (PetscInt i = 0; i < n_local; ++i) {
-    const double g_i = PetscRealPart(grad_array[i]);
+  double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
+
+  for (PetscInt i = 0; i < N; ++i) {
+    double v;
     if (PetscRealPart(gamma_array[i]) > 0) {
-      pg_array[i] = g_i;
+      v = grad_array[i];
     } else {
-      pg_array[i] = std::min(0.0, g_i);
+      v = std::min(0.0, PetscRealPart(grad_array[i]));
     }
+    res = std::max(res, std::abs(v));  // Take absolute value for infinity norm
   }
 
   // Restore arrays
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val, &grad_array));
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma, &gamma_array));
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(projected_gradient, &pg_array));
 
   // Compute the infinity norm of the projected gradient: max(abs(projected_gradient_i))
-  PetscReal norm_val;
-  PetscCallAbort(PETSC_COMM_WORLD, VecNorm(projected_gradient, NORM_INFINITY, &norm_val));
+  auto res_global = globalReduce(res, MPI_MAX);
 
-  // Clean up
-  PetscCallAbort(PETSC_COMM_WORLD, VecDestroy(&projected_gradient));
-
-  return (double)norm_val;
+  return res_global;
 }
 
 struct RecursiveSolverWorkspaces {
@@ -444,7 +437,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     };
 
     // Solver
-    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, solver_config.tolerance, solver_config.max_bbpgd_iterations);
+    int N = GAMMA.getSize();
+    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, solver_config.tolerance, solver_config.max_bbpgd_iterations, N);
 
     res = bbpgd_result_recursive.residual;
     bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
