@@ -45,20 +45,19 @@ int main(int argc, char** argv) {
         .min_box_size = {physic_config.l0 + 2, physic_config.l0 + 2, 0},
 
         .enable_adaptive_dt = true,
-        .target_bbpgd_iterations = 10000,
-        .dt_adjust_frequency = 10,
+        .target_bbpgd_iterations = 5000,
         .dt_adjust_factor = 0.1,
-        .min_dt = 1e-6,
+        .min_dt = 1,
         .max_dt = DT};
 
     SolverConfig solver_config = {
         .tolerance = physic_config.l0 / 1e3,
         .allowed_overlap = physic_config.l0 / 1e2,
-        .max_bbpgd_iterations = 10000,
+        .max_bbpgd_iterations = 100000,
         .max_recursive_iterations = 50,
         .linked_cell_size = physic_config.l0 * 2.2,
-        .growth_factor = 2,
-        .particle_preallocation_factor = 10,
+        .growth_factor = 1.5,
+        .particle_preallocation_factor = 8,
     };
 
     // Use PETSc's option system
