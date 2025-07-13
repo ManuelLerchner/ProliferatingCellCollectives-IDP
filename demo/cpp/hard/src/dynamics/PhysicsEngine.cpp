@@ -31,8 +31,8 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
 
   if (D_PREV_cleared || L_PREV_cleared) {
-    MatMPIAIJSetPreallocation(D_PREV, 12 * last_recursive_iteration, NULL, 12 * last_recursive_iteration, NULL);
-    MatMPIAIJSetPreallocation(L_PREV, 12 * last_recursive_iteration, NULL, 12 * last_recursive_iteration, NULL);
+    MatMPIAIJSetPreallocation(D_PREV, 8 * last_recursive_iteration, NULL, 2 * last_recursive_iteration, NULL);
+    MatMPIAIJSetPreallocation(L_PREV, 8 * last_recursive_iteration, NULL, 2 * last_recursive_iteration, NULL);
     MatSetOption(D_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
     MatSetOption(L_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
   }
@@ -401,7 +401,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     exchangeGhostParticles();
 
     // Use a larger tolerance for initial collision detection
-    double tolerance = iter == 0 ? 0.5 : 0.01;
+    double tolerance = iter == 0 ? 0.1 : 0.01;
     auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, tolerance);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
@@ -450,22 +450,32 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
     // Gradient
     auto gradient = [&](const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
-      // --- MOVEMENT PART ---
-      // gamma_diff = gamma_curr - gamma_old
-      VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, gamma_curr);
 
-      // phi_dot_movement = D * M * D^T * gamma_diff
-      estimate_phi_dot_movement_inplace(D_PREV, M, workspaces->U_ext, workspaces->gamma_diff_workspace, workspaces->F_g_workspace, workspaces->U_c_workspace, workspaces->U_total_workspace, workspaces->phi_dot_movement_workspace);
+#pragma omp sections
+      {
+#pragma omp section
+        {
+          // --- MOVEMENT PART ---
+          // gamma_diff = gamma_curr - gamma_old
+          VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, gamma_curr);
 
-      // --- GROWTH PART ---
-      // ldot_curr = growth_rate(gamma_curr)
-      calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->impedance_curr_workspace);
+          // phi_dot_movement = D * M * D^T * gamma_diff
+          estimate_phi_dot_movement_inplace(D_PREV, M, workspaces->U_ext, workspaces->gamma_diff_workspace, workspaces->F_g_workspace, workspaces->U_c_workspace, workspaces->U_total_workspace, workspaces->phi_dot_movement_workspace);
+        }
 
-      // ldot_diff = ldot_curr - ldot_prev
-      VecWAXPY(workspaces->ldot_diff_workspace, -1.0, workspaces->ldot_prev, workspaces->ldot_curr_workspace);
+#pragma omp section
+        {
+          // --- GROWTH PART ---
+          // ldot_curr = growth_rate(gamma_curr)
+          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->impedance_curr_workspace);
 
-      // phi_dot_growth = -L^T * ldot_diff
-      estimate_phi_dot_growth_inplace(L_PREV, workspaces->ldot_diff_workspace, workspaces->phi_dot_growth_result);
+          // ldot_diff = ldot_curr - ldot_prev
+          VecWAXPY(workspaces->ldot_diff_workspace, -1.0, workspaces->ldot_prev, workspaces->ldot_curr_workspace);
+
+          // phi_dot_growth = -L^T * ldot_diff
+          estimate_phi_dot_growth_inplace(L_PREV, workspaces->ldot_diff_workspace, workspaces->phi_dot_growth_result);
+        }
+      }
 
       // Start with the base violation: phi_next_out = phi
       PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI, phi_next_out));

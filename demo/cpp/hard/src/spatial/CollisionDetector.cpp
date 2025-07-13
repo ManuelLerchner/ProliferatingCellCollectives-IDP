@@ -92,7 +92,7 @@ std::vector<Constraint> CollisionDetector::detectCollisions(
 
   // Sort constraints by their contact point's x-position to group them spatially.
   std::sort(constraints.begin(), constraints.end(), [](const Constraint& a, const Constraint& b) {
-    return a.contactPoint[1] < b.contactPoint[1];
+    return a.contactPoint[0] < b.contactPoint[0];
   });
 
   // Get the number of locally owned constraints.
