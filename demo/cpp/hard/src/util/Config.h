@@ -15,6 +15,7 @@ struct SimulationConfig {
   // Adaptive timestepping parameters
   bool enable_adaptive_dt;
   int target_bbpgd_iterations;
+  int dt_adjust_frequency;
   double dt_adjust_factor;  // 10% adjustment up or down
   double min_dt;
   double max_dt;

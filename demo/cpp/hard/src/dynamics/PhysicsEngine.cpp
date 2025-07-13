@@ -23,31 +23,15 @@ PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_c
 }
 
 void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, const std::vector<Constraint>& old_constraints) {
-  // First ensure capacity for new constraints
-
-  // Now do preallocation
-  const MatWrapper& D_mat = D_PREV;
-  std::vector<PetscInt> d_nnz_jac(D_mat.getRows(), 0);
-  std::vector<PetscInt> o_nnz_jac(D_mat.getRows(), 0);
-
-  double safety_factor = 1.5;
-
-  preallocate_jacobian_matrix(D_PREV, safety_factor, old_constraints, new_constraints, d_nnz_jac, o_nnz_jac);
-
-  const MatWrapper& L_mat = L_PREV;
-  std::vector<PetscInt> d_nnz_stress(L_mat.getRows(), 0);
-  std::vector<PetscInt> o_nnz_stress(L_mat.getRows(), 0);
-  preallocate_stress_matrix(L_PREV, safety_factor, old_constraints, new_constraints, d_nnz_stress, o_nnz_stress);
-
+  // Ensure capacity for new constraints
   bool PHI_PREV_cleared = PHI_PREV.ensureCapacity(new_constraints.size());
   bool GAMMA_PREV_cleared = GAMMA_PREV.ensureCapacity(new_constraints.size());
-  bool D_PREV_cleared = D_PREV.ensureCapacity(new_constraints.size(), d_nnz_jac, o_nnz_jac);
-  bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size(), d_nnz_stress, o_nnz_stress);
+  bool D_PREV_cleared = D_PREV.ensureCapacity(new_constraints.size());
+  bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
 
-  PetscInt ownership_start, ownership_end;
+  int ownership_start, ownership_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(D_PREV, &ownership_start, &ownership_end));
 
-  // Now handle old constraints if needed
   if (PHI_PREV_cleared) {
     create_phi_vector_local(PHI_PREV, old_constraints, ownership_start);
     PHI_PREV.incrementSize(old_constraints.size());
@@ -73,7 +57,9 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
 
   // Populate matrices and vectors with new data
   create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
+
   calculate_jacobian_local(D_PREV, new_constraints, col_offset);
+
   calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
 
   // Update sizes
@@ -82,7 +68,7 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   D_PREV.incrementSize(new_constraints.size());
   L_PREV.incrementSize(new_constraints.size());
 
-  // Final assembly
+  // Finalize assembly
   VecAssemblyBegin(PHI_PREV);
   VecAssemblyBegin(GAMMA_PREV);
   MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
@@ -92,17 +78,6 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   VecAssemblyEnd(GAMMA_PREV);
   MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY);
-
-  // Get info about number of mallocs
-  MatInfo info;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(D_PREV, MAT_GLOBAL_SUM, &info));
-  PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info.mallocs);
-  PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info.nz_allocated, (PetscInt)info.nz_used, (PetscInt)info.nz_unneeded);
-
-  MatInfo info2;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(L_PREV, MAT_GLOBAL_SUM, &info2));
-  PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info2.mallocs);
-  PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info2.nz_allocated, (PetscInt)info2.nz_used, (PetscInt)info2.nz_unneeded);
 }
 
 VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
@@ -310,13 +285,8 @@ enum class SolverState {
 
 void PhysicsEngine::updateConstraintsFromSolution(std::vector<Constraint>& constraints, const VecWrapper& gamma, const VecWrapper& phi) {
   std::vector<PetscInt> indices;
-
-  int ownership_start;
-  int ownership_end;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetOwnershipRange(gamma, &ownership_start, &ownership_end));
-
-  for (int i = 0; i < constraints.size(); ++i) {
-    indices.push_back(ownership_start + i);
+  for (auto& c : constraints) {
+    indices.push_back(c.gid);
   }
 
   // Scatter the dC vector
@@ -388,7 +358,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   SolverState solver_state = SolverState::RUNNING;
 
-  last_recursive_iteration = 1;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
@@ -497,7 +466,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // constraint_logger.log(all_constraints_set);
 
     constraint_iterations++;
-    last_recursive_iteration++;
   }
 
   switch (solver_state) {

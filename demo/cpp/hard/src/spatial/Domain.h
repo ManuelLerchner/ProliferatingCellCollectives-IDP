@@ -27,7 +27,7 @@ class Domain {
   void rebalance();
   void exchangeGhostParticles();
   void resizeDomain();
-  void printProgress(int current_iteration, double colony_radius, double cpu_time_s) const;
+  void printProgress(int current_iteration, double colony_radius) const;
 
   std::pair<std::array<double, 3>, std::array<double, 3>> calculateLocalBoundingBox() const;
   void calculateGlobalBounds();

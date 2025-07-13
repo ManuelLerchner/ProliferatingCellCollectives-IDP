@@ -61,6 +61,4 @@ class PhysicsEngine {
   void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const VecWrapper& gamma, const VecWrapper& phi);
 
   std::mt19937 gen;
-
-  int last_recursive_iteration = 1;
 };
