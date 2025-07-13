@@ -31,8 +31,8 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
 
   if (D_PREV_cleared || L_PREV_cleared) {
-    MatMPIAIJSetPreallocation(D_PREV, 12 * last_recursive_iteration, NULL, 0, NULL);
-    MatMPIAIJSetPreallocation(L_PREV, 12 * last_recursive_iteration, NULL, 0, NULL);
+    MatMPIAIJSetPreallocation(D_PREV, 12 * last_recursive_iteration, NULL, 12 * last_recursive_iteration, NULL);
+    MatMPIAIJSetPreallocation(L_PREV, 12 * last_recursive_iteration, NULL, 12 * last_recursive_iteration, NULL);
     MatSetOption(D_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
     MatSetOption(L_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
   }
@@ -40,46 +40,61 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   PetscInt ownership_start, ownership_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(D_PREV, &ownership_start, &ownership_end));
 
-  // Now handle old constraints if needed
-  if (PHI_PREV_cleared) {
-    create_phi_vector_local(PHI_PREV, old_constraints, ownership_start);
-    PHI_PREV.incrementSize(old_constraints.size());
-  }
-
-  if (GAMMA_PREV_cleared) {
-    create_gamma_vector_local(GAMMA_PREV, old_constraints, ownership_start);
-    GAMMA_PREV.incrementSize(old_constraints.size());
-  }
-
-  if (D_PREV_cleared) {
-    calculate_jacobian_local(D_PREV, old_constraints, ownership_start);
-    D_PREV.incrementSize(old_constraints.size());
-  }
-
-  if (L_PREV_cleared) {
-    calculate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
-    L_PREV.incrementSize(old_constraints.size());
-  }
-
   // Calculate offset for new data
   PetscInt col_offset = ownership_start + PHI_PREV.getSize();
 
-  // Populate matrices and vectors with new data
-  create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
-  calculate_jacobian_local(D_PREV, new_constraints, col_offset);
-  calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
+// Populate matrices and vectors with new data
+#pragma omp parallel sections
+  {
+#pragma omp section
+    {
+      if (PHI_PREV_cleared) {
+        create_phi_vector_local(PHI_PREV, old_constraints, ownership_start);
+        PHI_PREV.incrementSize(old_constraints.size());
+      }
 
-  // Update sizes
-  PHI_PREV.incrementSize(new_constraints.size());
-  GAMMA_PREV.incrementSize(new_constraints.size());
-  D_PREV.incrementSize(new_constraints.size());
-  L_PREV.incrementSize(new_constraints.size());
+      create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
+      VecAssemblyBegin(PHI_PREV);
+      PHI_PREV.incrementSize(new_constraints.size());
+    }
+
+#pragma omp section
+    {
+      if (GAMMA_PREV_cleared) {
+        create_gamma_vector_local(GAMMA_PREV, old_constraints, ownership_start);
+        GAMMA_PREV.incrementSize(old_constraints.size());
+      }
+
+      create_gamma_vector_local(GAMMA_PREV, new_constraints, col_offset);
+
+      VecAssemblyBegin(GAMMA_PREV);
+      GAMMA_PREV.incrementSize(new_constraints.size());
+    }
+#pragma omp section
+    {
+      if (D_PREV_cleared) {
+        calculate_jacobian_local(D_PREV, old_constraints, ownership_start);
+        D_PREV.incrementSize(old_constraints.size());
+      }
+
+      calculate_jacobian_local(D_PREV, new_constraints, col_offset);
+      MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
+      D_PREV.incrementSize(new_constraints.size());
+    }
+#pragma omp section
+    {
+      if (L_PREV_cleared) {
+        calculate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
+        L_PREV.incrementSize(old_constraints.size());
+      }
+
+      calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
+      MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
+      L_PREV.incrementSize(new_constraints.size());
+    }
+  }
 
   // Final assembly
-  VecAssemblyBegin(PHI_PREV);
-  VecAssemblyBegin(GAMMA_PREV);
-  MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
-  MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
 
   VecAssemblyEnd(PHI_PREV);
   VecAssemblyEnd(GAMMA_PREV);
@@ -231,6 +246,7 @@ double residual(const VecWrapper& gradient_val, const VecWrapper& gamma, int N) 
   // Compute projected gradient component-wise
   double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
 
+#pragma omp parallel for reduction(max : res)
   for (PetscInt i = 0; i < N; ++i) {
     double v;
     if (PetscRealPart(gamma_array[i]) > 0) {

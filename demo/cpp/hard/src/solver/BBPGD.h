@@ -7,24 +7,30 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
-void dotProduct(const VecWrapper& a, const VecWrapper& b, double& res, int N) {
-  // Get local size and pointers to vector data
-  PetscInt n_local;
+void NormAdotAB(const VecWrapper& a, const VecWrapper& b, double& a_norm, double& ab, int N) {
   const PetscScalar *a_array, *b_array;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(a, &a_array));
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(b, &b_array));
 
-  double res_local = 0.0;
+  double a_norm_local = 0.0;
+  double ab_local = 0.0;
 
+#pragma omp parallel for reduction(+ : ab_local, a_norm_local)
   for (PetscInt i = 0; i < N; ++i) {
-    res_local += (a_array[i]) * (b_array[i]);
+    a_norm_local += (a_array[i]) * (a_array[i]);
+    ab_local += (a_array[i]) * (b_array[i]);
   }
 
   // Restore arrays
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(a, &a_array));
   PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(b, &b_array));
 
-  res = globalReduce(res_local, MPI_SUM);
+  // Combine both values into a single reduction
+  std::array<double, 2> local_values = {a_norm_local, ab_local};
+  std::array<double, 2> global_values;
+  globalReduce_v(local_values.data(), global_values.data(), 2, MPI_SUM);
+  a_norm = global_values[0];
+  ab = global_values[1];
 }
 
 struct BBPGDResult {
@@ -84,36 +90,30 @@ inline BBPGDResult BBPGD(
     // Step 7: g_next := g(γ_next)
     gradient(gamma_next, g_next);
 
-    // Step 8: res_next := res(γ_next)
-    res = residual(g_next, gamma_next, N);
+    if (iteration % 10 == 0) {
+      // Step 8: res_next := res(γ_next)
+      res = residual(g_next, gamma_next, N);
 
-    // Step 9-11: Check convergence
-    if (res <= allowed_residual) {
-      gamma = std::move(gamma_next);
-      break;
+      // Step 9-11: Check convergence
+      if (res <= allowed_residual) {
+        gamma = std::move(gamma_next);
+        break;
+      }
     }
 
     // Step 12: Compute new step size
     VecWAXPY(delta_gamma, -1.0, gamma, gamma_next);
     VecWAXPY(delta_phi, -1.0, phi_curr, g_next);
 
-    PetscScalar s_dot_y;
-
-    dotProduct(delta_gamma, delta_phi, s_dot_y, N);
-
     double numerator_val;
     double denominator_val;
 
     if (iteration % 2 == 0) {
-      PetscScalar s_dot_s;
-      dotProduct(delta_gamma, delta_gamma, s_dot_s, N);
-      numerator_val = PetscRealPart(s_dot_s);
-      denominator_val = PetscRealPart(s_dot_y);
+      // BB1 step: (d^T d)/(d^T g)
+      NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val, N);
     } else {
-      PetscScalar y_dot_y;
-      dotProduct(delta_phi, delta_phi, y_dot_y, N);
-      numerator_val = PetscRealPart(s_dot_y);
-      denominator_val = PetscRealPart(y_dot_y);
+      // BB2 step: (d^T g)/(d^T d)
+      NormAdotAB(delta_phi, delta_gamma, denominator_val, numerator_val, N);
     }
 
     if (std::abs(denominator_val) < 10 * std::numeric_limits<double>::epsilon()) {

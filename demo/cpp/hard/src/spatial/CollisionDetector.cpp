@@ -270,6 +270,8 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       -1,
       constraint_iterations);
 
+  constraint.gamma = signed_distance >= 0.0 ? 0.0 : -signed_distance * 1e3;
+
   return constraint;
 }
 

@@ -72,7 +72,7 @@ class DynamicMatWrapper {
     size = 0;
 
     mat = MatWrapper::CreateAIJ(local_rows, capacity_);
-    MatSetOption(mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+    // MatSetOption(mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
   }
 
   bool ensureCapacity(PetscInt additional_cols) {
@@ -84,7 +84,7 @@ class DynamicMatWrapper {
       PetscInt new_local_capacity = max_required_capacity * growth_factor;
 
       MatWrapper new_mat = MatWrapper::CreateAIJ(local_rows, new_local_capacity);
-      MatSetOption(new_mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+      // MatSetOption(new_mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
       mat = std::move(new_mat);
       local_capacity = new_local_capacity;
