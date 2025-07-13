@@ -277,8 +277,13 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   // Calculate center penalty using quadratic falloff
   double rank_center = (total_rank - 1) / 2.0;                                // Center point (works for both even and odd numbers)
   double max_distance = std::max(rank_center, total_rank - 1 - rank_center);  // Distance to furthest edge
-  double relative_distance = std::abs(rank - rank_center) / max_distance;     // Normalized distance [0,1]
-  double center_penalty = 1.0 - relative_distance * relative_distance;        // Quadratic falloff
+  double relative_distance;
+  if (total_rank == 1) {
+    relative_distance = 0.0;  // Single rank is always at the center
+  } else {
+    relative_distance = std::abs(rank - rank_center) / max_distance;  // Normalized distance [0,1]
+  }
+  double center_penalty = 1.0 - relative_distance * relative_distance;  // Quadratic falloff
 
   constraint.gamma = signed_distance >= 0.0 ? 0.0 : -signed_distance * 5e4 * center_penalty;
 
