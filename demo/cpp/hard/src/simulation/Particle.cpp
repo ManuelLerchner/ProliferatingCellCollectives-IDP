@@ -247,10 +247,10 @@ std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, bo
   const double rot_coeff = sqrt(2.0 * k_B * temperature * mobility_rot * 1.0 / dt);
 
   return {
-      trans_coeff * dist(gen),
-      trans_coeff * dist(gen),
-      monolayer ? 0.0 : trans_coeff * dist(gen),
-      monolayer ? 0.0 : rot_coeff * dist(gen),
-      monolayer ? 0.0 : rot_coeff * dist(gen),
-      rot_coeff * dist(gen)};
+      trans_coeff * dist(gen) * impedance_,
+      trans_coeff * dist(gen) * impedance_,
+      monolayer ? 0.0 : trans_coeff * dist(gen) * impedance_,
+      monolayer ? 0.0 : rot_coeff * dist(gen) * impedance_,
+      monolayer ? 0.0 : rot_coeff * dist(gen) * impedance_,
+      rot_coeff * dist(gen) * impedance_};
 }

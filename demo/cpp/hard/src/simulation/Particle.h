@@ -127,10 +127,6 @@ class Particle {
 
   void reset() {
     num_constraints_ = 0;
-    impedance_ = -1;
-    force_ = {-1, -1, -1};
-    torque_ = {-1, -1, -1};
-    velocityLinear_ = {-1, -1, -1};
   }
 
   std::array<double, 3> calculateGravitationalForce(const std::array<double, 3>& gravity) const;

@@ -56,7 +56,7 @@ class PhysicsEngine {
   CollisionDetector collision_detector;
 
  private:
-  void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt);
+  void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations);
   void apply_monolayer_constraints(VecWrapper& U, int n_local);
   void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const VecWrapper& gamma, const VecWrapper& phi);
 

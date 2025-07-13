@@ -67,7 +67,6 @@ class Domain {
 
   double simulation_time_seconds_ = 0.0;
   double time_last_log_ = 0.0;
-  double current_dt_s;
 
   double start_time_;
   double step_start_time_;

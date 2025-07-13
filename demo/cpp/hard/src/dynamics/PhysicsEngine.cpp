@@ -22,27 +22,20 @@ PhysicsEngine::PhysicsEngine(PhysicsConfig physics_config, SolverConfig solver_c
   gen = std::mt19937(42);
 }
 
-void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, const std::vector<Constraint>& old_constraints) {
+void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, const std::vector<Constraint>& old_constraints, int last_recursive_iteration) {
   // First ensure capacity for new constraints
-
-  // Now do preallocation
-  const MatWrapper& D_mat = D_PREV;
-  std::vector<PetscInt> d_nnz_jac(D_mat.getRows(), 0);
-  std::vector<PetscInt> o_nnz_jac(D_mat.getRows(), 0);
-
-  double safety_factor = 1.5;
-
-  preallocate_jacobian_matrix(D_PREV, safety_factor, old_constraints, new_constraints, d_nnz_jac, o_nnz_jac);
-
-  const MatWrapper& L_mat = L_PREV;
-  std::vector<PetscInt> d_nnz_stress(L_mat.getRows(), 0);
-  std::vector<PetscInt> o_nnz_stress(L_mat.getRows(), 0);
-  preallocate_stress_matrix(L_PREV, safety_factor, old_constraints, new_constraints, d_nnz_stress, o_nnz_stress);
 
   bool PHI_PREV_cleared = PHI_PREV.ensureCapacity(new_constraints.size());
   bool GAMMA_PREV_cleared = GAMMA_PREV.ensureCapacity(new_constraints.size());
-  bool D_PREV_cleared = D_PREV.ensureCapacity(new_constraints.size(), d_nnz_jac, o_nnz_jac);
-  bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size(), d_nnz_stress, o_nnz_stress);
+  bool D_PREV_cleared = D_PREV.ensureCapacity(new_constraints.size());
+  bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
+
+  if (D_PREV_cleared || L_PREV_cleared) {
+    MatMPIAIJSetPreallocation(D_PREV, 12 * last_recursive_iteration, NULL, 0, NULL);
+    MatMPIAIJSetPreallocation(L_PREV, 12 * last_recursive_iteration, NULL, 0, NULL);
+    MatSetOption(D_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+    MatSetOption(L_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+  }
 
   PetscInt ownership_start, ownership_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(D_PREV, &ownership_start, &ownership_end));
@@ -94,15 +87,15 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY);
 
   // Get info about number of mallocs
-  MatInfo info;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(D_PREV, MAT_GLOBAL_SUM, &info));
-  PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info.mallocs);
-  PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info.nz_allocated, (PetscInt)info.nz_used, (PetscInt)info.nz_unneeded);
+  // MatInfo info;
+  // PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(D_PREV, MAT_GLOBAL_SUM, &info));
+  // PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info.mallocs);
+  // PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info.nz_allocated, (PetscInt)info.nz_used, (PetscInt)info.nz_unneeded);
 
-  MatInfo info2;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(L_PREV, MAT_GLOBAL_SUM, &info2));
-  PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info2.mallocs);
-  PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info2.nz_allocated, (PetscInt)info2.nz_used, (PetscInt)info2.nz_unneeded);
+  // MatInfo info2;
+  // PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(L_PREV, MAT_GLOBAL_SUM, &info2));
+  // PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info2.mallocs);
+  // PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info2.nz_allocated, (PetscInt)info2.nz_used, (PetscInt)info2.nz_unneeded);
 }
 
 VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
@@ -123,7 +116,7 @@ VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
   return l;
 }
 
-void PhysicsEngine::calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt) {
+void PhysicsEngine::calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations) {
   PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(U_ext));
 
   // Create a vector for external forces
@@ -133,7 +126,7 @@ void PhysicsEngine::calculate_external_velocities(VecWrapper& U_ext, VecWrapper&
   // PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F_ext_workspace, U_ext));
 
   // Add Brownian motion
-  if (physics_config.temperature > 0) {
+  if (physics_config.temperature > 0 && constraint_iterations == 0) {
     for (const auto& particle : local_particles) {
       auto brownian_vel = particle.calculateBrownianVelocity(physics_config.temperature, physics_config.monolayer, physics_config.xi, dt, gen);
 
@@ -388,7 +381,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   SolverState solver_state = SolverState::RUNNING;
 
-  last_recursive_iteration = 1;
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     exchangeGhostParticles();
 
@@ -409,7 +401,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     }
 
     // Calculate matrices only for the newly identified constraints
-    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, all_constraints_set);
+    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, all_constraints_set, last_recursive_iteration);
 
     all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
 
@@ -438,7 +430,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     VecCopy(GAMMA, gamma_old);
 
     // Calculate external velocities
-    calculate_external_velocities(workspaces->U_ext, workspaces->F_ext_workspace, particle_manager.local_particles, M, dt);
+    calculate_external_velocities(workspaces->U_ext, workspaces->F_ext_workspace, particle_manager.local_particles, M, dt, constraint_iterations);
 
     // Gradient
     auto gradient = [&](const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
@@ -497,8 +489,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // constraint_logger.log(all_constraints_set);
 
     constraint_iterations++;
-    last_recursive_iteration++;
   }
+
+  last_recursive_iteration = constraint_iterations;
 
   switch (solver_state) {
     case SolverState::CONVERGED:

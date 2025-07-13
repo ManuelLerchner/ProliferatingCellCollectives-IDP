@@ -12,12 +12,7 @@ struct SimulationConfig {
   double log_frequency_seconds = 0;
   Vec3d min_box_size;
 
-  // Adaptive timestepping parameters
-  bool enable_adaptive_dt;
-  int target_bbpgd_iterations;
-  double dt_adjust_factor;  // 10% adjustment up or down
-  double min_dt;
-  double max_dt;
+
 };
 
 struct PhysicsConfig {

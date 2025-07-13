@@ -23,22 +23,6 @@ void calculate_stress_matrix_local(
     const std::vector<Constraint>& local_constraints,
     PetscInt offset);
 
-void preallocate_jacobian_matrix(
-    DynamicMatWrapper& D,
-    const double safety_factor,
-    const std::vector<Constraint>& old_constraints,
-    const std::vector<Constraint>& new_constraints,
-    std::vector<PetscInt>& d_nnz,
-    std::vector<PetscInt>& o_nnz);
-
-void preallocate_stress_matrix(
-    DynamicMatWrapper& L,
-    const double safety_factor,
-    const std::vector<Constraint>& old_constraints,
-    const std::vector<Constraint>& new_constraints,
-    std::vector<PetscInt>& d_nnz,
-    std::vector<PetscInt>& o_nnz);
-
 MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, double xi);
 
 MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles);

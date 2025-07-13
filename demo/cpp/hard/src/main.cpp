@@ -9,11 +9,6 @@
 #include "spatial/Domain.h"
 #include "util/Config.h"
 
-void printUsage(const char* program) {
-  PetscPrintf(PETSC_COMM_WORLD, "Usage: %s [--starter-vtk <path>]\n", program);
-  PetscPrintf(PETSC_COMM_WORLD, "  --starter-vtk: Path to VTK directory or PVTU file to initialize from\n");
-}
-
 int main(int argc, char** argv) {
   PetscInitialize(&argc, &argv, 0, 0);
 
@@ -34,7 +29,7 @@ int main(int argc, char** argv) {
         .TAU = 54 * 60,
         .l0 = 1,
         .LAMBDA = 2.44e-3,
-        .temperature = 0.01,
+        .temperature = 1e-30,
         .monolayer = true,
     };
 
@@ -42,13 +37,8 @@ int main(int argc, char** argv) {
         .dt_s = DT,
         .end_time = END_TIME,
         .log_frequency_seconds = LOG_FREQUENCY,
-        .min_box_size = {physic_config.l0 + 2, physic_config.l0 + 2, 0},
-
-        .enable_adaptive_dt = true,
-        .target_bbpgd_iterations = 5000,
-        .dt_adjust_factor = 0.1,
-        .min_dt = 1,
-        .max_dt = DT};
+        .min_box_size = {physic_config.l0 + 1, physic_config.l0 + 1, 0},
+    };
 
     SolverConfig solver_config = {
         .tolerance = physic_config.l0 / 1e3,
@@ -57,7 +47,7 @@ int main(int argc, char** argv) {
         .max_recursive_iterations = 50,
         .linked_cell_size = physic_config.l0 * 2.2,
         .growth_factor = 1.5,
-        .particle_preallocation_factor = 8,
+        .particle_preallocation_factor = 12,
     };
 
     // Use PETSc's option system

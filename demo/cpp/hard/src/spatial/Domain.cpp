@@ -18,7 +18,6 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
     : sim_config_(sim_config),
       physics_config_(physics_config),
       solver_config_(solver_config),
-      current_dt_s(sim_config.dt_s),
       iter(iter) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
   MPI_Comm_size(PETSC_COMM_WORLD, &size_);
@@ -55,22 +54,6 @@ void Domain::commitNewParticles() {
   this->global_particle_count += globalReduce(num_added_local, MPI_SUM);
 }
 
-void Domain::adjustDt(const PhysicsEngine::SolverSolution& solver_solution) {
-  if (!sim_config_.enable_adaptive_dt) {
-    return;
-  }
-
-  // Adjust dt based on the number of BBPGD iterations
-  if (solver_solution.bbpgd_iterations > sim_config_.target_bbpgd_iterations) {
-    current_dt_s *= (1.0 - sim_config_.dt_adjust_factor);  // Decrease dt
-  } else {
-    current_dt_s *= (1.0 + sim_config_.dt_adjust_factor);  // Increase dt
-  }
-
-  // Clamp dt to the min/max values
-  current_dt_s = std::max(sim_config_.min_dt, std::min(sim_config_.max_dt, current_dt_s));
-}
-
 void Domain::run() {
   using namespace utils::ArrayMath;
   while (simulation_time_seconds_ < sim_config_.end_time) {
@@ -90,7 +73,7 @@ void Domain::run() {
     double mpi_end_time = MPI_Wtime();
     double mpi_comm_time = mpi_end_time - mpi_start_time;
 
-    simulation_time_seconds_ += current_dt_s;
+    simulation_time_seconds_ += sim_config_.dt_s;
 
     // Determine colony radius
     double colony_radius = globalReduce(
@@ -130,7 +113,7 @@ void Domain::run() {
           .bbpgd_iterations = solver_solution.bbpgd_iterations,
           .max_overlap = solver_solution.max_overlap,
           .residual = solver_solution.residual,
-          .dt_s = current_dt_s,
+          .dt_s = sim_config_.dt_s,
 
           // Add performance metrics
           .memory_usage_mb = memory_usage_mb,
@@ -140,10 +123,6 @@ void Domain::run() {
           .load_imbalance = load_imbalance};
 
       simulation_logger_->log(step_data);
-    }
-
-    if (sim_config_.enable_adaptive_dt) {
-      adjustDt(solver_solution);
     }
 
     printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count());
@@ -232,12 +211,12 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
     }
   }
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f / %3.1f min (%4.1f%%) | ETA: %s | dt: %3.1fs | CPU: %3.1fs | Iter: %d | Particles: %d | Colony radius: %.1f",
+  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f / %3.1f min (%4.1f%%) | ETA: %s | dt: %4.1fs | CPU: %3.1fs | Iter: %d | Particles: %d | Colony radius: %.1f",
               time_elapsed_minutes,
               time_total_minutes,
               progress_percent,
               eta_str.c_str(),
-              current_dt_s,
+              sim_config_.dt_s,
               cpu_time_s,
               current_iteration,
               global_particle_count,
@@ -473,13 +452,12 @@ Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const Physi
 
   // Update simulation time
   domain.simulation_time_seconds_ = state.simulation_time_s;
-  domain.current_dt_s = state.dt_s;
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
   if (rank == 0) {
-     domain.queueNewParticles(state.particles);
+    domain.queueNewParticles(state.particles);
   }
 
   // Commit particles and update state
