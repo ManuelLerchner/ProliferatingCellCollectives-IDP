@@ -142,11 +142,11 @@ void Domain::run() {
       simulation_logger_->log(step_data);
     }
 
-    if (sim_config_.enable_adaptive_dt && iter % sim_config_.dt_adjust_frequency == 0) {
+    if (sim_config_.enable_adaptive_dt) {
       adjustDt(solver_solution);
     }
 
-    printProgress(iter + 1, colony_radius);
+    printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count());
     PetscPrintf(PETSC_COMM_WORLD, "\n");
     iter++;
   }
@@ -207,7 +207,7 @@ void Domain::resizeDomain() {
   particle_manager_->updateDomainBounds(min_bounds_, max_bounds_);
 }
 
-void Domain::printProgress(int current_iteration, double colony_radius) const {
+void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s) const {
   double time_elapsed_minutes = simulation_time_seconds_ / 60.0;
   double time_total_minutes = sim_config_.end_time / 60.0;
   double progress_percent = (simulation_time_seconds_ / sim_config_.end_time) * 100.0;
@@ -232,13 +232,14 @@ void Domain::printProgress(int current_iteration, double colony_radius) const {
     }
   }
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f / %3.1f min (%5.1f%%) | ETA: %s | Iter: %d | dt: %.2e | Particles: %d | Colony radius: %.1f",
+  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f / %3.1f min (%4.1f%%) | ETA: %s | dt: %3.1fs | CPU: %3.1fs | Iter: %d | Particles: %d | Colony radius: %.1f",
               time_elapsed_minutes,
               time_total_minutes,
               progress_percent,
               eta_str.c_str(),
-              current_iteration,
               current_dt_s,
+              cpu_time_s,
+              current_iteration,
               global_particle_count,
               colony_radius);
 }

@@ -234,7 +234,6 @@ inline VecWrapper VecWrapper::CreateWithGlobalSize(PetscInt global_size) {
   PetscCallAbort(PETSC_COMM_WORLD, VecCreate(PETSC_COMM_WORLD, new_obj.get_ref()));
   PetscCallAbort(PETSC_COMM_WORLD, VecSetSizes(new_obj, PETSC_DECIDE, global_size));
   PetscCallAbort(PETSC_COMM_WORLD, VecSetFromOptions(new_obj));
-  PetscCallAbort(PETSC_COMM_WORLD, VecSetUp(new_obj));
   return new_obj;
 }
 
@@ -244,7 +243,6 @@ inline MatWrapper MatWrapper::CreateAIJ(PetscInt local_rows, PetscInt local_cols
   PetscCallAbort(PETSC_COMM_WORLD, MatSetSizes(new_obj, local_rows, local_cols, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetType(new_obj, MATAIJ));
   PetscCallAbort(PETSC_COMM_WORLD, MatSetFromOptions(new_obj));
-  PetscCallAbort(PETSC_COMM_WORLD, MatSetUp(new_obj));
   return new_obj;
 }
 

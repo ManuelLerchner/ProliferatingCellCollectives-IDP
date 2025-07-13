@@ -6,12 +6,14 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "Constraint.h"
 #include "petscmat.h"
 #include "petscsys.h"
 #include "util/ArrayMath.h"
+#include "util/DynamicPetsc.h"
 #include "util/PetscRaii.h"
 
 void calculate_jacobian_local(
@@ -70,6 +72,152 @@ void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>&
     PetscInt c_global_idx = offset + c_idx;
     PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidI, c_global_idx, constraint.stressI, INSERT_VALUES));
     PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidJ, c_global_idx, constraint.stressJ, INSERT_VALUES));
+  }
+}
+
+void preallocate_jacobian_matrix(
+    DynamicMatWrapper& D,
+    const double safety_factor,
+    const std::vector<Constraint>& old_constraints,
+    const std::vector<Constraint>& new_constraints,
+    std::vector<PetscInt>& d_nnz,
+    std::vector<PetscInt>& o_nnz) {
+  PetscInt row_start, row_end;
+  MatGetOwnershipRange(D, &row_start, &row_end);
+
+  PetscInt ownership_start, ownership_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(D, &ownership_start, &ownership_end));
+
+  // Clear the arrays first
+  std::fill(d_nnz.begin(), d_nnz.end(), 0);
+  std::fill(o_nnz.begin(), o_nnz.end(), 0);
+
+  // Helper to check if a column index is local to this rank
+  auto isColumnLocal = [&](PetscInt col) {
+    return (col >= ownership_start && col < ownership_end);
+  };
+
+  // Track which row-column pairs we've counted
+  std::set<std::pair<PetscInt, PetscInt>> counted_entries;
+
+  // Process both old and new constraints together
+  for (bool is_new : {false, true}) {
+    const auto& constraints = is_new ? new_constraints : old_constraints;
+    PetscInt col_offset = is_new ? (ownership_start + old_constraints.size()) : ownership_start;
+
+    for (int c_local_idx = 0; c_local_idx < constraints.size(); c_local_idx++) {
+      const auto& constraint = constraints[c_local_idx];
+      PetscInt c_global_idx = col_offset + c_local_idx;
+      bool is_col_local = isColumnLocal(c_global_idx);
+
+      // For particle I's 6 rows
+      for (PetscInt i = 0; i < 6; i++) {
+        PetscInt row = constraint.gidI * 6 + i;
+        if (row >= row_start && row < row_end) {
+          auto entry = std::make_pair(row, c_global_idx);
+          if (counted_entries.insert(entry).second) {  // Only count if entry is new
+            if (is_col_local) {
+              d_nnz[row - row_start]++;
+            } else {
+              o_nnz[row - row_start]++;
+            }
+          }
+        }
+      }
+
+      // For particle J's 6 rows
+      for (PetscInt i = 0; i < 6; i++) {
+        PetscInt row = constraint.gidJ * 6 + i;
+        if (row >= row_start && row < row_end) {
+          auto entry = std::make_pair(row, c_global_idx);
+          if (counted_entries.insert(entry).second) {  // Only count if entry is new
+            if (is_col_local) {
+              d_nnz[row - row_start]++;
+            } else {
+              o_nnz[row - row_start]++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Apply safety factor if needed
+  if (safety_factor != 1.0) {
+    for (size_t i = 0; i < d_nnz.size(); i++) {
+      d_nnz[i] = static_cast<PetscInt>(d_nnz[i] * safety_factor);
+      o_nnz[i] = static_cast<PetscInt>(o_nnz[i] * safety_factor);
+    }
+  }
+}
+
+void preallocate_stress_matrix(
+    DynamicMatWrapper& L,
+    const double safety_factor,
+    const std::vector<Constraint>& old_constraints,
+    const std::vector<Constraint>& new_constraints,
+    std::vector<PetscInt>& d_nnz,
+    std::vector<PetscInt>& o_nnz) {
+  PetscInt row_start, row_end;
+  MatGetOwnershipRange(L, &row_start, &row_end);
+
+  PetscInt ownership_start, ownership_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(L, &ownership_start, &ownership_end));
+
+  // Clear the arrays first
+  std::fill(d_nnz.begin(), d_nnz.end(), 0);
+  std::fill(o_nnz.begin(), o_nnz.end(), 0);
+
+  // Helper to check if a column index is local to this rank
+  auto isColumnLocal = [&](PetscInt col) {
+    return (col >= ownership_start && col < ownership_end);
+  };
+
+  // Track which row-column pairs we've counted
+  std::set<std::pair<PetscInt, PetscInt>> counted_entries;
+
+  // Process both old and new constraints together
+  for (bool is_new : {false, true}) {
+    const auto& constraints = is_new ? new_constraints : old_constraints;
+    PetscInt col_offset = is_new ? (ownership_start + old_constraints.size()) : ownership_start;
+
+    for (int c_local_idx = 0; c_local_idx < constraints.size(); c_local_idx++) {
+      const auto& constraint = constraints[c_local_idx];
+      PetscInt c_global_idx = col_offset + c_local_idx;
+      bool is_col_local = isColumnLocal(c_global_idx);
+
+      // For particle I
+      if (constraint.gidI >= row_start && constraint.gidI < row_end) {
+        auto entry = std::make_pair(constraint.gidI, c_global_idx);
+        if (counted_entries.insert(entry).second) {  // Only count if entry is new
+          if (is_col_local) {
+            d_nnz[constraint.gidI - row_start]++;
+          } else {
+            o_nnz[constraint.gidI - row_start]++;
+          }
+        }
+      }
+
+      // For particle J
+      if (constraint.gidJ >= row_start && constraint.gidJ < row_end) {
+        auto entry = std::make_pair(constraint.gidJ, c_global_idx);
+        if (counted_entries.insert(entry).second) {  // Only count if entry is new
+          if (is_col_local) {
+            d_nnz[constraint.gidJ - row_start]++;
+          } else {
+            o_nnz[constraint.gidJ - row_start]++;
+          }
+        }
+      }
+    }
+  }
+
+  // Apply safety factor if needed
+  if (safety_factor != 1.0) {
+    for (size_t i = 0; i < d_nnz.size(); i++) {
+      d_nnz[i] = static_cast<PetscInt>(d_nnz[i] * safety_factor);
+      o_nnz[i] = static_cast<PetscInt>(o_nnz[i] * safety_factor);
+    }
   }
 }
 
