@@ -22,6 +22,9 @@ void calculate_jacobian_local(
     PetscInt offset) {
   using namespace utils::ArrayMath;
 
+  int ownership_start, ownership_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(D, &ownership_start, &ownership_end));
+
 #pragma omp parallel for
   for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
     const auto& constraint = local_constraints[c_local_idx];
@@ -46,6 +49,9 @@ void calculate_jacobian_local(
                           constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
     PetscCallAbort(PETSC_COMM_WORLD, MatSetValues(D, 6, rows_j, 1, &c_global_idx, F_j, INSERT_VALUES));
   }
+
+  int rank;
+  PetscCallAbort(PETSC_COMM_WORLD, MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
 }
 
 void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {

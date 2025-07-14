@@ -60,12 +60,14 @@ void Domain::run() {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);
     commitNewParticles();
-    assignGlobalIDs();
 
+    rebalance();
+    assignGlobalIDs();
     resizeDomain();
+
     auto update_ghosts_fn = [this]() {
       rebalance();
-      this->exchangeGhostParticles();
+      exchangeGhostParticles();
     };
 
     double mpi_start_time = MPI_Wtime();

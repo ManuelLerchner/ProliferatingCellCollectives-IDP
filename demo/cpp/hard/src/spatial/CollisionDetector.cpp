@@ -268,7 +268,8 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       contact_point,
       stress1, stress2,
       -1,
-      constraint_iterations);
+      constraint_iterations,
+      p1_local, p2_local);
 
   int rank, total_rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);

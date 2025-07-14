@@ -140,6 +140,10 @@ std::vector<Particle> ParticleManager::divideParticles() {
 }
 
 PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()> exchangeGhostParticles) {
+  for (auto& p : local_particles) {
+    p.reset();
+  }
+
   auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
 
   return solver_solution;

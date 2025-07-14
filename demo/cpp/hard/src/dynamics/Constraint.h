@@ -8,7 +8,7 @@ class Constraint {
   // Constructor with local IDs and ownership
   Constraint(double signed_distance, int gidI, int gidJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
-             double stressI, double stressJ, int gid, int iteration);
+             double stressI, double stressJ, int gid, int iteration, bool localI, bool localJ);
 
   Constraint();
 
@@ -37,6 +37,9 @@ class Constraint {
   int iteration;
   // Lagrange multiplier for this constraint
   double gamma = 0.0;
+
+  bool localI;
+  bool localJ;
 
   void print() const;
 };

@@ -360,6 +360,8 @@ void PhysicsEngine::updateConstraintsFromSolution(std::vector<Constraint>& const
 }
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
+  exchangeGhostParticles();
+
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
@@ -389,17 +391,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   // Reset collision detector state
   collision_detector.reset();
 
-  for (auto& p : particle_manager.local_particles) {
-    p.reset();
-  }
-
   std::vector<Constraint> all_constraints_set;
 
   SolverState solver_state = SolverState::RUNNING;
 
   while (constraint_iterations < solver_config.max_recursive_iterations) {
-    exchangeGhostParticles();
-
     // Use a larger tolerance for initial collision detection
     double tolerance = iter == 0 ? 0.1 : 0.01;
     auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, tolerance);
@@ -515,6 +511,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
     // constraint_logger.log(all_constraints_set);
 
     constraint_iterations++;
+    exchangeGhostParticles();
   }
 
   last_recursive_iteration = constraint_iterations;
