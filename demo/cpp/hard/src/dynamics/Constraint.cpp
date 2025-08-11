@@ -9,7 +9,7 @@
 
 Constraint::Constraint() = default;
 
-Constraint::Constraint(double signed_distance, int gidI, int gidJ, std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint, double stressI, double stressJ, int gid, int iteration, bool localI, bool localJ) {
+Constraint::Constraint(double signed_distance, int gidI, int gidJ, std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint, double stressI, double stressJ, int gid, int iteration, bool localI, bool localJ, int localIdxI, int localIdxJ) {
   using namespace utils::ArrayMath;
 
 
@@ -26,6 +26,8 @@ Constraint::Constraint(double signed_distance, int gidI, int gidJ, std::array<do
   this->iteration = iteration;
   this->localI = localI;
   this->localJ = localJ;
+  this->localIdxI = localIdxI;
+  this->localIdxJ = localIdxJ;
 }
 
 void Constraint::print() const {

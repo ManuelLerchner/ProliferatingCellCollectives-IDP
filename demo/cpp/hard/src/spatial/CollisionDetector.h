@@ -68,7 +68,9 @@ class CollisionDetector {
       Particle& p1, Particle& p2,
       bool p1_local, bool p2_local,
       int constraint_iterations,
-      double collision_tolerance);
+      double collision_tolerance,
+      ParticleManager& particle_manager,
+      const CollisionPair& pair);
 
   // Helper to check if a contact point is too close to existing ones
   bool isNewContactPoint(int gid1, int gid2, const std::array<double, 3>& contact_point);

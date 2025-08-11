@@ -24,6 +24,8 @@ int main(int argc, char** argv) {
     double END_TIME = 550 * 60;
     double LOG_FREQUENCY = 1 * 60;
 
+    DT = 0.05;
+
     PhysicsConfig physic_config = {
         .xi = 200 * 3600,
         .TAU = 54 * 60,

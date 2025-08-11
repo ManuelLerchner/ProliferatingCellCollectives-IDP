@@ -163,7 +163,9 @@ void CollisionDetector::checkParticlePairs(
         pair.is_localI,
         pair.is_localJ,
         constraint_iterations,
-        collision_tolerance);
+        collision_tolerance,
+        particle_manager,
+        pair);
 
     if (constraint.has_value()) {
       constraints.push_back(constraint.value());
@@ -191,7 +193,9 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     Particle& p1, Particle& p2,
     bool p1_local, bool p2_local,
     int constraint_iterations,
-    double collision_tolerance) {
+    double collision_tolerance,
+    ParticleManager& particle_manager,
+    const CollisionPair& pair) {
   using namespace utils::ArrayMath;
   // Get the line segments (cylindrical cores) of both particles
   auto [p1_start, p1_end] = getParticleEndpoints(p1);
@@ -260,6 +264,10 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     return std::nullopt;
   }
 
+  // Get indices from the collision pair
+  int localIdxI = pair.localIdxI;
+  int localIdxJ = pair.localIdxJ;
+
   auto constraint = Constraint(
       signed_distance,  // Now penetration is positive for overlap
       p1.getGID(), p2.getGID(),
@@ -269,7 +277,8 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
       stress1, stress2,
       -1,
       constraint_iterations,
-      p1_local, p2_local);
+      p1_local, p2_local,
+      localIdxI, localIdxJ);
 
   int rank, total_rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);

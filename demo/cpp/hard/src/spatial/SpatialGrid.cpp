@@ -32,10 +32,10 @@ void SpatialGrid::clear() {
   }
 }
 
-void SpatialGrid::insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter, bool is_local) {
+void SpatialGrid::insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter, bool is_local, int local_idx) {
   size_t cell_idx = getCellIndex(position);
   if (cell_idx >= 0 && cell_idx < grid_cells_.size()) {
-    grid_cells_[cell_idx].push_back({particle_idx, is_local});
+    grid_cells_[cell_idx].push_back({particle_idx, is_local, local_idx});
   }
 }
 
@@ -107,12 +107,14 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
   // Insert all particles into grid
   clear();
 
-  for (const auto& p : local_particles) {
-    insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), true);
+  for (size_t i = 0; i < local_particles.size(); i++) {
+    const auto& p = local_particles[i];
+    insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), true, i);
   }
 
-  for (const auto& p : ghost_particles) {
-    insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), false);
+  for (size_t i = 0; i < ghost_particles.size(); i++) {
+    const auto& p = ghost_particles[i];
+    insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), false, i);
   }
 
   for (size_t cell_idx = 0; cell_idx < grid_cells_.size(); ++cell_idx) {
@@ -135,11 +137,16 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
           const auto& p2_info = cell2[j];
 
           // Don't check ghost-ghost collisions
-          if (!p1_info.second && !p2_info.second) {
+          if (!p1_info.is_local && !p2_info.is_local) {
             continue;
           }
 
-          pairs.push_back({p1_info.first, p2_info.first, p1_info.second, p2_info.second});
+          pairs.push_back({.gidI = p1_info.gid,
+                           .gidJ = p2_info.gid,
+                           .is_localI = p1_info.is_local,
+                           .is_localJ = p2_info.is_local,
+                           .localIdxI = p1_info.local_idx,
+                           .localIdxJ = p2_info.local_idx});
         }
       }
     }

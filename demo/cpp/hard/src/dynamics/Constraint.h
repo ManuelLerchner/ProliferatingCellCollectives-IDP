@@ -8,7 +8,8 @@ class Constraint {
   // Constructor with local IDs and ownership
   Constraint(double signed_distance, int gidI, int gidJ,
              std::array<double, 3> normI, std::array<double, 3> posI, std::array<double, 3> posJ, std::array<double, 3> contactPoint,
-             double stressI, double stressJ, int gid, int iteration, bool localI, bool localJ);
+             double stressI, double stressJ, int gid, int iteration, bool localI, bool localJ,
+             int localIdxI, int localIdxJ);
 
   Constraint();
 
@@ -40,6 +41,10 @@ class Constraint {
 
   bool localI;
   bool localJ;
+
+  // Local indices in the respective arrays (local_particles or ghost_particles)
+  int localIdxI;
+  int localIdxJ;
 
   void print() const;
 };
