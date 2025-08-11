@@ -20,8 +20,8 @@ int main(int argc, char** argv) {
 
     PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
 
-    double DT = 10;
-    double END_TIME = 1000 * 60;
+    double DT = 0.5;
+    double END_TIME = 550 * 60;
     double LOG_FREQUENCY = 1 * 60;
 
     PhysicsConfig physic_config = {
@@ -57,6 +57,14 @@ int main(int argc, char** argv) {
     PetscOptionsGetString(NULL, NULL, "-starter_vtk", starter_vtk_cstr,
                           sizeof(starter_vtk_cstr), &starter_vtk_set);
 
+    char mode_cstr[PETSC_MAX_PATH_LEN];
+    PetscBool mode_set;
+
+    PetscOptionsGetString(NULL, NULL, "-mode", mode_cstr,
+                          sizeof(mode_cstr), &mode_set);
+
+    std::string mode = std::string(mode_cstr);
+
     std::string starter_vtk;
     if (starter_vtk_set) {
       starter_vtk = std::string(starter_vtk_cstr);
@@ -65,9 +73,9 @@ int main(int argc, char** argv) {
     std::optional<Domain> domain;
 
     if (starter_vtk.empty()) {
-      domain = Domain(sim_config, physic_config, solver_config, !starter_vtk.empty());
+      domain = Domain(sim_config, physic_config, solver_config, !starter_vtk.empty(), 0, mode);
     } else {
-      domain = Domain::initializeFromVTK(sim_config, physic_config, solver_config, starter_vtk);
+      domain = Domain::initializeFromVTK(sim_config, physic_config, solver_config, starter_vtk, mode);
     }
 
     if (starter_vtk.empty()) {

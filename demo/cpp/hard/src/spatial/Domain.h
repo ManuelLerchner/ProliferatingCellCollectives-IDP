@@ -14,14 +14,14 @@
 
 class Domain {
  public:
-  Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing = false, size_t step = 0);
+  Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing = false, size_t step = 0, const std::string& output_dir = "./vtk_output");
 
   void queueNewParticles(std::vector<Particle> particles);
   void commitNewParticles();
   void run();
 
   // Initialize simulation state from VTK file/directory
-  static Domain initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path);
+  static Domain initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path, const std::string& output_dir);
 
  private:
   void rebalance();

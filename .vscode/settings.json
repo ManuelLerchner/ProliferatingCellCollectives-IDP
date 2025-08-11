@@ -70,7 +70,10 @@
     "any": "cpp",
     "list": "cpp",
     "bitset": "cpp",
-    "regex": "cpp"
+    "regex": "cpp",
+    "strstream": "cpp",
+    "span": "cpp",
+    "typeindex": "cpp"
   },
   "cmake.sourceDirectory": "/home/manuel/MicrobeGrowthSim-IDP/demo/cpp/hard"
 }

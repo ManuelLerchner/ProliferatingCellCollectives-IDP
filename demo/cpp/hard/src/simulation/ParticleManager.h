@@ -16,7 +16,7 @@
 
 class ParticleManager {
  public:
-  ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger);
+  ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode);
 
   void queueNewParticles(Particle p);
   void commitNewParticles();
@@ -44,4 +44,5 @@ class ParticleManager {
   void printProgress(int current_iteration, int total_iterations) const;
   vtk::ParticleLogger& particle_logger_;
   vtk::ConstraintLogger& constraint_logger_;
+  std::string mode_;
 };

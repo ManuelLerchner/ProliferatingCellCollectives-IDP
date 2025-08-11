@@ -20,8 +20,8 @@
 #include "dynamics/PhysicsEngine.h"
 #include "logger/ParticleLogger.h"
 
-ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger)
-    : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config), particle_logger_(particle_logger), constraint_logger_(constraint_logger) {
+ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode)
+    : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config), particle_logger_(particle_logger), constraint_logger_(constraint_logger), mode_(mode) {
   physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
 }
 
@@ -144,9 +144,14 @@ PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()>
     p.reset();
   }
 
-  auto solver_solution = physics_engine->solveConstraintsRecursiveConstraints(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+  if (mode_ == "soft") {
+    auto solver_solution = physics_engine->solveConstraintsRecursive(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+  } else if (mode_ == "hard") {
+    auto solver_solution = physics_engine->solveConstraintsRecursive(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+    return solver_solution;
+  }
 
-  return solver_solution;
+  throw std::runtime_error("Invalid mode: " + mode_);
 }
 
 void ParticleManager::updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {

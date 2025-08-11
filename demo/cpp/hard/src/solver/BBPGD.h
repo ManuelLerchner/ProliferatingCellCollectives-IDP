@@ -108,13 +108,8 @@ inline BBPGDResult BBPGD(
     double numerator_val;
     double denominator_val;
 
-    if (iteration % 2 == 0) {
-      // BB1 step: (d^T d)/(d^T g)
-      NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val, N);
-    } else {
-      // BB2 step: (d^T g)/(d^T d)
-      NormAdotAB(delta_phi, delta_gamma, denominator_val, numerator_val, N);
-    }
+    // BB1 step: (d^T d)/(d^T g)
+    NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val, N);
 
     if (std::abs(denominator_val) < 10 * std::numeric_limits<double>::epsilon()) {
       denominator_val += 10 * std::numeric_limits<double>::epsilon();

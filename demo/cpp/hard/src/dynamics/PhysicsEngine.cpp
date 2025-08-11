@@ -359,7 +359,15 @@ void PhysicsEngine::updateConstraintsFromSolution(std::vector<Constraint>& const
   cleanupScatteredResources(phi_local, phi_scatter, phi_is);
 }
 
-PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraints(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
+void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
+  collision_detector.updateBounds(min_bounds, max_bounds);
+}
+
+SpatialGrid PhysicsEngine::getCollisionDetectorSpatialGrid() {
+  return collision_detector.getSpatialGrid();
+}
+
+PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   exchangeGhostParticles();
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
@@ -397,7 +405,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
 
   while (constraint_iterations < solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
-    double tolerance = iter == 0 ? 0.1 : 0.01;
+    double tolerance = constraint_iterations == 0 ? 0.1 : 0.01;
     auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, tolerance);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
@@ -536,10 +544,50 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursiveConstraint
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
 }
 
-void PhysicsEngine::updateCollisionDetectorBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
-  collision_detector.updateBounds(min_bounds, max_bounds);
-}
+PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
+  exchangeGhostParticles();
 
-SpatialGrid PhysicsEngine::getCollisionDetectorSpatialGrid() {
-  return collision_detector.getSpatialGrid();
+  MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
+
+  double res = 0;
+  double max_overlap = 0;
+
+  // Reset collision detector state
+  collision_detector.reset();
+
+  std::vector<Constraint> all_constraints_set;
+
+  // Use a larger tolerance for initial collision detection
+  double tolerance = 0.1;
+  auto new_constraints = collision_detector.detectCollisions(particle_manager, 0, tolerance);
+
+  max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
+                                             [](double acc, const Constraint& c) {
+                                               return std::max(acc, c.signed_distance < 0 ? -c.signed_distance : 0);
+                                             }),
+                             MPI_MAX);
+
+  // Check convergence
+  if (max_overlap < solver_config.allowed_overlap) {
+    return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = res, .max_overlap = max_overlap};
+  }
+
+  VecWrapper U_ext = VecWrapper::FromMat(M);
+  VecWrapper F_ext_workspace = VecWrapper::FromMat(M);
+
+  // Calculate external velocities
+  calculate_external_velocities(U_ext, F_ext_workspace, particle_manager.local_particles, M, dt, 0);
+
+  // Move
+  // particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du});
+
+  // log substep
+  // particle_logger.log(particle_manager.local_particles);
+  // constraint_logger.log(all_constraints_set);
+
+  exchangeGhostParticles();
+
+  particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
+
+  return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = res, .max_overlap = max_overlap};
 }

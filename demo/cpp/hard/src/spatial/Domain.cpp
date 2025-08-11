@@ -14,7 +14,7 @@
 #include "util/ArrayMath.h"
 #include "util/MetricsUtil.h"
 
-Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing, size_t iter)
+Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing, size_t iter, const std::string& mode)
     : sim_config_(sim_config),
       physics_config_(physics_config),
       solver_config_(solver_config),
@@ -24,14 +24,15 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   start_time_ = MPI_Wtime();
   last_eta_check_time_ = start_time_;
 
-  particle_logger_ = std::make_unique<vtk::ParticleLogger>("./vtk_output", "particles", preserve_existing, iter);
-  constraint_logger_ = std::make_unique<vtk::ConstraintLogger>("./vtk_output", "constraints", preserve_existing, iter);
-  domain_logger_ = std::make_unique<vtk::DomainLogger>("./vtk_output", "domain", preserve_existing, iter);
-  simulation_logger_ = std::make_unique<vtk::SimulationLogger>("./vtk_output", "simulation", preserve_existing, iter);
+  std::string output_dir = "./vtk_output_" + mode;
+  particle_logger_ = std::make_unique<vtk::ParticleLogger>(output_dir, "particles", preserve_existing, iter);
+  constraint_logger_ = std::make_unique<vtk::ConstraintLogger>(output_dir, "constraints", preserve_existing, iter);
+  domain_logger_ = std::make_unique<vtk::DomainLogger>(output_dir, "domain", preserve_existing, iter);
+  simulation_logger_ = std::make_unique<vtk::SimulationLogger>(output_dir, "simulation", preserve_existing, iter);
 
   createParticleMPIType(&mpi_particle_type_);
 
-  particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_);
+  particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_, mode);
   step_start_time_ = MPI_Wtime();
   sim_start_time_ = std::chrono::steady_clock::now();
 }
@@ -430,7 +431,7 @@ void Domain::assignGlobalIDsToNewParticles() {
   }
 }
 
-Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path) {
+Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path, const std::string& mode) {
   std::filesystem::path path(vtk_path);
   std::string vtk_dir;
 
@@ -450,7 +451,7 @@ Domain Domain::initializeFromVTK(const SimulationConfig& sim_config, const Physi
   PetscPrintf(PETSC_COMM_WORLD, "Loading %zu particles from VTK state at time %.2f s (iter %u)\n",
               state.particles.size(), state.simulation_time_s, state.step);
 
-  Domain domain(sim_config, physics_config, solver_config, true, state.step);
+  Domain domain(sim_config, physics_config, solver_config, true, state.step, mode);
 
   // Update simulation time
   domain.simulation_time_seconds_ = state.simulation_time_s;
