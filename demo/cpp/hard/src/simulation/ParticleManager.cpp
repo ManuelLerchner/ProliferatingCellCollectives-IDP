@@ -145,7 +145,8 @@ PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()>
   }
 
   if (mode_ == "soft") {
-    auto solver_solution = physics_engine->solveConstraintsRecursive(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+    auto solver_solution = physics_engine->solveSoftPotential(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+    return solver_solution;
   } else if (mode_ == "hard") {
     auto solver_solution = physics_engine->solveConstraintsRecursive(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
     return solver_solution;

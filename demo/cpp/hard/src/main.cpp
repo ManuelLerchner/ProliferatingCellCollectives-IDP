@@ -63,11 +63,14 @@ int main(int argc, char** argv) {
     PetscOptionsGetString(NULL, NULL, "-mode", mode_cstr,
                           sizeof(mode_cstr), &mode_set);
 
-    std::string mode = std::string(mode_cstr);
-
     std::string starter_vtk;
     if (starter_vtk_set) {
       starter_vtk = std::string(starter_vtk_cstr);
+    }
+
+    std::string mode;
+    if (mode_set) {
+      mode = std::string(mode_cstr);
     }
 
     std::optional<Domain> domain;

@@ -548,6 +548,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   exchangeGhostParticles();
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
+  MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
   double res = 0;
   double max_overlap = 0;
@@ -567,27 +568,31 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
                                              }),
                              MPI_MAX);
 
-  // Check convergence
-  if (max_overlap < solver_config.allowed_overlap) {
-    return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = res, .max_overlap = max_overlap};
-  }
+  VecWrapper F = VecWrapper::FromMat(M);
 
-  VecWrapper U_ext = VecWrapper::FromMat(M);
-  VecWrapper F_ext_workspace = VecWrapper::FromMat(M);
+  VecWrapper ldot = VecWrapper::Create(particle_manager.local_particles.size());
+  VecWrapper impedance = VecWrapper::Create(particle_manager.local_particles.size());
 
+  // U = M @ f
+  VecWrapper U = VecWrapper::FromMat(M);
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F, U));
+
+  // U = U + U_ext
   // Calculate external velocities
-  calculate_external_velocities(U_ext, F_ext_workspace, particle_manager.local_particles, M, dt, 0);
+  VecWrapper F_ext = VecWrapper::FromMat(M);
+  VecWrapper U_ext = VecWrapper::FromMat(M);
+  calculate_external_velocities(U_ext, F_ext, particle_manager.local_particles, M, dt, 0);
+  PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(U, 1.0, U_ext));
+
+  // deltaC = G @ U
+  VecWrapper deltaC = VecWrapper::FromMat(G);
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U, deltaC));
 
   // Move
-  // particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du});
+  particle_manager.moveLocalParticlesFromSolution({.dC = deltaC, .f = F, .u = U});
 
-  // log substep
-  // particle_logger.log(particle_manager.local_particles);
-  // constraint_logger.log(all_constraints_set);
-
-  exchangeGhostParticles();
-
-  particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
+  // Grow
+  particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance});
 
   return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = res, .max_overlap = max_overlap};
 }
