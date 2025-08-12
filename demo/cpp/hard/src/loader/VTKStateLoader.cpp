@@ -114,6 +114,7 @@ std::vector<Particle> VTKStateLoader::loadParticles(int timestep) {
     const auto& lengths = data_arrays["lengths"].data;
     const auto& forces = data_arrays["forces"].data;
     const auto& velocity_linear = data_arrays["velocity_linear"].data;
+    const auto& velocity_angular = data_arrays["velocity_angular"].data;
 
     size_t num_particles = positions.size() / 3;  // 3 components per position
 
@@ -144,6 +145,13 @@ std::vector<Particle> VTKStateLoader::loadParticles(int timestep) {
           0.0, 0.0, 0.0  // No angular velocity data in VTK
       };
       p.setVelocity(velocity_array);
+
+      // Set angular velocity
+      const PetscScalar angular_velocity_array[6] = {
+          velocity_angular[i * 3], velocity_angular[i * 3 + 1], velocity_angular[i * 3 + 2],
+          0.0, 0.0, 0.0  // No angular velocity data in VTK
+      };
+      p.setVelocityAngular(angular_velocity_array);
 
       particles.push_back(std::move(p));
     }

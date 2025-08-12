@@ -22,6 +22,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
   std::vector<int> number_of_constraints(particles.size());
   std::vector<int> ages(particles.size());
   std::vector<std::array<double, 3>> velocity_linear(particles.size());
+  std::vector<std::array<double, 3>> velocity_angular(particles.size());
   std::vector<int> ranks(particles.size());
 
   int rank;
@@ -40,6 +41,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
     ages[i] = particles[i].getAge();
     forces[i] = particles[i].getForce();
     velocity_linear[i] = particles[i].getVelocityLinear();
+    velocity_angular[i] = particles[i].getVelocityAngular();
     ranks[i] = rank;
   }
 
@@ -55,6 +57,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
   logger_.addPointData("age", ages);
   logger_.addPointData("forces", forces);
   logger_.addPointData("velocity_linear", velocity_linear);
+  logger_.addPointData("velocity_angular", velocity_angular);
   logger_.addPointData("rank", ranks);
 
   // Write to file

@@ -54,6 +54,11 @@ class Particle {
   const std::array<double, POSITION_SIZE>& getPosition() const {
     return data_.position;
   }
+
+  void setPosition(const std::array<double, POSITION_SIZE>& position) {
+    data_.position = position;
+  }
+
   const std::array<double, QUATERNION_SIZE>& getQuaternion() const {
     return data_.quaternion;
   }

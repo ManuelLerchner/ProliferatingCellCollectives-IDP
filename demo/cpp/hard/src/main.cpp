@@ -22,9 +22,9 @@ int main(int argc, char** argv) {
 
     double DT = 0.5;
     double END_TIME = 550 * 60;
-    double LOG_FREQUENCY = 1 * 60;
+    double LOG_FREQUENCY = 0.1 * 60;
 
-    DT = 0.05;
+    DT = 1;
 
     PhysicsConfig physic_config = {
         .xi = 200 * 3600,

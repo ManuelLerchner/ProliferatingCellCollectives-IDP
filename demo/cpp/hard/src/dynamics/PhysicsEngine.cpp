@@ -14,6 +14,7 @@
 #include "simulation/Particle.h"
 #include "simulation/ParticleManager.h"
 #include "solver/BBPGD.h"
+#include "util/ArrayMath.h"
 #include "util/DynamicPetsc.h"
 #include "util/PetscRaii.h"
 
@@ -545,13 +546,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
 }
 
 PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager& particle_manager, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
+  using namespace utils::ArrayMath;
+
   exchangeGhostParticles();
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
-
-  double res = 0;
-  double max_overlap = 0;
 
   // Reset collision detector state
   collision_detector.reset();
@@ -561,12 +561,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
 
   std::vector<Constraint> all_constraints_set;
 
-  // Constants from CellsMD3D
-  const double k_cc = 100000.0;    // Elastic constant for cell-cell interactions
-  const double gamma_n = 100.0;    // Normal damping coefficient
-  const double gamma_t = 10000.0;  // Tangential damping coefficient
-  const double cell_mu = 0.15;     // Friction coefficient
-
   // Calculate external velocities first
   VecWrapper F_ext = VecWrapper::FromMat(M);
   VecWrapper U_ext = VecWrapper::FromMat(M);
@@ -575,22 +569,30 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   auto new_constraints = collision_detector.detectCollisions(particle_manager, 0, tolerance);
   all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
 
-  max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
-                                             [](double acc, const Constraint& c) {
-                                               return std::max(acc, c.signed_distance < 0 ? -c.signed_distance : 0);
-                                             }),
-                             MPI_MAX);
+  double max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
+                                                    [](double acc, const Constraint& c) {
+                                                      return std::max(acc, c.signed_distance < 0 ? -c.signed_distance : 0);
+                                                    }),
+                                    MPI_MAX);
+
+  // Setup vectors for forces and growth calculation
+  VecWrapper force_vector = VecWrapper::Create(new_constraints.size());
+  VecZeroEntries(force_vector);
 
   VecWrapper F = VecWrapper::FromMat(M);
   VecZeroEntries(F);
 
-  // Create stress vector for impedance calculation
-  VecWrapper stress = VecWrapper::Create(particle_manager.local_particles.size());
-  VecZeroEntries(stress);
+  // Constants from CellsMD3D
+  const double k_cc = 200000.0;     // Elastic constant for cell-cell interactions
+  const double gamma_n = 100000.0;  // Normal damping coefficient
+  const double gamma_t = 100000.0;  // Tangential damping coefficient
+  const double cell_mu = 0.2;       // Friction coefficient
+  const double alpha = 0.7;
 
-  // Calculate forces and stresses for each constraint
+  // Calculate forces, stresses and growth for each constraint
   for (const auto& constraint : new_constraints) {
-    if (-constraint.signed_distance <= 0) continue;
+    double overlap = -constraint.signed_distance;
+    if (overlap <= 0) continue;
 
     const auto& p1 = constraint.localI ? particle_manager.local_particles[constraint.localIdxI] : particle_manager.ghost_particles[constraint.localIdxI];
     const auto& p2 = constraint.localJ ? particle_manager.local_particles[constraint.localIdxJ] : particle_manager.ghost_particles[constraint.localIdxJ];
@@ -601,8 +603,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
 
     // Calculate overlap and force
-    double overlap = -constraint.signed_distance;
-    double F_elastic = R_eff * k_cc * std::pow(overlap, 1.5);
+    double F_elastic = R_eff * k_cc * (std::pow(overlap, 1.5) + alpha * overlap);
+
+    // Store elastic force for growth calculation
+    VecSetValue(force_vector, constraint.gid, F_elastic / (M_PI * R1 * R1), INSERT_VALUES);
 
     // Calculate effective mass (CellsMD3D approach)
     double L1 = p1.getLength() + 4.0 / 3.0 * R1;
@@ -620,41 +624,26 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     const auto& r_pos_j = constraint.rPosJ;
     const auto& normal = constraint.normI;
 
-    std::array<double, 3> dv = {
-        v2[0] - v1[0] + (omega2[1] * r_pos_j[2] - omega2[2] * r_pos_j[1]) - (omega1[1] * r_pos_i[2] - omega1[2] * r_pos_i[1]),
-        v2[1] - v1[1] + (omega2[2] * r_pos_j[0] - omega2[0] * r_pos_j[2]) - (omega1[2] * r_pos_i[0] - omega1[0] * r_pos_i[2]),
-        v2[2] - v1[2] + (omega2[0] * r_pos_j[1] - omega2[1] * r_pos_j[0]) - (omega1[0] * r_pos_i[1] - omega1[1] * r_pos_i[0])};
+    auto dv = (v2 - v1) + cross_product(omega2, r_pos_j) - cross_product(omega1, r_pos_i);
 
     // Normal and tangential components
-    double dv_dot_n = dv[0] * normal[0] + dv[1] * normal[1] + dv[2] * normal[2];
-    std::array<double, 3> dv_n = {normal[0] * dv_dot_n, normal[1] * dv_dot_n, normal[2] * dv_dot_n};
-    std::array<double, 3> dv_t = {dv[0] - dv_n[0], dv[1] - dv_n[1], dv[2] - dv_n[2]};
+    double dv_dot_t = dot(dv, normal);
+    auto dv_n = normal * dv_dot_t;
+    auto dv_t = dv - dv_n;
 
     // Calculate forces
-    std::array<double, 3> F_damp_n = {
-        dv_n[0] * gamma_n * m_eff * overlap,
-        dv_n[1] * gamma_n * m_eff * overlap,
-        dv_n[2] * gamma_n * m_eff * overlap};
+    auto F_damp_n = -dv_n * gamma_n * m_eff * overlap;
 
+    double v_t_mag = magnitude(dv_t);
     std::array<double, 3> F_damp_t = {0.0, 0.0, 0.0};
-    double v_t_mag = std::sqrt(dv_t[0] * dv_t[0] + dv_t[1] * dv_t[1] + dv_t[2] * dv_t[2]);
     if (v_t_mag > 1e-10) {
       double F_damp_t_mag = std::min(gamma_t * m_eff * std::sqrt(overlap), cell_mu * F_elastic / v_t_mag);
-      for (int i = 0; i < 3; ++i) {
-        F_damp_t[i] = dv_t[i] * F_damp_t_mag;
-      }
+      F_damp_t = -dv_t * F_damp_t_mag;
     }
 
     // Total force and torque
-    std::array<double, 3> F_total_i = {
-        normal[0] * (-F_elastic) + F_damp_n[0] + F_damp_t[0],
-        normal[1] * (-F_elastic) + F_damp_n[1] + F_damp_t[1],
-        normal[2] * (-F_elastic) + F_damp_n[2] + F_damp_t[2]};
-
-    std::array<double, 3> torque_i = {
-        r_pos_i[1] * F_total_i[2] - r_pos_i[2] * F_total_i[1],
-        r_pos_i[2] * F_total_i[0] - r_pos_i[0] * F_total_i[2],
-        r_pos_i[0] * F_total_i[1] - r_pos_i[1] * F_total_i[0]};
+    auto F_total_i = normal * (-F_elastic) + F_damp_n + F_damp_t;
+    auto torque_i = cross_product(r_pos_i, F_total_i);
 
     // Set force values
     PetscInt idx1[6], idx2[6];
@@ -676,20 +665,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     // Calculate stress for impedance (CellsMD3D approach)
     double stress_i = F_elastic / (M_PI * R1 * R1);
     double stress_j = F_elastic / (M_PI * R2 * R2);
-
-    if (constraint.localI) {
-      PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(stress, constraint.localIdxI, stress_i, ADD_VALUES));
-    }
-    if (constraint.localJ) {
-      PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(stress, constraint.localIdxJ, stress_j, ADD_VALUES));
-    }
   }
 
+  // Assemble force vectors
   PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(F));
   PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(F));
-
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(stress));
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(stress));
 
   // Calculate velocities and movement
   VecWrapper U = VecWrapper::FromMat(M);
@@ -702,15 +682,81 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   // Move particles
   particle_manager.moveLocalParticlesFromSolution({.dC = deltaC, .f = F, .u = U});
 
-  // Calculate impedance and growth
-  calculate_impedance_inplace(stress, physics_config.getLambdaDimensionless());
+  // After post-step collision detection
+  auto post_constraints = collision_detector.detectCollisions(particle_manager, 0, tolerance);
+
+  VecWrapper baumgarte_dC = VecWrapper::Like(deltaC);
+  VecZeroEntries(baumgarte_dC);
+
+  const double baumgarte_factor = 0.2;
+
+  for (auto& c : post_constraints) {
+    double overlap = -c.signed_distance;
+    if (overlap <= 0) continue;
+
+    auto& p1 = c.localI ? particle_manager.local_particles[c.localIdxI] : particle_manager.ghost_particles[c.localIdxI];
+    auto& p2 = c.localJ ? particle_manager.local_particles[c.localIdxJ] : particle_manager.ghost_particles[c.localIdxJ];
+
+    double R1 = p1.getDiameter() / 2.0;
+    double R2 = p2.getDiameter() / 2.0;
+
+    double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
+
+    double F_elastic = R_eff * k_cc * (std::pow(overlap, 1.5) + alpha * overlap);
+
+    double stress_i = F_elastic / (M_PI * R1 * R1);
+    double stress_j = F_elastic / (M_PI * R2 * R2);
+
+    auto& n = c.normI;
+    double correction = baumgarte_factor * overlap;
+
+    // 3 DOFs for translation, 3 for rotation (rotation stays zero here)
+    double corr_i[7] = {0.5 * correction * n[0] / dt,
+                        0.5 * correction * n[1] / dt,
+                        0.5 * correction * n[2] / dt,
+                        0, 0, 0, 0};
+
+    double corr_j[7] = {-0.5 * correction * n[0] / dt,
+                        -0.5 * correction * n[1] / dt,
+                        -0.5 * correction * n[2] / dt,
+                        0, 0, 0, 0};
+
+    PetscInt idx_i[7], idx_j[7];
+    for (int k = 0; k < 7; ++k) {
+      idx_i[k] = c.gidI * 7 + k;
+      idx_j[k] = c.gidJ * 7 + k;
+    }
+
+    // Always insert for both particles — PETSc will handle ownership & ghosts
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(baumgarte_dC, 7, idx_i, corr_i, ADD_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(baumgarte_dC, 7, idx_j, corr_j, ADD_VALUES));
+  }
+
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(force_vector));
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(force_vector));
+
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(baumgarte_dC));
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(baumgarte_dC));
+
+  particle_manager.moveLocalParticlesFromSolution({.dC = baumgarte_dC, .f = F, .u = U});
 
   VecWrapper length = getLengthVector(particle_manager.local_particles);
   VecWrapper ldot = VecWrapper::Like(length);
-  VecPointwiseMult(ldot, length, stress);
-  VecScale(ldot, 1.0 / physics_config.TAU);
+  VecWrapper impedance = VecWrapper::Like(length);
 
-  particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = stress});
+  // Calculate growth rates using elastic forces
+  MatWrapper L = MatWrapper::CreateAIJ(particle_manager.local_particles.size(), new_constraints.size());
 
-  return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = res, .max_overlap = max_overlap};
+  PetscInt ownership_start, ownership_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(L, &ownership_start, &ownership_end));
+
+  calculate_stress_matrix_local(L, new_constraints, ownership_start);
+  MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
+
+  calculate_ldot_inplace(L, length, force_vector, physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, impedance);
+
+  particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance});
+
+  return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0, .max_overlap = max_overlap};
 }
