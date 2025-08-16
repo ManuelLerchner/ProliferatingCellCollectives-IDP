@@ -11,16 +11,24 @@ struct SimulationConfig {
   double end_time;
   double log_frequency_seconds = 0;
   Vec3d min_box_size;
-
-
 };
 
 struct PhysicsConfig {
-  double xi;   // Drag coefficient
-  double TAU;  // Growth time constant
-  double l0;   // Initial length
-  double LAMBDA;
-  double temperature;
+  // General parameters
+  double xi;           // Drag coefficient
+  double TAU;          // Growth time constant
+  double l0;           // Initial length
+  double LAMBDA;       // Stress sensitivity
+  double temperature;  // Brownian motion temperature
+
+  // Soft potential
+  double k_cc;     // Contact stiffness
+  double gamma_n;  // Normal damping coefficient
+  double gamma_t;  // Tangential damping coefficient
+  double cell_mu;  // Friction coefficient
+  double alpha;    // Overlap parameter
+  double baumgarte_factor;  // Baumgarte stabilization factor
+
   bool monolayer;
 
   double getLambdaDimensionless() const {

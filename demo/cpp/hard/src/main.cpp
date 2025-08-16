@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
     double DT = 0.5;
     double END_TIME = 550 * 60;
-    double LOG_FREQUENCY = 0.1 * 60;
+    double LOG_FREQUENCY = 1 * 60;
 
     DT = 1;
 
@@ -32,6 +32,14 @@ int main(int argc, char** argv) {
         .l0 = 1,
         .LAMBDA = 2.44e-3,
         .temperature = 1e-30,
+        // Soft potential parameters
+        .k_cc = 700000.0,
+        .gamma_n = 100000.0,
+        .gamma_t = 100000.0,
+        .cell_mu = 0.2,
+        .alpha = 0.5,
+        .baumgarte_factor = 0.05,
+
         .monolayer = true,
     };
 

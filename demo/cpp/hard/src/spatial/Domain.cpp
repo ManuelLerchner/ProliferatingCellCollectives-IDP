@@ -125,6 +125,7 @@ void Domain::run() {
           .mpi_comm_time_s = mpi_comm_time,
           .load_imbalance = load_imbalance};
 
+      // Log simulation data
       simulation_logger_->log(step_data);
     }
 
