@@ -100,18 +100,20 @@ void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::Growth
   }
 
   // Scatter both vectors
-  Vec dL_local, impedance_local;
-  VecScatter dL_scatter, impedance_scatter;
-  IS dL_is, impedance_is;
+  Vec dL_local, impedance_local, stress_local;
+  VecScatter dL_scatter, impedance_scatter, stress_scatter;
+  IS dL_is, impedance_is, stress_is;
 
   scatterVectorToLocal(solution.dL, indices, dL_local, dL_scatter, dL_is);
   scatterVectorToLocal(solution.impedance, indices, impedance_local,
                        impedance_scatter, impedance_is);
+  scatterVectorToLocal(solution.stress, indices, stress_local, stress_scatter, stress_is);
 
   // Get array pointers
-  const PetscScalar *dL_array, *impedance_array;
+  const PetscScalar *dL_array, *impedance_array, *stress_array;
   VecGetArrayRead(dL_local, &dL_array);
   VecGetArrayRead(impedance_local, &impedance_array);
+  VecGetArrayRead(stress_local, &stress_array);
 
   // Process each particle using correct mapping
   for (size_t arr_idx = 0; arr_idx < local_indices.size(); arr_idx++) {
@@ -119,13 +121,16 @@ void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::Growth
 
     local_particles[particle_idx].eulerStepLength(dL_array[arr_idx], dt);
     local_particles[particle_idx].setImpedance(impedance_array[arr_idx]);
+    local_particles[particle_idx].setStress(stress_array[arr_idx]);
   }
 
   // Clean up
   VecRestoreArrayRead(dL_local, &dL_array);
   VecRestoreArrayRead(impedance_local, &impedance_array);
+  VecRestoreArrayRead(stress_local, &stress_array);
   cleanupScatteredResources(dL_local, dL_scatter, dL_is);
   cleanupScatteredResources(impedance_local, impedance_scatter, impedance_is);
+  cleanupScatteredResources(stress_local, stress_scatter, stress_is);
 }
 
 std::vector<Particle> ParticleManager::divideParticles() {

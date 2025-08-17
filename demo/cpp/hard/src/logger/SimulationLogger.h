@@ -27,11 +27,6 @@ struct SimulationStep {
   double cpu_time_s;       // CPU time in seconds
   double mpi_comm_time_s;  // Time spent in MPI communication in seconds
   double load_imbalance;   // Load imbalance ratio (max/avg particles per rank)
-
-  // Length distribution data
-  std::vector<double> length_dist_centers;  // Bin centers for length distribution
-  std::vector<double> length_dist_values;   // Values for length distribution
-  int length_dist_nbins;                    // Number of bins in length distribution
 };
 
 class SimulationLogger {

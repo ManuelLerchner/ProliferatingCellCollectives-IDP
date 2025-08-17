@@ -1,64 +1,67 @@
 import os
 
 import pandas as pd
-
 from parse_vtu import vtu_to_dataframe
 
 
 def find_latest_vtu_files(folder):
-    # Dictionary to store ALL files grouped by iteration
-    all_files = {}  # Format: {iteration: {"domain": {rank: filename}}}
+    # Dictionary to store ALL files grouped by type, then iteration
+    all_files = {}  # Format: {log_type: {iteration: {rank: filename}}}
 
     # Dictionary to track ONLY the latest iteration files
-    latest_files = {}  # Format: {"domain": {rank: filename}}
+    latest_files = {}  # Format: {log_type: {rank: filename}}
 
     for file in os.listdir(folder):
         if file.endswith(".vtu"):
             # Parse filename (e.g., "domain_0000122_rank_0014.vtu")
             parts = file[:-4].split("_")  # Remove ".vtu" before splitting
-            log_type = parts[0]  # "domain"
-            iteration = int(parts[1])  # 122
-            rank = parts[3].strip("0") if len(parts[3].strip("0")) > 0 else 0
-            rank = int(rank)
-
-            # Initialize iteration entry if not exists
-            if iteration not in all_files:
-                all_files[iteration] = {}
+            log_type = parts[0]           # "domain"
+            iteration = int(parts[1])     # 122
+            rank = parts[3].strip("0")
+            rank = int(rank) if rank else 0
 
             # Initialize log_type entry if not exists
-            if log_type not in all_files[iteration]:
-                all_files[iteration][log_type] = {}
+            if log_type not in all_files:
+                all_files[log_type] = {}
+
+            # Initialize iteration entry if not exists
+            if iteration not in all_files[log_type]:
+                all_files[log_type][iteration] = {}
 
             # Store the file
-            all_files[iteration][log_type][rank] = file
+            all_files[log_type][iteration][rank] = file
 
-    # Find the latest iteration
-    latest_iteration = max(all_files.keys()) if all_files else None
+    # Populate latest_files with data from the latest iteration for each log_type
 
-    # Populate latest_files with data from the latest iteration
-    if latest_iteration is not None:
-        latest_files = all_files[latest_iteration]
+    latest_iteration_global = None
+    for log_type, iterations in all_files.items():
+        latest_iteration = max(iterations.keys())
 
-    return {
-        "all_files": all_files,          # All files grouped by iteration
-        "latest_iteration": latest_iteration,  # Just the latest iteration number
-        "latest_files": latest_files      # Files from the latest iteration
-    }
+        if latest_iteration_global is None:
+            latest_iteration_global = latest_iteration
+        else:
+            if latest_iteration != latest_iteration_global:
+                print(
+                    f"Latest iteration {latest_iteration} is not the same as the global latest iteration {latest_iteration_global}"
+                )
+
+        latest_files[log_type] = iterations[latest_iteration]
+
+    return latest_files
 
 
 def load_latest_iteration(folder):
 
-    # Usage
-    result = find_latest_vtu_files(folder)
+    latest_files = find_latest_vtu_files(folder)
 
     data = dict()
-    for log_type in result["latest_files"]:
+    for log_type in latest_files:
 
         df = pd.DataFrame()
 
-        for rank in result["latest_files"][log_type]:
+        for rank in latest_files[log_type]:
 
-            filename = result["latest_files"][log_type][rank]
+            filename = latest_files[log_type][rank]
 
             with open(folder + "/" + filename, "r") as f:
                 vtu_content = f.read()

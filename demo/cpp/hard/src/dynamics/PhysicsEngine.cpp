@@ -200,13 +200,15 @@ void calculate_growth_rate_vector(const VecWrapper& l, VecWrapper& sigma_and_imp
   VecScale(growth_rates_out, 1 / tau);
 }
 
-void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& impedance_curr_out) {
+void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& stress_curr_out, VecWrapper& impedance_curr_out) {
   // Use impedance_curr_out as a temporary vector to store stresses (sigma)
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(L, gamma, impedance_curr_out));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(L, gamma, stress_curr_out));
 
   // We now have stresses in impedance_curr_out.
   // We need to calculate the growth rate, which will overwrite ldot_curr_out,
   // and the final impedance, which will overwrite the stresses in impedance_curr_out.
+
+  VecCopy(stress_curr_out, impedance_curr_out);
   calculate_growth_rate_vector(l, impedance_curr_out, lambda, tau, ldot_curr_out);
 };
 
@@ -286,6 +288,7 @@ struct RecursiveSolverWorkspaces {
     VecZeroEntries(ldot_prev);
 
     impedance_curr_workspace = VecWrapper::Like(l);
+    stress_curr_workspace = VecWrapper::Like(l);
 
     U_ext = VecWrapper::FromMat(M);
     F_ext_workspace = VecWrapper::FromMat(M);
@@ -306,6 +309,7 @@ struct RecursiveSolverWorkspaces {
   VecWrapper ldot_diff_workspace;
   VecWrapper ldot_prev;
   VecWrapper impedance_curr_workspace;
+  VecWrapper stress_curr_workspace;
   VecWrapper U_ext;
   VecWrapper F_ext_workspace;
   VecWrapper df, du, dC;
@@ -472,7 +476,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
         {
           // --- GROWTH PART ---
           // ldot_curr = growth_rate(gamma_curr)
-          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->impedance_curr_workspace);
+          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
 
           // ldot_diff = ldot_curr - ldot_prev
           VecWAXPY(workspaces->ldot_diff_workspace, -1.0, workspaces->ldot_prev, workspaces->ldot_curr_workspace);
@@ -502,7 +506,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
     PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, GAMMA));
 
     calculate_forces(workspaces->df, workspaces->du, workspaces->dC, D_PREV, M, G, workspaces->U_ext, workspaces->gamma_diff_workspace);
-    calculate_ldot_inplace(L_PREV, l, GAMMA, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->impedance_curr_workspace);
+    calculate_ldot_inplace(L_PREV, l, GAMMA, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
 
     // Move
     particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du});
@@ -540,7 +544,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
       break;
   }
 
-  particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace});
+  particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace});
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
 }
@@ -730,6 +734,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   VecWrapper length = getLengthVector(particle_manager.local_particles);
   VecWrapper ldot = VecWrapper::Like(length);
   VecWrapper impedance = VecWrapper::Like(length);
+  VecWrapper stress = VecWrapper::Like(length);
 
   // Calculate growth rates using elastic forces
   MatWrapper L = MatWrapper::CreateAIJ(particle_manager.local_particles.size(), new_constraints.size());
@@ -741,9 +746,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
 
-  calculate_ldot_inplace(L, length, force_vector, physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, impedance);
+  calculate_ldot_inplace(L, length, force_vector, physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, stress, impedance);
 
-  particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance});
+  particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
 
   return {.constraints = all_constraints_set, .constraint_iterations = 0, .bbpgd_iterations = 0, .residual = 0, .max_overlap = max_overlap};
 }

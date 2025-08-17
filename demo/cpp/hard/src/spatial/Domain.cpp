@@ -9,6 +9,7 @@
 #include <numeric>
 
 #include "loader/VTKStateLoader.h"
+#include "logger/ParameterLogger.h"
 #include "simulation/Particle.h"
 #include "simulation/ParticleData.h"
 #include "util/ArrayMath.h"
@@ -35,6 +36,11 @@ Domain::Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_
   particle_manager_ = std::make_unique<ParticleManager>(sim_config, physics_config, solver_config, *particle_logger_, *constraint_logger_, mode);
   step_start_time_ = MPI_Wtime();
   sim_start_time_ = std::chrono::steady_clock::now();
+
+  if (rank_ == 0) {
+    vtk::ParameterLogger parameter_logger(output_dir, "parameters", true, iter);
+    parameter_logger.log(SimulationParameters{sim_config_, physics_config_, solver_config_, "", mode});
+  }
 }
 
 void Domain::queueNewParticles(std::vector<Particle> particles) {
@@ -57,6 +63,7 @@ void Domain::commitNewParticles() {
 
 void Domain::run() {
   using namespace utils::ArrayMath;
+
   while (simulation_time_seconds_ < sim_config_.end_time) {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);

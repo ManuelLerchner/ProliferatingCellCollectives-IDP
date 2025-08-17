@@ -35,6 +35,7 @@ class PhysicsEngine {
   struct GrowthSolution {
     const VecWrapper& dL;
     const VecWrapper& impedance;
+    const VecWrapper& stress;
   };
 
   struct SolverSolution {

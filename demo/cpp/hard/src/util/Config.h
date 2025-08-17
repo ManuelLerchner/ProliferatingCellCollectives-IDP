@@ -22,14 +22,14 @@ struct PhysicsConfig {
   double temperature;  // Brownian motion temperature
 
   // Soft potential
-  double k_cc;     // Contact stiffness
-  double gamma_n;  // Normal damping coefficient
-  double gamma_t;  // Tangential damping coefficient
-  double cell_mu;  // Friction coefficient
-  double alpha;    // Overlap parameter
+  double k_cc;              // Contact stiffness
+  double gamma_n;           // Normal damping coefficient
+  double gamma_t;           // Tangential damping coefficient
+  double cell_mu;           // Friction coefficient
+  double alpha;             // Overlap parameter
   double baumgarte_factor;  // Baumgarte stabilization factor
 
-  bool monolayer;
+  PetscBool monolayer;
 
   double getLambdaDimensionless() const {
     return (TAU / (xi * l0 * l0)) * LAMBDA;
@@ -39,7 +39,7 @@ struct PhysicsConfig {
 struct SolverConfig {
   double tolerance;
   double allowed_overlap;
-  long long max_bbpgd_iterations;
+  int max_bbpgd_iterations;
   int max_recursive_iterations;
   double linked_cell_size;
   double growth_factor;
@@ -48,4 +48,12 @@ struct SolverConfig {
   int getMinPreallocationSize(int n) const {
     return std::max(1, static_cast<int>(n * particle_preallocation_factor));
   }
+};
+
+struct SimulationParameters {
+  SimulationConfig sim_config;
+  PhysicsConfig physics_config;
+  SolverConfig solver_config;
+  std::string starter_vtk;
+  std::string mode;
 };

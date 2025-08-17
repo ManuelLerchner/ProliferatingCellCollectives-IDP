@@ -89,6 +89,14 @@ class Particle {
     impedance_ = impedance;
   }
 
+  double getStress() const {
+    return stress_;
+  }
+
+  void setStress(double stress) {
+    stress_ = stress;
+  }
+
   const std::array<double, 3>& getForce() const {
     return force_;
   }
@@ -147,5 +155,6 @@ class Particle {
   std::array<double, 3> velocityLinear_;
   std::array<double, 3> velocityAngular_;
   double impedance_;
+  double stress_;
   int num_constraints_ = 0;
 };
