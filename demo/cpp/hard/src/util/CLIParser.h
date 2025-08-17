@@ -44,9 +44,6 @@ void dumpParameters(const SimulationParameters& params) {
   printParam("l0 (reference length)", params.physics_config.l0);
   printParam("LAMBDA", params.physics_config.LAMBDA);
   printParam("Temperature", params.physics_config.temperature);
-  printParam("k_cc (contact stiffness)", params.physics_config.k_cc);
-  printParam("gamma_n (normal damping)", params.physics_config.gamma_n);
-  printParam("gamma_t (tangent damping)", params.physics_config.gamma_t);
   printParam("cell_mu (friction)", params.physics_config.cell_mu);
   printParam("alpha", params.physics_config.alpha);
   printParam("Baumgarte factor", params.physics_config.baumgarte_factor);
@@ -87,7 +84,7 @@ SimulationParameters parseCommandLineOrDefaults() {
   // Default configs
   params.sim_config = {
       .dt_s = 1.0,
-      .end_time = 550 * 60,
+      .end_time = 700 * 60,
       .log_frequency_seconds = 60,
       .min_box_size = {2.0, 2.0, 0},
   };
@@ -98,9 +95,6 @@ SimulationParameters parseCommandLineOrDefaults() {
       .l0 = 1.0,
       .LAMBDA = 2.44e-3,
       .temperature = 1e-30,
-      .k_cc = 700000.0,
-      .gamma_n = 100000.0,
-      .gamma_t = 100000.0,
       .cell_mu = 0.2,
       .alpha = 0.5,
       .baumgarte_factor = 0.05,
@@ -127,9 +121,6 @@ SimulationParameters parseCommandLineOrDefaults() {
   getOption("-l0", params.physics_config.l0);
   getOption("-lambda", params.physics_config.LAMBDA);
   getOption("-temperature", params.physics_config.temperature);
-  getOption("-k_cc", params.physics_config.k_cc);
-  getOption("-gamma_n", params.physics_config.gamma_n);
-  getOption("-gamma_t", params.physics_config.gamma_t);
   getOption("-cell_mu", params.physics_config.cell_mu);
   getOption("-alpha", params.physics_config.alpha);
   getOption("-baumgarte_factor", params.physics_config.baumgarte_factor);

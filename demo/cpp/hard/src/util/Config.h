@@ -22,9 +22,6 @@ struct PhysicsConfig {
   double temperature;  // Brownian motion temperature
 
   // Soft potential
-  double k_cc;              // Contact stiffness
-  double gamma_n;           // Normal damping coefficient
-  double gamma_t;           // Tangential damping coefficient
   double cell_mu;           // Friction coefficient
   double alpha;             // Overlap parameter
   double baumgarte_factor;  // Baumgarte stabilization factor

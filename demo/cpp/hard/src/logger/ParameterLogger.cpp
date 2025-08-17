@@ -25,9 +25,6 @@ void ParameterLogger::log(const SimulationParameters& params) {
   logger_.addFieldData("l0", params.physics_config.l0);
   logger_.addFieldData("LAMBDA", params.physics_config.LAMBDA);
   logger_.addFieldData("temperature", params.physics_config.temperature);
-  logger_.addFieldData("k_cc", params.physics_config.k_cc);
-  logger_.addFieldData("gamma_n", params.physics_config.gamma_n);
-  logger_.addFieldData("gamma_t", params.physics_config.gamma_t);
   logger_.addFieldData("cell_mu", params.physics_config.cell_mu);
   logger_.addFieldData("alpha", params.physics_config.alpha);
   logger_.addFieldData("baumgarte_factor", params.physics_config.baumgarte_factor);

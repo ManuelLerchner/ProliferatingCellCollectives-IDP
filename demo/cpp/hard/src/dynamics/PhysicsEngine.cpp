@@ -476,7 +476,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
         {
           // --- GROWTH PART ---
           // ldot_curr = growth_rate(gamma_curr)
-          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
+          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.LAMBDA, physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
 
           // ldot_diff = ldot_curr - ldot_prev
           VecWAXPY(workspaces->ldot_diff_workspace, -1.0, workspaces->ldot_prev, workspaces->ldot_curr_workspace);
@@ -506,7 +506,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
     PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, GAMMA));
 
     calculate_forces(workspaces->df, workspaces->du, workspaces->dC, D_PREV, M, G, workspaces->U_ext, workspaces->gamma_diff_workspace);
-    calculate_ldot_inplace(L_PREV, l, GAMMA, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
+    calculate_ldot_inplace(L_PREV, l, GAMMA, physics_config.LAMBDA, physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
 
     // Move
     particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du});
@@ -600,46 +600,16 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
 
     // Calculate overlap and force
-    double F_elastic = R_eff * physics_config.k_cc * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
+    double F_elastic = R_eff * physics_config.xi * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
 
     // Store elastic force for growth calculation
-    VecSetValue(force_vector, constraint.gid, F_elastic / (M_PI * R1 * R1), INSERT_VALUES);
+    VecSetValue(force_vector, constraint.gid, F_elastic / (M_PI * R1 * R2 * 750), INSERT_VALUES);
 
-    // Calculate effective mass (CellsMD3D approach)
-    double L1 = p1.getLength() + 4.0 / 3.0 * R1;
-    double L2 = p2.getLength() + 4.0 / 3.0 * R2;
-    double M1 = L1 * R1 * R1 * M_PI;
-    double M2 = L2 * R2 * R2 * M_PI;
-    double m_eff = M1 * M2 / (M1 + M2);
-
-    // Calculate relative velocities
-    const auto& v1 = p1.getVelocityLinear();
-    const auto& v2 = p2.getVelocityLinear();
-    const auto& omega1 = p1.getVelocityAngular();
-    const auto& omega2 = p2.getVelocityAngular();
     const auto& r_pos_i = constraint.rPosI;
-    const auto& r_pos_j = constraint.rPosJ;
     const auto& normal = constraint.normI;
 
-    auto dv = (v2 - v1) + cross_product(omega2, r_pos_j) - cross_product(omega1, r_pos_i);
-
-    // Normal and tangential components
-    double dv_dot_t = dot(dv, normal);
-    auto dv_n = normal * dv_dot_t;
-    auto dv_t = dv - dv_n;
-
     // Calculate forces
-    auto F_damp_n = -dv_n * physics_config.gamma_n * m_eff * overlap;
-
-    double v_t_mag = magnitude(dv_t);
-    std::array<double, 3> F_damp_t = {0.0, 0.0, 0.0};
-    if (v_t_mag > 1e-10) {
-      double F_damp_t_mag = std::min(physics_config.gamma_t * m_eff * std::sqrt(overlap), physics_config.cell_mu * F_elastic / v_t_mag);
-      F_damp_t = -dv_t * F_damp_t_mag;
-    }
-
-    // Total force and torque
-    auto F_total_i = normal * (-F_elastic) + F_damp_n + F_damp_t;
+    auto F_total_i = normal * (-F_elastic);
     auto torque_i = cross_product(r_pos_i, F_total_i);
 
     // Set force values
@@ -687,16 +657,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
 
     auto& p1 = c.localI ? particle_manager.local_particles[c.localIdxI] : particle_manager.ghost_particles[c.localIdxI];
     auto& p2 = c.localJ ? particle_manager.local_particles[c.localIdxJ] : particle_manager.ghost_particles[c.localIdxJ];
-
-    double R1 = p1.getDiameter() / 2.0;
-    double R2 = p2.getDiameter() / 2.0;
-
-    double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
-
-    double F_elastic = R_eff * physics_config.k_cc * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
-
-    double stress_i = F_elastic / (M_PI * R1 * R1);
-    double stress_j = F_elastic / (M_PI * R2 * R2);
 
     auto& n = c.normI;
     double correction = physics_config.baumgarte_factor * overlap;
@@ -746,7 +706,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
 
-  calculate_ldot_inplace(L, length, force_vector, physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, stress, impedance);
+  calculate_ldot_inplace(L, length, force_vector, 750*physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, stress, impedance);
 
   particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
 
