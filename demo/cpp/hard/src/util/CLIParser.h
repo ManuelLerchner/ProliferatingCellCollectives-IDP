@@ -42,7 +42,7 @@ void dumpParameters(const SimulationParameters& params) {
   printParam("Xi (viscosity)", params.physics_config.xi);
   printParam("TAU (growth time)", params.physics_config.TAU);
   printParam("l0 (reference length)", params.physics_config.l0);
-  printParam("LAMBDA", params.physics_config.LAMBDA);
+  printParam("LAMBDA", params.physics_config.getLambdaDimensionless());
   printParam("Temperature", params.physics_config.temperature);
   printParam("cell_mu (friction)", params.physics_config.cell_mu);
   printParam("alpha", params.physics_config.alpha);
@@ -93,7 +93,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .xi = 200 * 3600,
       .TAU = 54 * 60,
       .l0 = 1.0,
-      .LAMBDA = 2.44e-3,
+      .LAMBDA = 1e-2,
       .temperature = 1e-30,
       .cell_mu = 0.2,
       .alpha = 0.5,

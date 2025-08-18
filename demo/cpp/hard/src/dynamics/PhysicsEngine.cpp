@@ -476,7 +476,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
         {
           // --- GROWTH PART ---
           // ldot_curr = growth_rate(gamma_curr)
-          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.LAMBDA, physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
+          calculate_ldot_inplace(L_PREV, l, gamma_curr, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
 
           // ldot_diff = ldot_curr - ldot_prev
           VecWAXPY(workspaces->ldot_diff_workspace, -1.0, workspaces->ldot_prev, workspaces->ldot_curr_workspace);
@@ -506,7 +506,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
     PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, GAMMA));
 
     calculate_forces(workspaces->df, workspaces->du, workspaces->dC, D_PREV, M, G, workspaces->U_ext, workspaces->gamma_diff_workspace);
-    calculate_ldot_inplace(L_PREV, l, GAMMA, physics_config.LAMBDA, physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
+    calculate_ldot_inplace(L_PREV, l, GAMMA, physics_config.getLambdaDimensionless(), physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
 
     // Move
     particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du});
@@ -603,12 +603,12 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double F_elastic = R_eff * physics_config.xi * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
 
     // Store elastic force for growth calculation
-    VecSetValue(force_vector, constraint.gid, F_elastic / (M_PI * R1 * R2 * 750), INSERT_VALUES);
+    VecSetValue(force_vector, constraint.gid, 150.0 * F_elastic / (M_PI * R1 * R2 * 750), INSERT_VALUES);
 
     const auto& r_pos_i = constraint.rPosI;
     const auto& normal = constraint.normI;
 
-    // Calculate forces
+    // Calculate forcess
     auto F_total_i = normal * (-F_elastic);
     auto torque_i = cross_product(r_pos_i, F_total_i);
 
@@ -706,7 +706,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
 
-  calculate_ldot_inplace(L, length, force_vector, 750*physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, stress, impedance);
+  calculate_ldot_inplace(L, length, force_vector, physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, stress, impedance);
 
   particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
 

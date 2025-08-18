@@ -23,7 +23,7 @@ void ParameterLogger::log(const SimulationParameters& params) {
   logger_.addFieldData("xi", params.physics_config.xi);
   logger_.addFieldData("TAU", params.physics_config.TAU);
   logger_.addFieldData("l0", params.physics_config.l0);
-  logger_.addFieldData("LAMBDA", params.physics_config.LAMBDA);
+  logger_.addFieldData("LAMBDA", params.physics_config.getLambdaDimensionless());
   logger_.addFieldData("temperature", params.physics_config.temperature);
   logger_.addFieldData("cell_mu", params.physics_config.cell_mu);
   logger_.addFieldData("alpha", params.physics_config.alpha);
