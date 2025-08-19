@@ -29,7 +29,7 @@ struct PhysicsConfig {
   PetscBool monolayer;
 
   double getLambdaDimensionless() const {
-    return (TAU / (xi * l0 * l0)) * LAMBDA;
+    return  LAMBDA;
   }
 };
 

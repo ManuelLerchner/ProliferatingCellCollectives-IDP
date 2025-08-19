@@ -600,10 +600,10 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
 
     // Calculate overlap and force
-    double F_elastic = R_eff * physics_config.xi * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
+    double F_elastic = R_eff * 500 * physics_config.xi * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
 
     // Store elastic force for growth calculation
-    VecSetValue(force_vector, constraint.gid, 150.0 * F_elastic / (M_PI * R1 * R2 * 750), INSERT_VALUES);
+    VecSetValue(force_vector, constraint.gid, F_elastic / (M_PI * R1 * R2), INSERT_VALUES);
 
     const auto& r_pos_i = constraint.rPosI;
     const auto& normal = constraint.normI;

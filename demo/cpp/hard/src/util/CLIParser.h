@@ -83,15 +83,15 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Default configs
   params.sim_config = {
-      .dt_s = 1.0,
+      .dt_s = 1.0 / 5000.0,
       .end_time = 700 * 60,
-      .log_frequency_seconds = 60,
+      .log_frequency_seconds = 60 / 5000.0,
       .min_box_size = {2.0, 2.0, 0},
   };
 
   params.physics_config = {
-      .xi = 200 * 3600,
-      .TAU = 54 * 60,
+      .xi = 1,
+      .TAU =1,
       .l0 = 1.0,
       .LAMBDA = 1e-2,
       .temperature = 1e-30,

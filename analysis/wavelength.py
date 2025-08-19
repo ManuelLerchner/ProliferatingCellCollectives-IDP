@@ -211,6 +211,33 @@ def sine_fit_wavelength(bin_centers, avg_length, plot=True):
         return np.nan, 0, None
 
 
+def findpeaks_wavelength(bin_centers, avg_length, plot=True):
+    import findpeaks
+    import numpy as np
+
+    fp = findpeaks.findpeaks(method='peakdetect', lookahead=1, interpolate=2)
+    results = fp.fit(avg_length)
+
+    df = results["df"]
+
+    # get indices where a peak was detected
+    peak_indices = df.index[df["peak"] == True].to_numpy()
+
+    # map them to bin_centers (your x-axis)
+    peak_positions = bin_centers[peak_indices]
+
+    # distances between consecutive peaks
+    peak_distances = np.diff(peak_positions)
+
+    avg_wavelength = np.mean(peak_distances)
+    std_wavelength = np.std(peak_distances)
+
+    if plot:
+        fp.plot()
+
+    return avg_wavelength, peak_distances, std_wavelength
+
+
 def comprehensive_wavelength_analysis(particles: pd.DataFrame, plot=False):
     """Run all wavelength detection methods and compare results"""
     # Prepare data (same as your original function)
@@ -218,12 +245,15 @@ def comprehensive_wavelength_analysis(particles: pd.DataFrame, plot=False):
         particles["x"]**2 + particles["y"]**2 + particles["z"]**2)
 
     bins = pd.IntervalIndex.from_tuples(
-        [(i, i+1) for i in range(0, int(particles["dist_center"].max()), 3)])
+        [(i, i+1) for i in range(10, int(particles["dist_center"].max()), 3)])
     particles["bin"] = pd.cut(particles["dist_center"], bins=bins)
 
     avg_length = particles.groupby("bin", observed=True)["lengths_x"].mean()
 
     bin_centers = avg_length.index.map(lambda interval: interval.mid)
+
+    if len(avg_length) == 0:
+        return None, None, None
 
     dominant_wl, all_wl, powers = fft_wavelength_improved(
         bin_centers, avg_length, plot=plot)
@@ -237,7 +267,13 @@ def comprehensive_wavelength_analysis(particles: pd.DataFrame, plot=False):
     peak_to_peak_wl, peak_distances, std_wl = peak_to_peak_wavelength(
         bin_centers, avg_length, plot=plot)
 
-    valid_wavelengths = [w for w in [autocorr_wl] if not np.isnan(w)]
+    findpeaks_wl, peak_distances, std_wl = findpeaks_wavelength(
+        bin_centers, avg_length, plot=plot)
+
+    valid_wavelengths = [w for w in [
+        autocorr_wl, findpeaks_wl, peak_to_peak_wl, sine_wl] if not np.isnan(w)]
+
+    print(valid_wavelengths)
 
     final_wavelength = np.mean(valid_wavelengths)
 
