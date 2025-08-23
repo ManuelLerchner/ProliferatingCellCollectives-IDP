@@ -8,7 +8,7 @@ struct Vec3d {
 
 struct SimulationConfig {
   double dt_s;
-  double end_time;
+  double end_radius;
   double log_frequency_seconds = 0;
   Vec3d min_box_size;
 };
@@ -35,7 +35,6 @@ struct PhysicsConfig {
 
 struct SolverConfig {
   double tolerance;
-  double allowed_overlap;
   int max_bbpgd_iterations;
   int max_recursive_iterations;
   double linked_cell_size;

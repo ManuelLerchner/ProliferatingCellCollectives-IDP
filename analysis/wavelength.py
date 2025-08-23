@@ -238,22 +238,19 @@ def findpeaks_wavelength(bin_centers, avg_length, plot=True):
     return avg_wavelength, peak_distances, std_wavelength
 
 
-def comprehensive_wavelength_analysis(particles: pd.DataFrame, plot=False):
+def comprehensive_wavelength_analysis(particles: pd.DataFrame, plot=False, start_bin=1, step_bin=3):
     """Run all wavelength detection methods and compare results"""
     # Prepare data (same as your original function)
     particles["dist_center"] = np.sqrt(
         particles["x"]**2 + particles["y"]**2 + particles["z"]**2)
 
     bins = pd.IntervalIndex.from_tuples(
-        [(i, i+1) for i in range(10, int(particles["dist_center"].max()), 3)])
+        [(i, i+1) for i in range(start_bin, int(particles["dist_center"].max()), step_bin)])
     particles["bin"] = pd.cut(particles["dist_center"], bins=bins)
 
     avg_length = particles.groupby("bin", observed=True)["lengths_x"].mean()
 
     bin_centers = avg_length.index.map(lambda interval: interval.mid)
-
-    if len(avg_length) == 0:
-        return None, None, None
 
     dominant_wl, all_wl, powers = fft_wavelength_improved(
         bin_centers, avg_length, plot=plot)

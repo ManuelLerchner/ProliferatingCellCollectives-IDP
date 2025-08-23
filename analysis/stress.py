@@ -12,7 +12,7 @@ def stress_distribution(particles: pd.DataFrame):
         particles["x"]**2 + particles["y"]**2 + particles["z"]**2)
 
     bins = pd.IntervalIndex.from_tuples(
-        [(i, i+1) for i in range(0, int(particles["dist_center"].max()), 3)])
+        [(i, i+1) for i in range(0, int(particles["dist_center"].max())+3, 3)])
     particles["bin"] = pd.cut(particles["dist_center"], bins=bins)
 
     avg_stress = particles.groupby(

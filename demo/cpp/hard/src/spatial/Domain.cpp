@@ -64,7 +64,9 @@ void Domain::commitNewParticles() {
 void Domain::run() {
   using namespace utils::ArrayMath;
 
-  while (simulation_time_seconds_ < sim_config_.end_time) {
+  double colony_radius = 0;
+
+  while (colony_radius < sim_config_.end_radius) {
     auto new_particles = particle_manager_->divideParticles();
     queueNewParticles(new_particles);
     commitNewParticles();
@@ -86,10 +88,10 @@ void Domain::run() {
     simulation_time_seconds_ += sim_config_.dt_s;
 
     // Determine colony radius
-    double colony_radius = globalReduce(
+    colony_radius = globalReduce(
         std::accumulate(particle_manager_->local_particles.begin(), particle_manager_->local_particles.end(), 0.0,
-                        [](double acc, const Particle& p) {
-                          return std::max(acc, utils::ArrayMath::magnitude(p.getPosition()));
+                        [this](double acc, const Particle& p) {
+                          return std::max(acc, utils::ArrayMath::magnitude(particle_manager_->physics_engine->collision_detector.getParticleEndpoints(p).second));
                         }),
         MPI_MAX);
 
@@ -198,9 +200,8 @@ void Domain::resizeDomain() {
 }
 
 void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s) const {
-  double time_elapsed_minutes = simulation_time_seconds_ / 60.0;
-  double time_total_minutes = sim_config_.end_time / 60.0;
-  double progress_percent = (simulation_time_seconds_ / sim_config_.end_time) * 100.0;
+  double time_elapsed_seconds = simulation_time_seconds_;
+  double progress_percent = (colony_radius / sim_config_.end_radius) * 100.0;
 
   std::string eta_str = "N/A";
   if (simulation_time_seconds_ > 1.0) {
@@ -210,7 +211,7 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
 
     if (sim_time_since_last_check > 1e-9) {
       double wall_seconds_per_sim_seconds = wall_time_since_last_check / sim_time_since_last_check;
-      double estimated_remaining_wall_time_seconds = (sim_config_.end_time - simulation_time_seconds_) * wall_seconds_per_sim_seconds;
+      double estimated_remaining_wall_time_seconds = (sim_config_.end_radius - colony_radius) * wall_seconds_per_sim_seconds;
 
       char buffer[100];
       snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
@@ -222,16 +223,16 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
     }
   }
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n Time: %3.1f / %3.1f min (%4.1f%%) | ETA: %s | dt: %4.1fs | CPU: %3.1fs | Iter: %d | Particles: %d | Colony radius: %.1f",
-              time_elapsed_minutes,
-              time_total_minutes,
+  PetscPrintf(PETSC_COMM_WORLD, "\n Colony radius: %.1f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | dt: %4.1fs | CPU: %3.1fs | Iter: %d | Particles: %d",
+              colony_radius,
+              sim_config_.end_radius,
               progress_percent,
+              time_elapsed_seconds,
               eta_str.c_str(),
               sim_config_.dt_s,
               cpu_time_s,
               current_iteration,
-              global_particle_count,
-              colony_radius);
+              global_particle_count);
 }
 
 std::pair<std::array<double, 3>, std::array<double, 3>> Domain::calculateLocalBoundingBox() const {

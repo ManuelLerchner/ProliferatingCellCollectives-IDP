@@ -71,6 +71,7 @@
 - Successful concentric-ring pattern reproduction
 - Quantitative pattern metrics and validation
 - Computational performance characteristics
+- Time-step vs speed / num iterations
 
 ### 5.2 Soft Model Behavior Analysis
 

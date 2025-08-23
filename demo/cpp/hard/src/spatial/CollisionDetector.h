@@ -42,6 +42,8 @@ class CollisionDetector {
   // Reset the collision detector state (e.g., between solver runs)
   void reset();
 
+  std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
+
  private:
   double collision_tolerance_;
   double cell_size_;
@@ -52,7 +54,6 @@ class CollisionDetector {
   static constexpr double CONTACT_POINT_TOLERANCE = 0.01;  // Distance below which contact points are considered the same
 
   std::array<double, 3> getParticleDirection(const Particle& p);
-  std::pair<std::array<double, 3>, std::array<double, 3>> getParticleEndpoints(const Particle& p);
 
   void checkParticlePairs(
       ParticleManager& particle_manager,

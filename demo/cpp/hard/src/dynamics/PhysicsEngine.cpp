@@ -420,7 +420,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
                                MPI_MAX);
 
     // Check convergence
-    if (max_overlap < solver_config.allowed_overlap && constraint_iterations > 0) {
+    if (max_overlap < solver_config.tolerance && constraint_iterations > 0) {
       solver_state = SolverState::CONVERGED;
       break;
     }

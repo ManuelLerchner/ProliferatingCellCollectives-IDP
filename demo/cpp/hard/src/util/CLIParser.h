@@ -31,7 +31,7 @@ void printParam(const char* label, const T& value) {
 void dumpParameters(const SimulationParameters& params) {
   PetscPrintf(PETSC_COMM_WORLD, "\n=== SIMULATION CONFIGURATION ===\n");
   printParam("Time step (dt)", params.sim_config.dt_s);
-  printParam("End time", params.sim_config.end_time);
+  printParam("End radius", params.sim_config.end_radius);
   printParam("Log frequency", params.sim_config.log_frequency_seconds);
   PetscPrintf(PETSC_COMM_WORLD, "Min box size             : [%.3f, %.3f, %.3f]\n",
               params.sim_config.min_box_size.x,
@@ -51,7 +51,6 @@ void dumpParameters(const SimulationParameters& params) {
 
   PetscPrintf(PETSC_COMM_WORLD, "\n=== SOLVER CONFIGURATION ===\n");
   printParam("Tolerance", params.solver_config.tolerance);
-  printParam("Allowed overlap", params.solver_config.allowed_overlap);
   printParam("Max BBPGD iterations", params.solver_config.max_bbpgd_iterations);
   printParam("Max recursive iterations", params.solver_config.max_recursive_iterations);
   printParam("Linked cell size", params.solver_config.linked_cell_size);
@@ -70,8 +69,6 @@ void dumpParameters(const SimulationParameters& params) {
   printParam("Lambda dimensionless", params.physics_config.getLambdaDimensionless());
   PetscPrintf(PETSC_COMM_WORLD, "Tolerance/l0 ratio       : %.2e\n",
               params.solver_config.tolerance / params.physics_config.l0);
-  PetscPrintf(PETSC_COMM_WORLD, "Overlap/l0 ratio         : %.2e\n",
-              params.solver_config.allowed_overlap / params.physics_config.l0);
   PetscPrintf(PETSC_COMM_WORLD, "Cell size/l0 ratio       : %.3f\n",
               params.solver_config.linked_cell_size / params.physics_config.l0);
 
@@ -83,15 +80,15 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Default configs
   params.sim_config = {
-      .dt_s = 1.0 / 5000.0,
-      .end_time = 700 * 60,
-      .log_frequency_seconds = 60 / 5000.0,
+      .dt_s = 1.0 / 1000.0,
+      .end_radius = 30,
+      .log_frequency_seconds = 60 / 1000.0,
       .min_box_size = {2.0, 2.0, 0},
   };
 
   params.physics_config = {
       .xi = 1,
-      .TAU =1,
+      .TAU = 1,
       .l0 = 1.0,
       .LAMBDA = 1e-2,
       .temperature = 1e-30,
@@ -103,7 +100,6 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   params.solver_config = {
       .tolerance = 1e-3,
-      .allowed_overlap = 1e-2,
       .max_bbpgd_iterations = 100000,
       .max_recursive_iterations = 50,
       .linked_cell_size = 2.2,
@@ -113,7 +109,7 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Parse overrides
   getOption("-dt", params.sim_config.dt_s);
-  getOption("-end_time", params.sim_config.end_time);
+  getOption("-end_radius", params.sim_config.end_radius);
   getOption("-log_frequency", params.sim_config.log_frequency_seconds);
 
   getOption("-xi", params.physics_config.xi);
@@ -127,7 +123,6 @@ SimulationParameters parseCommandLineOrDefaults() {
   getOption("-monolayer", params.physics_config.monolayer);
 
   getOption("-tolerance", params.solver_config.tolerance);
-  getOption("-allowed_overlap", params.solver_config.allowed_overlap);
   getOption("-max_bbpgd_iterations", params.solver_config.max_bbpgd_iterations);
   getOption("-max_recursive_iterations", params.solver_config.max_recursive_iterations);
   getOption("-linked_cell_size", params.solver_config.linked_cell_size);
@@ -140,8 +135,6 @@ SimulationParameters parseCommandLineOrDefaults() {
   PetscOptionsHasName(NULL, NULL, "-allowed_overlap", &overlap_set);
   PetscOptionsHasName(NULL, NULL, "-linked_cell_size", &cell_size_set);
 
-  if (!tolerance_set) params.solver_config.tolerance = params.physics_config.l0 / 1e3;
-  if (!overlap_set) params.solver_config.allowed_overlap = params.physics_config.l0 / 1e2;
   if (!cell_size_set) params.solver_config.linked_cell_size = params.physics_config.l0 * 2.2;
 
   params.sim_config.min_box_size = {

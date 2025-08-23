@@ -14,7 +14,7 @@ void ParameterLogger::log(const SimulationParameters& params) {
 
   // Add all metrics as field data
   logger_.addFieldData("dt_s", params.sim_config.dt_s);
-  logger_.addFieldData("end_time", params.sim_config.end_time);
+  logger_.addFieldData("end_radius", params.sim_config.end_radius);
   logger_.addFieldData("log_frequency_seconds", params.sim_config.log_frequency_seconds);
   logger_.addFieldData("min_box_size_x", params.sim_config.min_box_size.x);
   logger_.addFieldData("min_box_size_y", params.sim_config.min_box_size.y);
