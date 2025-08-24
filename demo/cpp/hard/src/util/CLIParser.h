@@ -79,7 +79,7 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Default configs
   params.sim_config = {
-      .dt_s = 1.0 / 1000.0,
+      .dt_s = 1.0 / 10000.0,
       .end_radius = 42,
       .log_frequency_seconds = 0.1,
       .min_box_size = {2.0, 2.0, 0},
@@ -89,7 +89,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .xi = 1,
       .TAU = 1,
       .l0 = 1.0,
-      .LAMBDA = 1e-1,
+      .LAMBDA = 1e-3,
       .temperature = 1e-30,
       .alpha = 1,
       .baumgarte_factor = 0.000,
