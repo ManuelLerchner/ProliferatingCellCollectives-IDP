@@ -4,12 +4,9 @@ import pandas as pd
 from parse_vtu import vtu_to_dataframe
 
 
-def find_latest_vtu_files(folder):
+def load_files(folder):
     # Dictionary to store ALL files grouped by type, then iteration
     all_files = {}  # Format: {log_type: {iteration: {rank: filename}}}
-
-    # Dictionary to track ONLY the latest iteration files
-    latest_files = {}  # Format: {log_type: {rank: filename}}
 
     for file in os.listdir(folder):
         if file.endswith(".vtu"):
@@ -31,7 +28,12 @@ def find_latest_vtu_files(folder):
             # Store the file
             all_files[log_type][iteration][rank] = file
 
-    # Populate latest_files with data from the latest iteration for each log_type
+    return all_files
+
+
+def find_latest_vtu_files(folder):
+    all_files = load_files(folder)
+    latest_files = {}  # Format: {log_type: {rank: filename}}
 
     latest_iteration_global = None
     for log_type, iterations in all_files.items():
@@ -74,3 +76,29 @@ def load_latest_iteration(folder):
         data[log_type] = df
 
     return data
+
+
+def load_all_files(folder, log_type):
+    all_files = load_files(folder)
+
+    df_all = pd.DataFrame()
+
+    for iteration in all_files[log_type]:
+        for rank in all_files[log_type][iteration]:
+            filename = all_files[log_type][iteration][rank]
+
+            with open(folder + "/" + filename, "r") as f:
+                vtu_content = f.read()
+
+            df_temp = vtu_to_dataframe(vtu_content)
+            df_temp["iteration"] = iteration
+            df_temp["rank"] = rank
+
+            df_all = pd.concat([df_all, df_temp])
+
+    # put iteration as first column
+    df_all = df_all.reindex(
+        columns=["iteration"] + [col for col in df_all.columns if col != "iteration"])
+    df_all.sort_values(by="iteration", inplace=True)
+
+    return df_all

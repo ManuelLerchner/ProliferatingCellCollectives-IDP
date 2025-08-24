@@ -4,11 +4,11 @@
 % Packages
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage[dvipsnames]{xcolor}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{listings}
 \usepackage{subcaption}
+\usepackage{float}
 \usepackage{multirow}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -22,8 +22,13 @@
 \usepackage{multicol}
 \usepackage{enumitem}
 \usepackage{balance}
+\usepackage{array,booktabs}
 
 \setlength {\marginparwidth }{2cm}
+\newlength{\subfigwidth}
+\setlength{\subfigwidth}{0.15\textwidth}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}} % w/ horizontal centering
+
 
 \hypersetup{hidelinks}
 
@@ -135,6 +140,107 @@
 \end{itemize}
 
 \subsection{Pattern Formation Analysis}
+
+
+\begin{figure*}
+
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+
+        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} }
+            Hard                                                                                    &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/hard.0019.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/hard.0038.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/hard.0057.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/hard.0076.png}
+            \end{subfigure} &
+            \begin{subfigure}[t]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/hard.0095.png}
+            \end{subfigure}    \\
+
+            Soft                                                                                    &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/soft.0019.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/soft.0035.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/soft.0051.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/soft.0083.png}
+            \end{subfigure} &
+            \begin{subfigure}[t]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-3/soft.0099.png}
+            \end{subfigure}    \\
+        \end{tabular}
+        \caption{Growth Comparison $\lambda=10^{-3}$}
+
+
+    \end{subfigure}
+
+    \vspace{1em}
+
+
+    \begin{subfigure}[b]{\textwidth}
+
+        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} }
+            Hard                                                                                    &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/hard.0020.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/hard.0040.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/hard.0060.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/hard.0080.png}
+            \end{subfigure} &
+            \begin{subfigure}[t]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/hard.0100.png}
+            \end{subfigure}    \\
+
+            Soft                                                                                    &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/soft.0020.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/soft.0040.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/soft.0060.png}
+            \end{subfigure} &
+            \begin{subfigure}[b]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/soft.0080.png}
+            \end{subfigure} &
+            \begin{subfigure}[t]{\subfigwidth}
+                \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_1e-2/soft.0100.png}
+            \end{subfigure}    \\
+        \end{tabular}
+        \caption{Growth Comparison $\lambda=10^{-2}$}
+
+
+    \end{subfigure}
+
+    \vspace{1em}
+
+    \caption{Pattern formation under stress-sensitive growth at different time points. Each row shows the evolution for a different value of $\lambda$, demonstrating how the strength of mechanical feedback affects the emerging patterns. Time points are shown as fractions of the total simulation time $T$.}
+    \label{fig:pattern_evolution}
+\end{figure*}
+
+
+
+
 \begin{itemize}
     \item Concentric ring reproduction
     \item Quantitative metrics

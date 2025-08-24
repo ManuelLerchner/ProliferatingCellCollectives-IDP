@@ -61,6 +61,9 @@ class PhysicsEngine {
 
  private:
   void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations);
+  void calculate_elastic_forces(VecWrapper& F, VecWrapper& F_workspace, const std::vector<Constraint>& constraints, const MatWrapper& M, double dt, int constraint_iterations);
+  void calculate_elastic_forces_with_growth(VecWrapper& F, VecWrapper& F_workspace, const std::vector<Constraint>& constraints, const MatWrapper& M, double dt, int constraint_iterations);
+  void calculate_elastic_forces_with_growth_and_impedance(VecWrapper& F, VecWrapper& F_workspace, const std::vector<Constraint>& constraints, const MatWrapper& M, double dt, int constraint_iterations);
   void apply_monolayer_constraints(VecWrapper& U, int n_local);
   void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const VecWrapper& gamma, const VecWrapper& phi);
 

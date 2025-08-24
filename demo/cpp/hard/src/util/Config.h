@@ -22,7 +22,6 @@ struct PhysicsConfig {
   double temperature;  // Brownian motion temperature
 
   // Soft potential
-  double cell_mu;           // Friction coefficient
   double alpha;             // Overlap parameter
   double baumgarte_factor;  // Baumgarte stabilization factor
 

@@ -44,7 +44,6 @@ void dumpParameters(const SimulationParameters& params) {
   printParam("l0 (reference length)", params.physics_config.l0);
   printParam("LAMBDA", params.physics_config.getLambdaDimensionless());
   printParam("Temperature", params.physics_config.temperature);
-  printParam("cell_mu (friction)", params.physics_config.cell_mu);
   printParam("alpha", params.physics_config.alpha);
   printParam("Baumgarte factor", params.physics_config.baumgarte_factor);
   printParam("Monolayer mode", (bool)params.physics_config.monolayer);
@@ -81,8 +80,8 @@ SimulationParameters parseCommandLineOrDefaults() {
   // Default configs
   params.sim_config = {
       .dt_s = 1.0 / 1000.0,
-      .end_radius = 30,
-      .log_frequency_seconds = 60 / 1000.0,
+      .end_radius = 42,
+      .log_frequency_seconds = 0.1,
       .min_box_size = {2.0, 2.0, 0},
   };
 
@@ -90,11 +89,10 @@ SimulationParameters parseCommandLineOrDefaults() {
       .xi = 1,
       .TAU = 1,
       .l0 = 1.0,
-      .LAMBDA = 1e-2,
+      .LAMBDA = 1e-1,
       .temperature = 1e-30,
-      .cell_mu = 0.2,
-      .alpha = 0.5,
-      .baumgarte_factor = 0.05,
+      .alpha = 1,
+      .baumgarte_factor = 0.000,
       .monolayer = PETSC_TRUE,
   };
 
@@ -117,7 +115,6 @@ SimulationParameters parseCommandLineOrDefaults() {
   getOption("-l0", params.physics_config.l0);
   getOption("-lambda", params.physics_config.LAMBDA);
   getOption("-temperature", params.physics_config.temperature);
-  getOption("-cell_mu", params.physics_config.cell_mu);
   getOption("-alpha", params.physics_config.alpha);
   getOption("-baumgarte_factor", params.physics_config.baumgarte_factor);
   getOption("-monolayer", params.physics_config.monolayer);

@@ -565,7 +565,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
 
   std::vector<Constraint> all_constraints_set;
 
-  // Calculate external velocities first
   VecWrapper F_ext = VecWrapper::FromMat(M);
   VecWrapper U_ext = VecWrapper::FromMat(M);
   calculate_external_velocities(U_ext, F_ext, particle_manager.local_particles, M, dt, 0);
@@ -579,12 +578,11 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
                                                     }),
                                     MPI_MAX);
 
-  // Setup vectors for forces and growth calculation
-  VecWrapper force_vector = VecWrapper::Create(new_constraints.size());
-  VecZeroEntries(force_vector);
-
   VecWrapper F = VecWrapper::FromMat(M);
   VecZeroEntries(F);
+
+  VecWrapper force_vector = VecWrapper::Create(new_constraints.size());
+  VecZeroEntries(force_vector);
 
   // Calculate forces, stresses and growth for each constraint
   for (const auto& constraint : new_constraints) {
@@ -600,10 +598,9 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
 
     // Calculate overlap and force
-    double F_elastic = R_eff * 500 * physics_config.xi * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
+    double F_elastic = R_eff * 2000 * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
 
-    // Store elastic force for growth calculation
-    VecSetValue(force_vector, constraint.gid, F_elastic / (M_PI * R1 * R2), INSERT_VALUES);
+    VecSetValue(force_vector, constraint.gid, F_elastic, INSERT_VALUES);
 
     const auto& r_pos_i = constraint.rPosI;
     const auto& normal = constraint.normI;
@@ -651,25 +648,27 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   VecWrapper baumgarte_dC = VecWrapper::Like(deltaC);
   VecZeroEntries(baumgarte_dC);
 
+  // // Setup vectors for forces and growth calculation
+
   for (auto& c : post_constraints) {
     double overlap = -c.signed_distance;
     if (overlap <= 0) continue;
 
-    auto& p1 = c.localI ? particle_manager.local_particles[c.localIdxI] : particle_manager.ghost_particles[c.localIdxI];
-    auto& p2 = c.localJ ? particle_manager.local_particles[c.localIdxJ] : particle_manager.ghost_particles[c.localIdxJ];
+    const auto& p1 = c.localI ? particle_manager.local_particles[c.localIdxI] : particle_manager.ghost_particles[c.localIdxI];
+    const auto& p2 = c.localJ ? particle_manager.local_particles[c.localIdxJ] : particle_manager.ghost_particles[c.localIdxJ];
 
     auto& n = c.normI;
-    double correction = physics_config.baumgarte_factor * overlap;
+    double correction = physics_config.baumgarte_factor * overlap / dt;
 
     // 3 DOFs for translation, 3 for rotation (rotation stays zero here)
-    double corr_i[7] = {0.5 * correction * n[0] / dt,
-                        0.5 * correction * n[1] / dt,
-                        0.5 * correction * n[2] / dt,
+    double corr_i[7] = {0.5 * correction * n[0],
+                        0.5 * correction * n[1],
+                        0.5 * correction * n[2],
                         0, 0, 0, 0};
 
-    double corr_j[7] = {-0.5 * correction * n[0] / dt,
-                        -0.5 * correction * n[1] / dt,
-                        -0.5 * correction * n[2] / dt,
+    double corr_j[7] = {-0.5 * correction * n[0],
+                        -0.5 * correction * n[1],
+                        -0.5 * correction * n[2],
                         0, 0, 0, 0};
 
     PetscInt idx_i[7], idx_j[7];
