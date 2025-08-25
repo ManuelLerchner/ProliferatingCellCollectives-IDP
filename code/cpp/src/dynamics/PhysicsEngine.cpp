@@ -598,29 +598,24 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
 
     VecSetValue(gamma, constraint.gid, F_elastic, INSERT_VALUES);
 
-    const auto& r_pos_i = constraint.rPosI;
-    const auto& normal = constraint.normI;
+    const auto f_i = constraint.normI * F_elastic;
+    const auto f_j = -f_i;
+    const auto r_i = constraint.rPosI;
+    const auto r_j = constraint.rPosJ;
+    const auto torque_i = cross_product(r_i, f_i);
+    const auto torque_j = cross_product(r_j, f_j);
 
-    // Calculate forcess
-    auto F_total_i = normal * (-F_elastic);
-    auto torque_i = cross_product(r_pos_i, F_total_i);
+    double F_i[6] = {f_i[0], f_i[1], f_i[2], torque_i[0], torque_i[1], torque_i[2]};
+    double F_j[6] = {f_j[0], f_j[1], f_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
-    // Set force values
-    PetscInt idx1[6], idx2[6];
-    for (int i = 0; i < 6; i++) {
-      idx1[i] = constraint.gidI * 6 + i;
-      idx2[i] = constraint.gidJ * 6 + i;
-    }
 
-    double f_data_j[6] = {
-        F_total_i[0], F_total_i[1], F_total_i[2],
-        torque_i[0], torque_i[1], torque_i[2]};
-    double f_data_i[6] = {
-        -F_total_i[0], -F_total_i[1], -F_total_i[2],
-        -torque_i[0], -torque_i[1], -torque_i[2]};
+    PetscInt rows_i[6] = {constraint.gidI * 6 + 0, constraint.gidI * 6 + 1, constraint.gidI * 6 + 2,
+                          constraint.gidI * 6 + 3, constraint.gidI * 6 + 4, constraint.gidI * 6 + 5};
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, rows_i, F_i, ADD_VALUES));
 
-    PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, idx1, f_data_i, ADD_VALUES));
-    PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, idx2, f_data_j, ADD_VALUES));
+    PetscInt rows_j[6] = {constraint.gidJ * 6 + 0, constraint.gidJ * 6 + 1, constraint.gidJ * 6 + 2,
+                          constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, rows_j, F_j, ADD_VALUES));
   }
 
   // Assemble force vectors

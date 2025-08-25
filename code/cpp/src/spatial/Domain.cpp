@@ -223,7 +223,7 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
     }
   }
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n Colony radius: %.1f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | dt: %4.1fs | CPU: %3.1fs | Iter: %d | Particles: %d",
+  PetscPrintf(PETSC_COMM_WORLD, "\n Colony radius: %.1f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | dt: %4.1es | CPU: %3.1fs | Iter: %d | Particles: %d",
               colony_radius,
               sim_config_.end_radius,
               progress_percent,
