@@ -193,7 +193,32 @@ $$
 
 Now we can define the specific implementations of hard and soft collision models by specifying how the force vector $\mathbfcal{F}$ is computed in each case.
 
+\newpage
 
+\subsection{Soft Collision Model}
+
+For the soft collision model, we use a potential-based approach inspired by \cite{Warren2019} where overlapping cells exert repelling forces on each other based on a predefined potential function. In particular, we implement a Hertzian potential, which provides a smooth force response as particles approach each other.
+
+We use the following Model:
+
+$$
+    F_{elastic} = R_{eff} k \left( k \delta^{1.5} + \alpha \delta \right)
+$$
+
+where $R_{eff} = \sqrt{\frac{R_1 R_2}{R_1 + R_2}}$ is the effective radius of the two interacting particles with radii $R_1$ and $R_2$, $\delta$ is the overlap distance between the particles, $k$ is the elastic constant, and $\alpha$ is a linear spring coefficient used to make the particles act stiffer at small overlaps. From empirical tests, we found that setting $\alpha = 1$ and $k = 2000$ produces similar results to the hard collision model (see \autoref{fig:hertzian_contact_model}).
+
+The overlap distance $\delta$ is calculated as the distance between the two closest points on the surface of the two particles minus the sum of their radii. If the particles are not overlapping, $\delta$ is set to zero. The resulting torque vector is then calculated as $\mathbf{T} = \mathbf{y} \times \mathbf{F}$ where $\mathbf{y}$ is the vector from the particle's center to the point of contact.
+
+By aggregating the forces and torques from all overlapping particle pairs, we can construct the full force vector $\mathbfcal{F} = [ \dots, F_n^T, T_n^T, \dots]^T$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{figures/hertzian_contact_model.png}
+    \caption{Elastic force as a function of overlap distance for the implemented Hertzian contact model with $k=2000$ and $\alpha=0.5$.}
+    \label{fig:hertzian_contact_model}
+\end{figure}
+
+\newpage
 \subsection{Hard Collision Model}
 
 
@@ -273,12 +298,7 @@ $$
 This set of conditions is known as a Linear Complementarity Problem (LCP) and the missing Lagrange multipliers $\mathbf{\gamma}$ can be solved for using various numerical methods such as the the BBPGD algorithm described in \cite{Weady2024}. This allows us to compute the exact forces needed to resolve all overlaps in a single update step (excluding approximation errors from the Taylor expansion), ensuring that the non-overlapping conditions are satisfied at all times.
 
 
-\subsection{Soft Collision Model}
-\begin{itemize}
-    \item Potential functions
-    \item Force calculations
-    \item Stability considerations
-\end{itemize}
+
 
 \newpage
 
@@ -325,14 +345,14 @@ This suggests that, for the purpose of reproducing such patterns, the soft colli
     \begin{subfigure}[b]{\textwidth}
         \caption{Growth Comparison $\lambda=10^{-3}$}
         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-3}{0038}{0057}{0076}{0095}
-            \growthcomparisonrow{Soft}{1e-3}{0035}{0051}{0083}{0099}
+            \growthcomparisonrow{Hard}{1e-3}{0040}{0060}{0080}{0100}
+            \growthcomparisonrow{Soft}{1e-3}{0040}{0060}{0080}{0100}
         \end{tabular}
 
     \end{subfigure}
 
 
-    \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 50. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green).}
+    \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 40. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green).}
     \label{fig:pattern_formation}
 \end{figure*}
 
