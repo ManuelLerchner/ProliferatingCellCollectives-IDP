@@ -25,6 +25,7 @@ std::optional<Domain> createDomain(const SimulationParameters& params) {
                              params.physics_config.l0,
                              params.physics_config.l0,
                              params.physics_config.l0 / 2);
+
       domain.queueNewParticles({p1});
     }
     return domain;
