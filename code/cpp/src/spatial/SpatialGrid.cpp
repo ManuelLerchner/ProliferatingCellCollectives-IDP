@@ -45,6 +45,9 @@ size_t SpatialGrid::getCellIndex(const std::array<double, 3>& position) const {
   // Check bounds
   for (int i = 0; i < 3; ++i) {
     if (coords[i] >= grid_dims_[i]) {  // coords are unsigned, so only check upper bound
+      std::cout << "Particle out of bounds: " << position[0] << " " << position[1] << " " << position[2] << std::endl;
+      std::cout << "Cell index: " << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+      std::cout << "Grid dims: " << grid_dims_[0] << " " << grid_dims_[1] << " " << grid_dims_[2] << std::endl;
       throw std::runtime_error("Particle out of bounds");
     }
   }

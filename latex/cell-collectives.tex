@@ -105,33 +105,36 @@
 \maketitle
 
 \begin{abstract}
-    This thesis investigates the computational modeling of proliferating cell collectives, focusing on the fundamental differences between hard (constraint-based) and soft (potential-based) collision models. Building on recent advances in understanding bacterial colony pattern formation \cite{Weady2024}, we demonstrate that both approaches can reproduce the experimentally observed patterns. However, we show that the soft collision model faces inherent limitations in handling growth events and maintaining proper particle spacing.
+    This work investigates the computational modeling of proliferating cell collectives, comparing the established constraint-based hard collision model\cite{Weady2024} with a more computationally efficient potential-based soft collision model. While both approaches are demonstrated to reproduce key emergent patterns observed in bacterial colony growth, we highlight the inherent computational advantages of the soft model. Specifically, we propose that the soft collision model offers a simpler and potentially faster simulation pathway, particularly in handling continuous growth events, making it a promising alternative for large-scale simulations of active matter systems.
 
 \end{abstract}
 
 \begin{IEEEkeywords}
-    active matter, cell collectives, particle simulation, constraint optimization, pattern formation, computational biology
+    active matter, cell collectives, particle simulation, soft collision model, hard collision model, pattern formation, computational biology, performance comparison, agent-based modeling
 \end{IEEEkeywords}
 
 
 \section{Introduction}
 \subsection{Biological Motivation}
-\begin{itemize}
-    \item Cell collectives and pattern formation in nature
-    \item Experimental observations of bacterial colony growth
-    \item Importance of understanding collective behavior
-\end{itemize}
 
-\newpage
+The collective behaviors of biological entities, from microbial colonies to multicellular tissues, are fundamental to understanding life processes. These systems often exhibit emergent patterns driven by simple local interactions and individual growth. Bacterial colonies, for instance, display remarkable self-organization, forming complex spatial structures in response to environmental cues. This work is inspired by such phenomena, particularly the observed concentric ring patterns in growing bacterial communities, which represent a key mode of self-organization under controlled conditions, as explored in \cite{Weady2024}. Understanding these patterns requires robust computational models that can capture the interplay of individual cell mechanics, interactions, and proliferation.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/real-bacteria/Exserohilum turcicum.png}
+    \caption{Morphology of Exserohilum turcicum as presented in \cite{Bankole2023}. The Left image shows a colony of Exserohilum turcicum, the right image shows a single cell of Exserohilum turcicum.}
+    \label{fig:exserohilum_turcicum}
+\end{figure}
 
 \subsection{Computational Challenges}
-\begin{itemize}
-    \item Modeling proliferating active matter systems
-    \item Trade-offs between computational efficiency and accuracy
-    \item Time scale separation in growing systems
-\end{itemize}
 
-\newpage
+Simulating large populations of interacting, proliferating agents like cells presents significant computational hurdles. Accurately capturing the dynamics of active matter, where particles generate their own motion and change system composition through growth, require efficient algorithms. A critical challenge lies in the accurate and stable resolution of inter-particle interactions, especially collisions.
+
+While existing constraint-based (hard) collision models, which enforce non-overlapping conditions through an optimization framework, are precise, they can impose substantial computational overhead as typically constraints have to be iteratevly resolved globally for the entire system at each time step. This can become a bottleneck in simulations involving large numbers of particles or frequent collision events.
+
+Contrary to this, potential-based (soft) collision models, which allow for slight overlaps and use repulsive forces to resolve collisions, offer a more computationally tractable alternative requiring only local computations.
+
+However, the trade-off between the physical accuracy of hard collision models and the computational efficiency of soft collision models in the context of proliferating cell collectives remains underexplored. This work aims to fill this gap by systematically comparing both approaches in terms of their ability to reproduce biologically relevant patterns and their computational performance.
 
 \subsection{Research Questions}
 \begin{itemize}
@@ -156,24 +159,39 @@
 \newpage
 
 \subsection{Collision Models}
-\begin{itemize}
-    \item Hard collision approaches
-    \item Soft collision methods
-    \item Known limitations
-\end{itemize}
 
-\newpage
+Content: Particle interaction models are broadly categorized into hard and soft collision schemes. Hard collision models enforce strict non-overlap through constraints, often requiring iterative solvers (like LCP for the hard-rod model) to determine forces. This ensures physical realism in terms of impenetrability but can be computationally intensive. Soft collision models, conversely, utilize continuous potential functions (e.g., springs, Lennard-Jones) to generate repulsive forces when particles approach or overlap. These models are typically easier to implement and integrate numerically, offering a potentially faster computational pathway, although they may allow for transient overlaps depending on parameter tuning and time-stepping.
+
 
 \subsection{Cell Mechanics}
-\begin{itemize}
-    \item Rigid vs. deformable assumptions
-    \item Experimental evidence
-    \item Model selection implications
-\end{itemize}
 
-\newpage
+The mechanical representation of cells significantly influences simulation outcomes. For many bacteria and fungal hyphae, a rigid rod approximation is a reasonable simplification, capturing their elongated morphology and the primary drivers of collective behavior. While real cells can exhibit some deformability, treating them as rigid bodies allows for a focus on the collective dynamics. This choice of a rigid rod geometry is well-supported by the experimental observations that inspire our work and aligns with common practices in modeling microbial collectives\cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015}. The selected collision models are applied to these rigid rod entities.
 
-\section{Mathematical Formulations}
+\section{Hard-rod Model}
+
+For modeling the cell collectives, we use a hard-rod model where cells are represented as rigid rods with a fixed length and radius. This is a common assumption in many cell collectives models \cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015} and is supported by experimental evidence, closely matching common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} as shown in \autoref{fig:exserohilum_turcicum}.
+
+
+Each bacterium is represented by a spherocylinder with length $l$ and diameter $d$. For this implementation we consider bacteria of a fixed diameter $d_0 = 1.0$ and a variable length $l$ which is a parameter of the model. n the scale of typical bacteria, the system can be represented by an overdamped dynamics, because their Reynolds number is extremely small (Re $\ll 1$), so viscous drag stops them from coasting almost instantaneously \cite{datta2024lifelowreynoldsnumber}. The resulting dynamics is then described by the overdamped Langevin equation:
+
+$$
+    \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \mathbf{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_ij \times \mathbf{F}_{ij})
+$$
+\label{eq:overdamped_langevin}
+
+where $\mathbf{x}_i$ is the position of the cell, $\mathbf{\omega}_i$ is the angular velocity of the cell, $\mathbf{F}_{ij}$ is the force acting on the cell from the $j$-th cell. $\zeta$ is a constant drag coefficient representing the friction of the cell in the fluid, $\mathbf{r}_ij$ is the point of contact between the two cells relative to the center of the $i$-th cell.
+
+% todo figure of colliding cells
+
+To model the bacteria growth, also keep track of the bacteria length, $\mathbfcal{l} = [\dots, l_n, \dots]^T \in \mathbb{R}^{N}$ where $l_n$ is the length of the $n$-th cell. We use the following model in accordance with \cite{Weady2024}:
+
+$$
+    \dot{\mathbfcal{l}} =  \frac{\mathbfcal{l}}{\tau} e^{\lambda \mathbfcal{\sigma}}
+$$
+
+where $\tau$ is a time scale, $\mathbfcal{\sigma} \in \mathbb{R}^{N}$ is the stress vector representing the stress along the main axis of each cell in the colony, and $\lambda$ is a stress sensitivity parameter which will later be used to control the growth rate and the macroscopic pattern formation of the colony.
+
+
 
 \subsection{Common Framework}
 
@@ -191,25 +209,36 @@ $$
 $$
 \label{eq:colony_update}
 
+
+To keep track of the bacteria length, we also keep track of a length vector $\mathbfcal{L} = [\dots, l_n, \dots]^T \in \mathbb{R}^{N}$ where $l_n$ is the length of the $n$-th cell.
+
+
+
+
+
+
+
 Now we can define the specific implementations of hard and soft collision models by specifying how the force vector $\mathbfcal{F}$ is computed in each case.
 
 \newpage
 
 \subsection{Soft Collision Model}
 
-For the soft collision model, we use a potential-based approach inspired by \cite{Warren2019} where overlapping cells exert repelling forces on each other based on a predefined potential function. In particular, we implement a Hertzian potential, which provides a smooth force response as particles approach each other.
+For the soft collision model, we consider a potential-based approach inspired by \cite{Warren2019} and \cite{You2018} where overlapping cells exert repelling forces on each other based on a predefined potential function. In particular, we implement a Hertzian potential, which provides a smooth force response as particles approach each other.
 
 We use the following Model:
 
 $$
-    F_{elastic} = R_{eff} k \left( k \delta^{1.5} + \alpha \delta \right)
+    F_{elastic} =k_{cc} \sqrt{d_0} \delta^{1.5} \hat{\mathbf{n}}
 $$
 
-where $R_{eff} = \sqrt{\frac{R_1 R_2}{R_1 + R_2}}$ is the effective radius of the two interacting particles with radii $R_1$ and $R_2$, $\delta$ is the overlap distance between the particles, $k$ is the elastic constant, and $\alpha$ is a linear spring coefficient used to make the particles act stiffer at small overlaps. From empirical tests, we found that setting $\alpha = 1$ and $k = 2000$ produces similar results to the hard collision model (see \autoref{fig:hertzian_contact_model}).
+where $\delta$ is the overlap distance between the particles, $k_{cc}$ is the elastic constant, and $\hat{\mathbf{n}}$ is the normal vector at the point of contact.
 
-The overlap distance $\delta$ is calculated as the distance between the two closest points on the surface of the two particles minus the sum of their radii. If the particles are not overlapping, $\delta$ is set to zero. The resulting torque vector is then calculated as $\mathbf{T} = \mathbf{y} \times \mathbf{F}$ where $\mathbf{y}$ is the vector from the particle's center to the point of contact.
+The overlap distance $\delta$ is calculated as the distance between the two closest points on the surface of the two particles minus the sum of their radii. If the particles are not overlapping, $\delta$ is set to zero. Using equation \autoref{eq:overdamped_langevin} we can then express the total force and torque of each cell. From this we can construct the full force vector $\mathbfcal{F} = [ \dots, F_n^T, T_n^T, \dots]^T$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
 
-By aggregating the forces and torques from all overlapping particle pairs, we can construct the full force vector $\mathbfcal{F} = [ \dots, F_n^T, T_n^T, \dots]^T$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
+Inspired from the used parameters in \cite{You2018} we set $k_{cc} = \frac{Y}{\zeta} = \frac{4 MPa}{200 Pa h} = 20000 \frac{1}{h}$.
+
+
 
 \begin{figure}[H]
     \centering
@@ -303,6 +332,18 @@ This set of conditions is known as a Linear Complementarity Problem (LCP) and th
 \newpage
 
 \section{Implementation and Results}
+
+All the simulations presented in this paper were conducted using a framework for simulating proliferating cell collectives. The framework implements both the hard and soft collision models and closely followes the mathematical formulations presented in the previous section. To achieve a good performance we leverage PETSc \cite{petsc-web-page} for efficient parallel processing and sparse matrix operations, enabling scalability. Our primary objective in this section is to compare the performance characteristics and pattern formation capabilities of these two models, with a particular focus on identifying the computational advantages of the soft collision approach. The simulation code is publicly available at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP}.
+
+
+
+
+
+
+
+
+
+
 \subsection{Simulation Framework}
 \begin{itemize}
     \item Implementation details
@@ -314,47 +355,50 @@ This set of conditions is known as a Linear Complementarity Problem (LCP) and th
 
 \subsection{Pattern Formation Analysis}
 
-To analyze the pattern formation capabilities of both hard and soft collision models under stress-sensitive growth, aswell as to verify our implementation, we reproduce the concentric ring patterns observed by Weady et al. \cite{Weady2024}. We conduct simulations for three different values of the stress sensitivity parameter $\lambda$ ($10^{-1}$, $10^{-2}$, and $10^{-3}$) for both collision models. The results are presented in \autoref{fig:pattern_formation}.
+\subsection{Concentric Ring Patterns}
 
-The patterns formed by both models closely resemble those reported by Weady et al., confirming the validity of our implementations. Notably, the soft model also produces the expected concentric ring patterns, while using a drastically simplified approach to handling collision resolution.
+We first validate our implementations by reproducing the concentric ring patterns observed under stress-sensitive growth conditions, as documented in \cite{Weady2024}. Simulations were conducted for $\lambda = 10^{-1}, 10^{-2}, 10^{-3}$ using both hard and soft collision models. As presented in \autoref{fig:pattern_formation}, both models successfully generate qualitatively similar emergent ring structures. This indicates that the soft collision model, despite its simpler underlying mechanics, can adequately capture the essential dynamics leading to these macroscopic patterns, suggesting it is a viable and potentially more efficient alternative for pattern formation studies.
+
+
+Notably, the soft model also produces the expected concentric ring patterns, while using a drastically simplified approach to handling collision resolution.
 
 This suggests that, for the purpose of reproducing such patterns, the soft collision model is a viable alternative to the more complex hard collision approach.
 
-\begin{figure*}
-    \centering
+% \begin{figure*}
+%     \centering
 
-    % Lambda = 10^-1 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \caption{Growth Comparison $\lambda=10^{-1}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-1}{0045}{0090}{0135}{0180}
-            \growthcomparisonrow{Soft}{1e-1}{0045}{0090}{0135}{0180}
-        \end{tabular}
-    \end{subfigure}
+%     % Lambda = 10^-1 comparison
+%     \begin{subfigure}[b]{\textwidth}
+%         \caption{Growth Comparison $\lambda=10^{-1}$}
+%         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+%             \growthcomparisonrow{Hard}{1e-1}{0045}{0090}{0135}{0180}
+%             \growthcomparisonrow{Soft}{1e-1}{0045}{0090}{0135}{0180}
+%         \end{tabular}
+%     \end{subfigure}
 
-    % Lambda = 10^-2 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \caption{Growth Comparison $\lambda=10^{-2}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-2}{0040}{0060}{0080}{0100}
-            \growthcomparisonrow{Soft}{1e-2}{0040}{0060}{0080}{0100}
-        \end{tabular}
-    \end{subfigure}
+%     % Lambda = 10^-2 comparison
+%     \begin{subfigure}[b]{\textwidth}
+%         \caption{Growth Comparison $\lambda=10^{-2}$}
+%         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+%             \growthcomparisonrow{Hard}{1e-2}{0040}{0060}{0080}{0100}
+%             \growthcomparisonrow{Soft}{1e-2}{0040}{0060}{0080}{0100}
+%         \end{tabular}
+%     \end{subfigure}
 
-    % Lambda = 10^-3 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \caption{Growth Comparison $\lambda=10^{-3}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-3}{0040}{0060}{0080}{0100}
-            \growthcomparisonrow{Soft}{1e-3}{0040}{0060}{0080}{0100}
-        \end{tabular}
+%     % Lambda = 10^-3 comparison
+%     \begin{subfigure}[b]{\textwidth}
+%         \caption{Growth Comparison $\lambda=10^{-3}$}
+%         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+%             \growthcomparisonrow{Hard}{1e-3}{0040}{0060}{0080}{0100}
+%             \growthcomparisonrow{Soft}{1e-3}{0040}{0060}{0080}{0100}
+%         \end{tabular}
 
-    \end{subfigure}
+%     \end{subfigure}
 
 
-    \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 40. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green).}
-    \label{fig:pattern_formation}
-\end{figure*}
+%     \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 40. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green).}
+%     \label{fig:pattern_formation}
+% \end{figure*}
 
 
 \begin{itemize}
@@ -363,41 +407,49 @@ This suggests that, for the purpose of reproducing such patterns, the soft colli
     \item Model comparison
 \end{itemize}
 
+
+
+\subsection{Microdommain formation}
+
+\cite{You2018}
+
+
+
+
+
 \newpage
 
 \subsection{Computational Performance}
-\begin{itemize}
-    \item Runtime scaling
-    \item Memory efficiency
-    \item Parameter sensitivity
-\end{itemize}
+
+While both models reproduce the observed patterns, our preliminary analysis suggests significant performance differences. The hard collision model's requirement to solve an LCP at each time step introduces a computational bottleneck, potentially limiting its scalability for very large systems or long simulation times. In contrast, the direct force calculation in the soft collision model is inherently less complex per interaction but typical needs to be computed using a finder time step to avoid instabilities.
+
+
+Moreover solving a LCP requires global information about the system, as it is essentially optimizing a global system of constraints. This can lead to increased communication overhead in parallel implementations, as all processors take part in an iterative solver and are required to share information about all particles in the system during each optimization step.
+
+
+In contrast, the soft collision model only requires local information about neighboring particles to compute forces, and can be efficiencyly computed using common molecular dynamics techniques such as cell lists or Verlet lists (See \cite{Gratl2019}). This locality greatly reduces the amount of inter-processor communication needed in a parallel implementation, as each processor can largely operate independently on its own subset of particles, only needing to occasionally exchange information about particles near the boundaries of its domain.
+
+
+
+
 
 \newpage
 \section{Discussion}
 \subsection{Model Selection Insights}
-\begin{itemize}
-    \item When constraints are essential
-    \item Computational trade-offs
-    \item Practical recommendations
-\end{itemize}
 
-\newpage
+
+The choice between hard and soft collision models for simulating proliferating cell collectives presents a clear trade-off. The hard model offers precision in enforcing non-overlap but at a considerable computational cost due to LCP solving. The soft model, by employing continuous potentials, offers a potentially much faster simulation pathway, crucially important for exploring large-scale systems or parameter spaces. For many biological pattern formation scenarios, where the precise moment of contact is less critical than the emergent macroscopic behavior, the computational efficiency of the soft model makes it a highly attractive option.
 
 \subsection{Biological Relevance}
-\begin{itemize}
-    \item Model assumptions
-    \item Connection to reality
-    \item Implications for understanding
-\end{itemize}
+
+Our findings suggest that the simplified mechanics of the soft collision model are sufficient to recapitulate key emergent behaviors like concentric ring formation. This implies that the fundamental drivers of these patterns may be robust to the specific details of collision resolution. The biological plausibility of the soft model lies in its ability to represent continuous pressure and proximity effects between cells, which might be more representative of cellular interactions than instantaneous, purely geometric constraints. The potential for faster simulations with the soft model could enable more extensive exploration of how proliferation rates, cell mechanics, and environmental factors influence colony morphogenesis.
 
 \newpage
 
 \section{Conclusion}
-\begin{itemize}
-    \item Validation of constraint-based approach
-    \item Methodological contributions
-    \item Future research directions
-\end{itemize}
+
+This work demonstrates that a computationally efficient soft collision model can effectively simulate proliferating cell collectives and reproduce complex emergent patterns observed in bacterial colonies, such as concentric rings. While the hard collision model provides exact non-overlap, its computational demands are substantial. The soft collision model offers a compelling alternative, promising significantly improved performance and scalability without a critical loss in qualitative pattern formation fidelity. This makes the soft approach a valuable tool for future large-scale simulations in computational biology and active matter research. Future work will focus on quantitatively detailing these performance benefits and exploring the soft model's behavior under more varied growth and environmental conditions.
+
 
 \bibliographystyle{IEEEtran}
 \bibliography{literature}

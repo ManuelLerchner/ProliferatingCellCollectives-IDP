@@ -25,7 +25,6 @@ void ParameterLogger::log(const SimulationParameters& params) {
   logger_.addFieldData("l0", params.physics_config.l0);
   logger_.addFieldData("LAMBDA", params.physics_config.getLambdaDimensionless());
   logger_.addFieldData("temperature", params.physics_config.temperature);
-  logger_.addFieldData("alpha", params.physics_config.alpha);
   logger_.addFieldData("kcc", params.physics_config.kcc);
 
   logger_.addFieldData("max_bbpgd_iterations", params.solver_config.max_bbpgd_iterations);
