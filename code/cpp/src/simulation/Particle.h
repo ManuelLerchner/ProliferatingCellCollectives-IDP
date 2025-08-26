@@ -6,6 +6,7 @@
 #include <random>
 #include <vector>
 
+#include <iostream>
 #include "ParticleData.h"
 
 class Particle {

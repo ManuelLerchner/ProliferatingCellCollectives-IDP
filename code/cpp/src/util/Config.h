@@ -22,8 +22,7 @@ struct PhysicsConfig {
   double temperature;  // Brownian motion temperature
 
   // Soft potential
-  double kcc;    // Collision constant
-  double alpha;  // Overlap parameter
+  double kcc;  // Collision constant
 
   PetscBool monolayer;
 

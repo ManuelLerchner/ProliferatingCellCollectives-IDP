@@ -25,7 +25,6 @@ void printHelp(const SimulationParameters& params) {
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-l0", "Reference length", params.physics_config.l0);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-lambda", "Lambda parameter", params.physics_config.LAMBDA);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-temperature", "Simulation temperature", params.physics_config.temperature);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-alpha", "Alpha parameter", params.physics_config.alpha);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-kcc", "Collision constant", params.physics_config.kcc);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-monolayer", "Enable monolayer mode", params.physics_config.monolayer ? "true" : "false");
 
@@ -98,7 +97,6 @@ void dumpParameters(const SimulationParameters& params) {
   printParam("l0 (reference length)", params.physics_config.l0);
   printParam("LAMBDA", params.physics_config.getLambdaDimensionless());
   printParam("Temperature", params.physics_config.temperature);
-  printParam("alpha", params.physics_config.alpha);
   printParam("kcc", params.physics_config.kcc);
   printParam("Monolayer mode", (bool)params.physics_config.monolayer);
 
@@ -133,7 +131,7 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Default configs
   params.sim_config = {
-      .dt_s = 1.0 / 10000.0,
+      .dt_s = 0.5 * 1e-4,
       .end_radius = 42,
       .log_frequency_seconds = 0.01,
       .min_box_size = {2.0, 2.0, 0},
@@ -145,8 +143,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .l0 = 1.0,
       .LAMBDA = 1e-3,
       .temperature = 1e-30,
-      .kcc = 2000,
-      .alpha = 0,
+      .kcc = 20000,
       .monolayer = PETSC_TRUE,
   };
 
@@ -178,7 +175,6 @@ SimulationParameters parseCommandLineOrDefaults() {
   getOption("-l0", params.physics_config.l0);
   getOption("-lambda", params.physics_config.LAMBDA);
   getOption("-temperature", params.physics_config.temperature);
-  getOption("-alpha", params.physics_config.alpha);
   getOption("-kcc", params.physics_config.kcc);
   getOption("-monolayer", params.physics_config.monolayer);
 

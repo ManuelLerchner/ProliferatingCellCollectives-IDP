@@ -563,10 +563,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   // Use a larger tolerance for initial collision detection
   double tolerance = 0.1;
 
-  VecWrapper F_ext = VecWrapper::FromMat(M);
-  VecWrapper U_ext = VecWrapper::FromMat(M);
-  calculate_external_velocities(U_ext, F_ext, particle_manager.local_particles, M, dt, 0);
-
   auto new_constraints = collision_detector.detectCollisions(particle_manager, 0, tolerance);
 
   double max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
@@ -594,7 +590,7 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double R_eff = std::sqrt(R1 * R2 / (R1 + R2));
 
     // Calculate overlap and force
-    double F_elastic = R_eff * physics_config.kcc * (std::pow(overlap, 1.5) + physics_config.alpha * overlap);
+    double F_elastic = R_eff * physics_config.kcc * std::pow(overlap, 1.5);
 
     VecSetValue(gamma, constraint.gid, F_elastic, INSERT_VALUES);
 
@@ -608,7 +604,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     double F_i[6] = {f_i[0], f_i[1], f_i[2], torque_i[0], torque_i[1], torque_i[2]};
     double F_j[6] = {f_j[0], f_j[1], f_j[2], torque_j[0], torque_j[1], torque_j[2]};
 
-
     PetscInt rows_i[6] = {constraint.gidI * 6 + 0, constraint.gidI * 6 + 1, constraint.gidI * 6 + 2,
                           constraint.gidI * 6 + 3, constraint.gidI * 6 + 4, constraint.gidI * 6 + 5};
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, rows_i, F_i, ADD_VALUES));
@@ -618,21 +613,32 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, rows_j, F_j, ADD_VALUES));
   }
 
-  // Assemble force vectors
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(F));
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(F));
+  VecAssemblyBegin(F);
+  VecAssemblyEnd(F);
 
-  // Calculate velocities and movement
+  VecAssemblyBegin(gamma);
+  VecAssemblyEnd(gamma);
+
+  // Move particles
+  VecWrapper F_ext = VecWrapper::FromMat(M);
+  VecWrapper U_ext = VecWrapper::FromMat(M);
+  calculate_external_velocities(U_ext, F_ext, particle_manager.local_particles, M, dt, 0);
+
   VecWrapper U = VecWrapper::FromMat(M);
+  VecWrapper deltaC = VecWrapper::FromMat(G);
+
+  // U = M @ f
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F, U));
+
+  // U = U + U_ext
   PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(U, 1.0, U_ext));
 
-  VecWrapper deltaC = VecWrapper::FromMat(G);
+  // deltaC = G @ U
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U, deltaC));
 
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(gamma));
-  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(gamma));
+  particle_manager.moveLocalParticlesFromSolution({.dC = deltaC, .f = F, .u = U});
 
+  // Grow particles
   VecWrapper length = getLengthVector(particle_manager.local_particles);
   VecWrapper ldot = VecWrapper::Like(length);
   VecWrapper impedance = VecWrapper::Like(length);
@@ -649,9 +655,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveSoftPotential(ParticleManager&
   MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
 
   calculate_ldot_inplace(L, length, gamma, physics_config.getLambdaDimensionless(), physics_config.TAU, ldot, stress, impedance);
-
-  // Move particles
-  particle_manager.moveLocalParticlesFromSolution({.dC = deltaC, .f = F, .u = U});
 
   // Grow particles
   particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
