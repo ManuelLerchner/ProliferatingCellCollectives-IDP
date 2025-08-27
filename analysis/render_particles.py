@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib as mpl
 
 # --- Visualization setup ---
-fig, ax = plt.subplots(figsize=(6, 6))
+fig, ax = plt.subplots(figsize=(12, 12))
 
 ax.set_aspect('equal')
 
@@ -16,7 +16,7 @@ def draw_particles(data):
 
     # color scale from 1 to 2 - dark green to light green
     cmap = mpl.colors.LinearSegmentedColormap.from_list(
-        'custom_cmap', [(0, 0.2, 0), (0, 1, 0)])
+        'custom_cmap', [(0.2, 0.3, 0), (0, 1, 0)])
     norm = mpl.colors.Normalize(vmin=1, vmax=2)
 
     for i, row in data.iterrows():
@@ -28,7 +28,7 @@ def draw_particles(data):
 
         # ellipse
         ellipse = mpl.patches.Ellipse(
-            (x, y), length, 0.5, angle=angle, fill=True, fc=fill_color, ec="green", lw=2.0)
+            (x, y), length, 0.5, angle=angle, fill=True, fc=fill_color, ec=None)
         ax.add_patch(ellipse)
 
     # reset x and y limits
