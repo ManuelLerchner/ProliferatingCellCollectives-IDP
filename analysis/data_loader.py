@@ -43,9 +43,10 @@ def find_latest_vtu_files(folder):
             latest_iteration_global = latest_iteration
         else:
             if latest_iteration != latest_iteration_global:
-                print(
-                    f"Latest iteration {latest_iteration} is not the same as the global latest iteration {latest_iteration_global}"
-                )
+                # print(
+                #     f"Latest iteration {latest_iteration} is not the same as the global latest iteration {latest_iteration_global}"
+                # )
+                pass
 
         latest_files[log_type] = iterations[latest_iteration]
 
