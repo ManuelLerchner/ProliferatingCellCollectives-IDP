@@ -1,1 +1,0 @@
-from paraview.simple import *

@@ -14,33 +14,50 @@ void printHelp(const SimulationParameters& params) {
 
   // Simulation Configuration
   PetscPrintf(PETSC_COMM_WORLD, "\nSimulation Configuration:\n");
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-dt", "Time step in seconds", params.sim_config.dt_s);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-end_radius", "Final radius to simulate", params.sim_config.end_radius);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-log_frequency", "How often to log simulation state in seconds", params.sim_config.log_frequency_seconds);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-dt", "Time step in seconds",
+              params.sim_config.dt_s);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-end_radius", "Final radius to simulate",
+              params.sim_config.end_radius);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-log_frequency",
+              "How often to log simulation state in seconds", params.sim_config.log_frequency_seconds);
 
   // Physics Configuration
   PetscPrintf(PETSC_COMM_WORLD, "\nPhysics Configuration:\n");
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-xi", "Viscosity parameter", params.physics_config.xi);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-tau", "Growth time constant", params.physics_config.TAU);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-xi", "Viscosity parameter",
+              params.physics_config.xi);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-tau", "Growth time constant",
+              params.physics_config.TAU);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-l0", "Reference length", params.physics_config.l0);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-lambda", "Lambda parameter", params.physics_config.LAMBDA);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-temperature", "Simulation temperature", params.physics_config.temperature);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-kcc", "Collision constant", params.physics_config.kcc);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-monolayer", "Enable monolayer mode", params.physics_config.monolayer ? "true" : "false");
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-lambda", "Lambda parameter",
+              params.physics_config.LAMBDA);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-temperature", "Simulation temperature",
+              params.physics_config.temperature);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-kcc", "Collision constant",
+              params.physics_config.kcc);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-monolayer", "Enable monolayer mode",
+              params.physics_config.monolayer ? "true" : "false");
 
   // Solver Configuration
   PetscPrintf(PETSC_COMM_WORLD, "\nSolver Configuration:\n");
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-tolerance", "Solver tolerance", params.solver_config.tolerance);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %d]\n", "-max_bbpgd_iterations", "Maximum BBPGD iterations", params.solver_config.max_bbpgd_iterations);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %d]\n", "-max_recursive_iterations", "Maximum recursive iterations", params.solver_config.max_recursive_iterations);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-linked_cell_size", "Size of linked cells", params.solver_config.linked_cell_size);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-growth_factor", "Growth factor", params.solver_config.growth_factor);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-particle_preallocation_factor", "Particle preallocation factor", params.solver_config.particle_preallocation_factor);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-tolerance", "Solver tolerance",
+              params.solver_config.tolerance);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %d]\n", "-max_bbpgd_iterations", "Maximum BBPGD iterations",
+              params.solver_config.max_bbpgd_iterations);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %d]\n", "-max_recursive_iterations",
+              "Maximum recursive iterations", params.solver_config.max_recursive_iterations);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-linked_cell_size", "Size of linked cells",
+              params.solver_config.linked_cell_size);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-growth_factor", "Growth factor",
+              params.solver_config.growth_factor);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-particle_preallocation_factor",
+              "Particle preallocation factor", params.solver_config.particle_preallocation_factor);
 
   // File/Mode Options
   PetscPrintf(PETSC_COMM_WORLD, "\nFile/Mode Options:\n");
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-starter_vtk", "Path to starter VTK file", params.starter_vtk.empty() ? "none" : params.starter_vtk.c_str());
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s] (required)\n", "-mode", "Simulation mode", params.mode.empty() ? "none" : params.mode.c_str());
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-starter_vtk", "Path to starter VTK file",
+              params.starter_vtk.empty() ? "none" : params.starter_vtk.c_str());
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s] (required)\n", "-mode", "Simulation mode",
+              params.mode.empty() ? "none" : params.mode.c_str());
 
   PetscPrintf(PETSC_COMM_WORLD, "\n");
 }
@@ -141,14 +158,14 @@ SimulationParameters parseCommandLineOrDefaults() {
       .xi = 1,
       .TAU = 1,
       .l0 = 1.0,
-      .LAMBDA = 1e-3,
-      .temperature = 1e-30,
+      .LAMBDA = 1e-2,
+      .temperature = 1e-14,
       .kcc = 20000,
       .monolayer = PETSC_TRUE,
   };
 
   params.solver_config = {
-      .tolerance = 1e-2,
+      .tolerance = 1e-3,
       .max_bbpgd_iterations = 100000,
       .max_recursive_iterations = 50,
       .linked_cell_size = 2.2,
@@ -211,7 +228,8 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Check required parameters
   if (params.mode.empty()) {
-    PetscPrintf(PETSC_COMM_WORLD, "Error: Required parameter -mode not provided. Use -help for usage information.\n");
+    PetscPrintf(PETSC_COMM_WORLD,
+                "Error: Required parameter -mode not provided. Use -help for usage information.\n");
     PetscFinalize();
     exit(1);
   }
