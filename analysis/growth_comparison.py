@@ -23,29 +23,8 @@ def run_simulation(config, mode, LAMBDA):
 
     args += f" -end_radius {END_RADIUS}"
 
-    process = subprocess.Popen(
-        f"make -j && mpirun -np 16 ./cellcollectives -mode {mode} {args}", shell=True, cwd=BIN_FOLDER, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    t_last = 0
-    while process.stdout.readable():
-
-        try:
-            if time.time() - t_last > 50:
-                t_last = time.time()
-                data = load_latest_iteration(
-                    f"{BIN_FOLDER}/vtk_output_{mode}/data")
-
-                draw_particles(data["particles"])
-
-        except Exception as e:
-            print(e)
-
-        line = process.stdout.readline()
-
-        if not line:
-            break
-
-        print(str(line.strip() )+ (" " * 100), end="\r")
+    process = subprocess.run(
+        f"make -j && mpirun -np 16 ./cellcollectives -mode {mode} {args}", shell=True, cwd=BIN_FOLDER)
 
     # copy vtk_output_{mode} folder to growth_comparison_data/vtk_output_{mode}_{lambda}
     # delete old folder if it exists
@@ -62,3 +41,4 @@ for mode in ["soft", "hard"]:
         config = base_physics_config.copy()
         config["LAMBDA"] = LAMBDA
         run_simulation(config, mode, LAMBDA)
+        print("Finished simulation")

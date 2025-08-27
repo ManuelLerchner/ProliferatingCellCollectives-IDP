@@ -70,7 +70,7 @@
 \maketitle
 
 \begin{abstract}
-    This work investigates the computational modeling of proliferating cell collectives, comparing the established constraint-based hard collision model\cite{Weady2024} with a more computationally efficient potential-based soft collision model. While both approaches are demonstrated to reproduce key emergent patterns observed in bacterial colony growth, we highlight the inherent computational advantages of the soft model. Specifically, we propose that the soft collision model offers a simpler and potentially faster simulation pathway, particularly in handling continuous growth events, making it a promising alternative for large-scale simulations of active matter systems.
+    This work investigates the computational modeling of proliferating cell collectives, comparing an established constraint-based collision model as developed by \cite{Weady2024} with a simpler potential-based collision model. While both approaches are demonstrated to reproduce key emergent patterns observed in bacterial colony growth, we highlight that ...............
 
 \end{abstract}
 
@@ -81,46 +81,55 @@
 \section{Introduction}
 \subsection{Biological Motivation}
 
-The collective behaviors of biological entities, from microbial colonies to multicellular tissues, are fundamental to understanding life processes. These systems often exhibit emergent patterns driven by simple local interactions and individual growth. Bacterial colonies, for instance, display remarkable self-organization, forming complex spatial structures in response to environmental cues. In particular we explore the slowing down of growth rates in the center of a colony due to pressure from surrounding cells which has been observed experimentally in \cite{Wittmann2023}. For bacteria such as \textit{E. coli}, \textit{Bacillus subtilis} and \textit{Proteus mirabilis} or fungi such as \textit{Setosphaeria rostrata} or \textit{Exserohilum Turcicum }, which exhibit a different local cell density based on their growth phase this phenomenon leads to the formation of concentric ring patterns\cite{YAMAZAKI2005136}.
-
-Such phenomena are not only fascinating from a biological standpoint but also present significant challenges for computational modeling, as they require capturing both the mechanical interactions between individual cells and their proliferation dynamics.
-
-
-This work is inspired by such phenomena, particularly the observed concentric ring patterns in growing bacterial communities, which represent a key mode of self-organization under controlled conditions, as explored in \cite{Weady2024}. Understanding these patterns requires robust computational models that can capture the interplay of individual cell mechanics, interactions, and proliferation.
+The collective behaviors of biological entities, ranging from simple microbial colonies to complex multicellular tissues, are fundamental to unraveling the intricate processes of life. These systems often exhibit emergent spatio-temporal patterns, driven by the interplay of simple local interactions and individual growth dynamics. Bacterial colonies, for instance, showcase remarkable self-organization, developing sophisticated spatial structures in response to environmental stimuli. Specifically, experimental observations have highlighted the phenomenon of growth rate reduction in the colony's center due to mechanical pressure exerted by surrounding cells \cite{Wittmann2023}. For various bacteria, such as E. coli, Bacillus subtilis, and Proteus mirabilis, and fungi like Setosphaeria rostrata and Exserohilum Turcicum, which experience different local cell densities across their growth phases, this pressure-induced deceleration contributes to the formation of characteristic concentric ring patterns \cite{YAMAZAKI2005136}.
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{figures/real-bacteria/Exserohilum turcicum.png}
-    \caption{Morphology of Exserohilum turcicum as presented in \cite{Bankole2023}. The Left image shows a colony of Exserohilum turcicum, the right image shows a single cell of Exserohilum turcicum.}
+    \caption{Morphology of \textit{Exserohilum turcicum}. The left image displays a colony of Exserohilum turcicum, while the right image shows a single cell of the same species. Source: \cite{Bankole2023}.}
     \label{fig:exserohilum_turcicum}
 \end{figure}
 
+These biologically fascinating phenomena pose significant computational modeling challenges, demanding the accurate integration of both mechanical cell interactions and proliferation dynamics.
+
+This work is directly inspired by these observations, particularly the formation of concentric rings in growing bacterial communities. These patterns represent a key manifestation of self-organization under controlled conditions, as further explored in \cite{Weady2024}. Comprehending these emergent structures necessitates robust computational models capable of capturing the dynamic interplay between individual cell mechanics, intercellular interactions, and proliferation.
+
 \subsection{Computational Challenges}
 
-Simulating large populations of interacting, proliferating agents like cells presents significant computational hurdles. Accurately capturing the dynamics of active matter, where particles generate their own motion and change system composition through growth, require efficient algorithms. A critical challenge lies in the accurate and stable resolution of inter-particle interactions, especially collisions.
+Simulating large populations of interacting and proliferating agents, such as individual cells, presents substantial computational hurdles. Accurately representing the dynamics of active matter systems where particles interact with each other and alter the system composition through growth, demands the development of efficient algorithms. A critical challenge lies in the accurate and stable resolution of inter-particle interactions, especially in the context of collisions.
 
-While existing constraint-based (hard) collision models, which enforce non-overlapping conditions through an optimization framework, are precise, they can impose substantial computational overhead as typically constraints have to be iteratevly resolved globally for the entire system at each time step. This can become a bottleneck in simulations involving large numbers of particles or frequent collision events.
+Existing constraint-based (hard) collision models, which enforce strict non-overlapping conditions via an optimization framework, offer high physical precision. However, they can incur significant computational overhead, as constraints typically require iterative, global resolution across the entire system at each simulation step. This process can become a considerable bottleneck, particularly for simulations involving vast numbers of particles or frequent collision events.
 
-Contrary to this, potential-based (soft) collision models, which allow for slight overlaps and use repulsive forces to resolve collisions, offer a more computationally tractable alternative requiring only local computations.
+In contrast, potential-based (soft) collision models, which permit minor overlaps and employ repulsive forces to manage interactions, provide a computationally more tractable alternative by relying solely on local computations.
 
-However, the trade-off between the physical accuracy of hard collision models and the computational efficiency of soft collision models in the context of proliferating cell collectives remains underexplored. This work aims to fill this gap by systematically comparing both approaches in terms of their ability to reproduce biologically relevant patterns and their computational performance.
+Despite the established trade-offs, the comparative effectiveness of hard versus soft collision models in accurately reproducing biologically relevant patterns and their computational performance within the context of proliferating cell collectives remains an underexplored area. This research aims to address this gap by systematically comparing these two modeling approaches by investigating the computational performance of both models and their ability to reproduce biologically relevant patterns.
 
-This paper focuses on the implementation and comparison of two distinct collision models for simulating proliferating cell collectives: a constraint-based hard collision model and a potential-based soft collision model. We evaluate both models in terms of their ability to reproduce biologically relevant patterns, such as the concentric rings observed in bacterial colonies, and compare their computational performance.
 
 \section{Related Work}
 
+The simulation of collective biological behaviors, particularly the emergent patterns observed in bacterial colonies, necessitates robust computational models that accurately capture both individual cell mechanics and proliferation dynamics. Agent-based models (ABMs) are a prevalent approach, representing individual cells as discrete agents interacting within a simulated environment. A critical computational bottleneck within these ABMs is the accurate and efficient resolution of cell-cell collisions. This section reviews existing approaches to collision modeling, their computational underpinnings, and highlights a significant gap in the comparative benchmarking of these methods, particularly from a high-performance computing (HPC) perspective.
+
+\subsection{Collision Models}
+
+Two primary paradigms exist for handling collisions in ABMs: constraint-based (hard) collision models and potential-based (soft) collision models.
 
 
-% imulations were performed on a Hewlett-Packard
-% Z800 workstation with an NVIDIA Quadro FX5800 graphics
-% card. Using OpenCL means that the software will run on a large
-% range of GPU and CPU architectures, and the Pythonimplementation is cross-platform with respect to operating
-% systems.
+\begin{description}[style=nextline]
+    \item[Constraint-Based (Hard) Collision Models]
+        Constraint-based models enforce strict non-overlapping conditions between agents. This is typically achieved through optimization frameworks that resolve collisions by adjusting agent positions or velocities to satisfy geometric constraints. These methods offer high physical fidelity, ensuring that simulated agents behave as if they are truly impenetrable. \cite{Rudge2012} demonstrated a notable application of this approach for growing bacterial colonies. Their work highlighted the significant computational intensity of hard collisions, requiring methods like sparse matrix inversions for constraint resolution. They showcased the benefits of GPU acceleration for performance, achieving simulations of 30,000 cells in 30 minutes on their hardware, illustrating the substantial computational cost of such precise collision handling. This study provides a rare, explicit runtime measurement for a hard collision model, underscoring its computational demands.
 
-Prior work from \cite{Rudge2012} investigate a constraint-based/hard collision model for simulating growing bacterial colonies, by solving a sparse matrix inversion problem. Their implementation leverages GPU acceleration to handle the computational load, demonstrating significant performance improvements over CPU-only approaches. Their approach can simulate up to 30,000 cells in 30 minutes on a Hewlett-Packard Z800 workstation with an NVIDIA Quadro FX5800 graphics card and makes use of GPU acceleration to handle the computational load. Their performance results are summarized in \autoref{figure:rudge_performance}.
+    \item[Potential-Based (Soft) Collision Models]
+        In contrast, potential-based (soft) collision models manage interactions by employing repulsive forces when agents approach or overlap, generally offering greater computational tractability. These models typically rely on local computations, such as calculating inter-particle forces based on proximity, making them more amenable to parallelization and large-scale simulations. \cite{Warren2019} presented a soft collision model that enabled simulations of 3D growth and complex structures, achieving impressive scalability by simulating millions of cells on multi-core CPUs. This work provides valuable insights into the performance scaling of soft collision approaches.
+\end{description}
 
+\subsection{The Benchmarking Gap: Comparative Performance of Collision Models}
 
-A soft collision model for simulating growing bacterial colonies was presented in \cite{Warren2019}. Their approach allows for the colony to also grow in 3D and forming hill structures. Their implemenation scales up to a few million cells using a highly optimized C++ implementation with OpenMP parallelization on a multi-core CPU with 14-16 processors.
+While collision models have been implemented and applied to a wide range of biological systems, there is a notable lack of direct, systematic comparison focusing on their computational performance trade-offs. Many existing studies, including those that explore mechanical interactions using bacteria simulation frameworks such as \cite{Rudge2012}\cite{Weady2024}\cite{Blanchard2015}\cite{Ghosh2015}\cite{You2018}\cite{Warren2019}, tend to prioritize biological insights without providing comprehensive runtime analyses or detailed HPC benchmarking across different interaction paradigms.
+
+Specifically, the comparative effectiveness and computational cost of hard versus soft collision models within the context of proliferating cell collectives remain underexplored. A unified analysis that directly contrasts their performance characteristics (e.g., execution time, scalability, numerical stability (critical timestep), etc.) is largely absent.
+
+This research aims to address this critical gap by systematically implementing and comparing these two collision models within a unified ABM framework, providing a much-needed computational analysis from an HPC perspective to quantify these trade-offs.
+
 
 \section{Proliferating Active Matter}
 
@@ -139,10 +148,10 @@ The mechanical representation of cells significantly influences simulation outco
 
 \subsubsection{Mathematical Formulation}
 
-For modeling the cell collectives, we use a rod model where cells are represented as rigid rods with a fixed length and radius. This is a common assumption in many cell collectives models \cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015} and is supported by experimental evidence, closely matching common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} as shown in \autoref{fig:exserohilum_turcicum}.
+For modeling the cell collectives, we use a rod model where cells are represented as rigid rods with a certain length and radius. This is a common assumption in many cell collectives models \cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015} and is supported by experimental evidence, closely matching common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} as shown in \autoref{fig:exserohilum_turcicum}.
 
 
-Each bacterium is represented by a spherocylinder with length $l$ and diameter $d$. For this implementation we consider bacteria of a fixed diameter $d_0 = 1.0$ and a variable length $l$ which is a parameter of the model. n the scale of typical bacteria, the system can be represented by an overdamped dynamics, because their Reynolds number is extremely small (Re $\ll 1$), so viscous drag stops them from coasting almost instantaneously \cite{datta2024lifelowreynoldsnumber}. The resulting dynamics is then described by the overdamped Langevin equation:
+Each bacterium is represented by a spherocylinder with length $l$ and diameter $d$. For this implementation we consider bacteria of a fixed diameter $d_0 = 0.5$ and initialial length $l_0 = 1$. At the scale of typical bacteria, the system can be represented by an overdamped dynamics, because their Reynolds number is extremely small (Re $\ll 1$), so viscous drag stops them from coasting almost instantaneously \cite{datta2024lifelowreynoldsnumber}. The resulting dynamics is then described by the overdamped Langevin equation:
 
 $$
     \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \mathbf{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_ij \times \mathbf{F}_{ij})
@@ -160,6 +169,8 @@ $$
 $$
 
 where $\tau$ is a time scale, $\mathbfcal{\sigma} \in \mathbb{R}^{N}$ is the stress vector representing the stress along the main axis of each cell in the colony, and $\lambda$ is a stress sensitivity parameter which will later be used to control the growth rate and the macroscopic pattern formation of the colony.
+
+After bacteria have grown to be longer than a critical length $l_c = 2l_0$, they will divide into two new cells. To avoid synchronization effects, we follow \cite{Khan_2024} and slighly change the length of the daughter cells randomly between $l_0*0.98$ and $l_0*1.02$.
 
 
 \subsubsection{Colony Representation}
