@@ -8,7 +8,7 @@ from render_particles import draw_particles
 
 BIN_FOLDER = f"../code/cpp/build/src"
 
-END_RADIUS = 50
+END_RADIUS = 60
 
 
 base_physics_config = {
@@ -36,8 +36,8 @@ def run_simulation(config, mode, LAMBDA):
                     f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}/")
 
 
-for mode in ["soft", "hard"]:
-    for LAMBDA in [1e-4, 1e-3, 1e-2, 1e-1]:
+for mode in ["hard"]:
+    for LAMBDA in [1e-3]:
         config = base_physics_config.copy()
         config["LAMBDA"] = LAMBDA
         run_simulation(config, mode, LAMBDA)

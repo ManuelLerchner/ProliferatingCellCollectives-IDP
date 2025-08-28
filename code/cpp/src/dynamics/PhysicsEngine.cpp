@@ -511,8 +511,6 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
     // Move
     particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du});
 
-    particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_curr_workspace, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace});
-
     // update phi_prev
     gradient(GAMMA, PHI);
 
@@ -545,6 +543,8 @@ PhysicsEngine::SolverSolution PhysicsEngine::solveConstraintsRecursive(ParticleM
       PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mRunning\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", res, max_overlap, bbpgd_iterations);
       break;
   }
+
+  particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace});
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
 }

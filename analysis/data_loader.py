@@ -97,6 +97,8 @@ def load_all_files(folder, log_type):
 
             df_all = pd.concat([df_all, df_temp])
 
+    df_all.reset_index(drop=True, inplace=True)
+
     # put iteration as first column
     df_all = df_all.reindex(
         columns=["iteration"] + [col for col in df_all.columns if col != "iteration"])
