@@ -35,24 +35,23 @@
 \DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
 
 % Macro for growth comparison row
-\setlength {\marginparwidth }{2cm}
 \newlength{\subfigwidth}
-\setlength{\subfigwidth}{0.2\textwidth}
+\setlength{\subfigwidth}{0.20\textwidth}
 \newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
 
 \newcommand{\growthcomparisonrow}[6]{%
     #1 &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1.#3.png}
+        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#3.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1.#4.png}
+        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#4.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1.#5.png}
+        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#5.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1.#6.png}
+        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#6.jpeg}
     \end{subfigure}  \\
 }
 
@@ -124,29 +123,17 @@ Two primary paradigms exist for handling collisions in ABMs: constraint-based (h
 
 \subsection{The Benchmarking Gap: Comparative Performance of Collision Models}
 
-While collision models have been implemented and applied to a wide range of biological systems, there is a notable lack of direct, systematic comparison focusing on their computational performance trade-offs. Many existing studies, including those that explore mechanical interactions using bacteria simulation frameworks such as \cite{Rudge2012}\cite{Weady2024}\cite{Blanchard2015}\cite{Ghosh2015}\cite{You2018}\cite{Warren2019}, tend to prioritize biological insights without providing comprehensive runtime analyses or detailed HPC benchmarking across different interaction paradigms.
+While collision models have been implemented and applied to a wide range of biological systems, there is a notable lack of direct, systematic comparison focusing on their computational performance trade-offs. Many existing studies, including those that explore mechanical interactions using bacteria simulation frameworks such as \cite{Rudge2012}\cite{Weady2024}\cite{Blanchard2015}\cite{Ghosh2015}\cite{You2018}\cite{Warren2019}\cite{Khan_2024}, tend to prioritize biological insights without providing comprehensive runtime analyses or detailed HPC benchmarking across different interaction paradigms.
 
 Specifically, the comparative effectiveness and computational cost of hard versus soft collision models within the context of proliferating cell collectives remain underexplored. A unified analysis that directly contrasts their performance characteristics (e.g., execution time, scalability, numerical stability (critical timestep), etc.) is largely absent.
 
 This research aims to address this critical gap by systematically implementing and comparing these two collision models within a unified ABM framework, providing a much-needed computational analysis from an HPC perspective to quantify these trade-offs.
 
+\section{Cell Mechanics}
 
-\section{Proliferating Active Matter}
+The mechanical representation of cells significantly influences simulation outcomes. For many bacteria and fungal hyphae, a rigid rod approximation is a reasonable simplification, capturing their elongated morphology and the primary drivers of collective behavior. While real cells can exhibit some deformability, treating them as rigid bodies allows for a focus on the collective dynamics. This choice of a rigid rod geometry is well-supported by the experimental observations that inspire our work and aligns with common practices in modeling microbial collectives. The selected collision models are applied to these rigid rod entities.
 
-Active matter systems are characterized by constituents that intrinsically generate motion or exert forces, leading to complex emergent behaviors. In biological contexts, these constituents, often referred to as agents, can be individual cells that also undergo proliferation, thereby altering the system's composition over time. Simulating these systems requires addressing the interplay between individual agent dynamics, inter-agent interactions, and continuous growth events.
-
-A key challenge in such simulations is the accurate and efficient handling of collisions, particularly as the number of agents and the rate of proliferation increase. The following sections outline the two primary collision modeling approaches considered in this work, along with their implications for simulating proliferating cell collectives.
-
-\subsection{Collision Models}
-
-Particle interaction models are broadly categorized into hard and soft collision schemes. Hard collision models enforce strict non-overlap through constraints, often requiring iterative solvers (like LCP for the hard-rod model) to determine forces. This ensures physical realism in terms of impenetrability but can be computationally intensive. Soft collision models, conversely, utilize continuous potential functions (e.g., springs, Lennard-Jones) to generate repulsive forces when particles approach or overlap. These models are typically easier to implement and integrate numerically, offering a potentially faster computational pathway, although they may allow for transient overlaps depending on parameter tuning and time-stepping.
-
-
-\subsection{Cell Mechanics}
-
-The mechanical representation of cells significantly influences simulation outcomes. For many bacteria and fungal hyphae, a rigid rod approximation is a reasonable simplification, capturing their elongated morphology and the primary drivers of collective behavior. While real cells can exhibit some deformability, treating them as rigid bodies allows for a focus on the collective dynamics. This choice of a rigid rod geometry is well-supported by the experimental observations that inspire our work and aligns with common practices in modeling microbial collectives\cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015}\cite{Khan_2024}\cite{Rudge2012} . The selected collision models are applied to these rigid rod entities.
-
-\subsubsection{Mathematical Formulation}
+\subsection{Mathematical Formulation}
 
 For modeling the cell collectives, we use a rod model where cells are represented as rigid rods with a certain length and radius. This is a common assumption in many cell collectives models \cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015} and is supported by experimental evidence, closely matching common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} as shown in \autoref{fig:exserohilum_turcicum}.
 
@@ -335,54 +322,78 @@ Notably, the soft model also produces the expected concentric ring patterns, whi
 
 This suggests that, for the purpose of reproducing such patterns, the soft collision model is a viable alternative to the more complex hard collision approach.
 
-% \begin{figure*}
-%     \centering
+\begin{figure*}[p]
+    \centering
 
-%     % Lambda = 10^-1 comparison
-%     \begin{subfigure}[b]{\textwidth}
-%         \caption{Growth Comparison $\lambda=10^{-1}$}
-%         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-%             \growthcomparisonrow{Hard}{1e-1}{0045}{0090}{0135}{0180}
-%             \growthcomparisonrow{Soft}{1e-1}{0045}{0090}{0135}{0180}
-%         \end{tabular}
-%     \end{subfigure}
+    % Lambda = 10^-1 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \caption{Growth Comparison $\lambda=10^{-1}$}
+        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+            \growthcomparisonrow{Hard}{1e-1}{0400}{0800}{1200}{1800}
+            \growthcomparisonrow{Soft}{1e-1}{0400}{0800}{1200}{1800}
+        \end{tabular}
+    \end{subfigure}
 
-%     % Lambda = 10^-2 comparison
-%     \begin{subfigure}[b]{\textwidth}
-%         \caption{Growth Comparison $\lambda=10^{-2}$}
-%         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-%             \growthcomparisonrow{Hard}{1e-2}{0040}{0060}{0080}{0100}
-%             \growthcomparisonrow{Soft}{1e-2}{0040}{0060}{0080}{0100}
-%         \end{tabular}
-%     \end{subfigure}
+    % % Lambda = 10^-2 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \caption{Growth Comparison $\lambda=10^{-2}$}
+        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+            \growthcomparisonrow{Hard}{1e-2}{0400}{0700}{0900}{1100}
+            \growthcomparisonrow{Soft}{1e-2}{0400}{0700}{0900}{1100}
+        \end{tabular}
+    \end{subfigure}
 
-%     % Lambda = 10^-3 comparison
-%     \begin{subfigure}[b]{\textwidth}
-%         \caption{Growth Comparison $\lambda=10^{-3}$}
-%         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-%             \growthcomparisonrow{Hard}{1e-3}{0040}{0060}{0080}{0100}
-%             \growthcomparisonrow{Soft}{1e-3}{0040}{0060}{0080}{0100}
-%         \end{tabular}
-
-%     \end{subfigure}
-
-
-%     \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 40. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green).}
-%     \label{fig:pattern_formation}
-% \end{figure*}
+    % Lambda = 10^-3 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \caption{Growth Comparison $\lambda=10^{-3}$}
+        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+            \growthcomparisonrow{Hard}{1e-3}{0400}{0600}{0800}{1000}
+            \growthcomparisonrow{Soft}{1e-3}{0400}{0600}{0800}{1000}
+        \end{tabular}
+    \end{subfigure}
 
 
-\begin{itemize}
-    \item Concentric ring reproduction
-    \item Quantitative metrics
-    \item Model comparison
-\end{itemize}
+    \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 50. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green). Clear concentric ring pattern are visible for $\lambda \in \{10^{-2}, 10^{-3}\}$.}
+    \label{fig:pattern_formation}
+\end{figure*}
 
 
 
 \subsubsection{Microdommain formation}
 
 \cite{You2018}
+
+
+\newpage
+
+\subsection{Quantitative Comparison}
+
+For a more quantitative comparison, we analyze the following metrics: \textit{radial distribution of stress}, \textit{radial distribution of packing fraction} and \textit{maximum overlap}.
+
+Figures~\ref{figure:radial_distribution_stress}--\ref{figure:max_overlap_simulation} illustrate these results in detail. Those figures confirm that altough certain quantities, such as the packing fraction, and thus the maximum overlap, are different between the two models, the overall macroscopic behavior is similar as previously anayzed in \autoref{fig:pattern_formation}.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparisons/radial_distribution_stress.png}
+    \caption{Comparison of the radial distribution of the stress for the hard and soft collision models. Both models reproduce the expected stress distribution analytically derived in \cite{Weady2024}.}
+    \label{figure:radial_distribution_stress}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparisons/radial_distribution_packing_fraction.png}
+    \caption{Comparison of the radial distribution of the packing fraction for the hard and soft collision models. As expected, particles in the soft model experience some overcrowding at the center of the colony, but the overall distribution is similar to the hard model.}
+    \label{figure:radial_distribution_packing_fraction}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparisons/max_overlap_simulation.png}
+    \caption{Comparison of the maximum overlap for the hard and soft collision models. The maximum overlap between particles in the soft model increases over time, while it is kept close to a constant value (determined by the tolerance parameter) in the hard model.}
+    \label{figure:max_overlap_simulation}
+\end{figure}
+
 
 
 
@@ -401,14 +412,18 @@ Moreover solving a LCP requires global information about the system, as it is es
 In contrast, the soft collision model only requires local information about neighboring particles to compute forces, and can be efficiencyly computed using common molecular dynamics techniques such as cell lists or Verlet lists (See \cite{Gratl2019}). This locality greatly reduces the amount of inter-processor communication needed in a parallel implementation, as each processor can largely operate independently on its own subset of particles, only needing to occasionally exchange information about particles near the boundaries of its domain.
 
 
-
-
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparisons/wall_time_simulation.png}
+    \caption{Comparison of the total simulation time for the hard and soft collision models over number of particles. The soft model is generally faster by a factor of 1.8.}
+    \label{figure:wall_time_simulation}
+\end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{figures/rudge.png}
-    \caption{Simulation time for the GPU-accelerated hard collision model from \cite{Rudge2012}.}
-    \label{figure:rudge_performance}
+    \includegraphics[width=\linewidth]{figures/comparisons/bbpgd_iterations_simulation.png}
+    \caption{BBPGD iterations for the hard and soft collision models. To maintain constant particle separation, the hard model needs to solve an LCP iteratively at each time step. The required number of iterations increases with the number of particles.}
+    \label{figure:bbpgd_iterations_simulation}
 \end{figure}
 
 \newpage
