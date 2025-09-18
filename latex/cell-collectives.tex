@@ -155,7 +155,7 @@ This research aims to address this critical gap by systematically implementing a
 
 The mechanical representation of cells significantly influences simulation outcomes. For many bacteria and fungal hyphae, a rigid rod approximation is a reasonable simplification, capturing their elongated morphology and the primary drivers of collective behavior. While real cells can exhibit some deformability, treating them as rigid bodies allows for a focus on the collective dynamics. This choice of a rigid rod geometry is well-supported by the experimental observations that inspire our work and aligns with common practices in modeling microbial collectives. The selected collision models are applied to these rigid rod entities.
 
-\subsection{Cell Model}
+\subsection{Physical Cell Model}
 
 For modeling the cell collectives, we use a rod model where cells are represented as rigid rods with a certain length and radius. This is a common assumption in many cell collectives models \cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015} and is supported by experimental evidence, closely matching common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} as shown in \autoref{fig:exserohilum_turcicum}.
 
@@ -239,26 +239,35 @@ where $\mathbf{x}_i$ is the position of the cell, $\mathbf{\omega}_i$ is the ang
 
 \end{figure}
 
+\subsection{Cell Growth and Division}
 
 Bacteria cells grow along their main axis using the following model in accordance with \cite{Weady2024}:
 
 \begin{equation}
-    \dot{{\ell}} =  \frac{{\ell}}{\tau} e^{\lambda \boldsymbol{\sigma}}
+    \dot{{\ell_i}} =  \frac{{\ell_i}}{\tau} e^{\lambda \boldsymbol{\sigma_i}}
 \end{equation}
 
 
-where $\tau$ is a time scale, $\sigma$ is the compressive stress along the main axis of the cell, and $\lambda$ is a stress sensitivity parameter which will later be used to control the growth rate and the macroscopic pattern formation of the colony.
+where $\tau$ is a time scale, $\sigma_i$ is the compressive stress along the main axis of the cell, and $\lambda$ is a stress sensitivity parameter which will later be used to control the growth rate and the macroscopic pattern formation of the colony. The stress $\boldsymbol{\sigma_i}$ acting on each cell is computed by following the approach of \cite{Weady2024} projecting all contact forces onto the cell's main axis using the unit tangent vector $\hat{\mathbf{t}}_i$:
+
+\begin{equation}
+    \boldsymbol{\sigma}_i = \sum_{j} \frac{1}{2}\, \hat{\mathbf t}_i\!\cdot\!\mathbf F_{ij}
+\end{equation}
+\label{eq:stress}
 
 Once a bacteria cell reaches a certain length ($\ell_0 = 2\ell_0$), it will divide into two new cells. To avoid synchronization effects, we adapt the model from \cite{Weady2024} and slighly change the length of the daughter cells randomly between $\ell_0 \cdot 0.98$ and $\ell_0 \cdot 1.02$ as proposed in \cite{Khan_2024}.
 
 \newpage
+
+\section{Computational Framework}
+
 \subsection{Colony Representation}
 
 For the implementation we closely follow the approach of Weady et al. \cite{Weady2024} described in the supplementary material where the whole bacteria colony gets represented in a single global vector $\mathbfcal{C} = [\dots, x_n^T, w_n^T, \dots]^T \in \mathbb{R}^{7N}$ where $N$ is the number of cells in the colony. Each particle is thus represented by a 7-dimensional vector consisting of a position vector $x_n \in \mathbb{R}^3$ and a unit quaternion $q_n \in \mathbb{R}^4$ representing the cell's orientation. The length vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^T \in \mathbb{R}^{N}$ is stored seperately.
 
 \subsection{Colony Dynamics}
 
-We determine the resulting translational and angular velocity for particles in the colony by using the force-velocity relation $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$, where $\mathbfcal{F}$ is the generalized force vector consisting of both force and torque components for the whole colony and $\mathbfcal{M}$ is the mobility matrix. $\mathbfcal{U}$ and $\mathbfcal{F}$ are also stacked collumn vectors, where $\mathbfcal{F} = [\dots, f_n^T, t_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the force and torque for the $n$-th cell, $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{l_n}, \frac{12}{l_n^3}, \dots]) \in \mathbb{R}^{6 \times 6}$ is a diagonal matrix consisting of the inverse of the cell's linear and angular mobility on the diagonal and $\mathbfcal{U} = [\dots, u_n^T, \omega_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the resulting translational and angular velocity for the $n$-th cell.
+We determine the resulting translational and angular velocity for particles in the colony by using the force-velocity relation $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$, where $\mathbfcal{F}$ is the generalized force vector consisting of both force and torque components for the whole colony and $\mathbfcal{M}$ is the mobility matrix. $\mathbfcal{U}$ and $\mathbfcal{F}$ are also stacked collumn vectors, where $\mathbfcal{F} = [\dots, f_n^T, t_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the force and torque for the $n$-th cell, $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{l_n}, \frac{12}{l_n^3}, \dots]) \in \mathbb{R}^{6 \times 6}$ is a diagonal matrix consisting of the inverse of the cell's linear and angular mobility on the diagonal and $\mathbfcal{U} = [\dots, u_n^T, \omega_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the resulting translational and angular velocity for the $n$-th cell resulting from the applied force and torque.
 
 Combined with a map $\mathbfcal{G}$ mapping cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding change in position and quaternion in $\mathbb{R}^{7N}$, described in \cite{Weady2024}, we can express the resulting colony state after applying force and torque $\mathbfcal{F}$ for an euler timestep $\Delta t$ as:
 
@@ -280,11 +289,11 @@ For the soft collision model, we consider a potential-based approach inspired by
 We use the following Model for the elastic force between two overlapping particles:
 
 \begin{equation}
-    \mathbf{F}_{elastic} =k_{cc} \sqrt{d_0} \delta^{1.5} \hat{\mathbf{n}}
+    \mathbf{F}^{elastic}_{ij} =k_{cc} \sqrt{d_0} \delta^{1.5} \hat{\mathbf{n}}
 \end{equation}
 \label{eq:hertzian_contact_model}
 
-where $\delta$ is the overlap distance between the particles, $k_{cc}$ is the elastic constant, and $\hat{\mathbf{n}}$ is the normal vector at the point of contact. \autoref{fig:hertzian_contact_model} illustrates the force response of this model as a function of overlap distance.
+where $\delta$ is the overlap distance between the two particles, $d_0$ is the diameter of the particles, $k_{cc}$ is the elastic constant, and $\hat{\mathbf{n}}$ is the normal vector at the point of contact. \autoref{fig:hertzian_contact_model} illustrates the force response of this model as a function of overlap distance.
 
 Using equation \autoref{eq:overdamped_langevin} we can then express the total force and torque of each cell. From this we can construct the full force vector $\mathbfcal{F}$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
 
@@ -294,7 +303,7 @@ Inspired from  \cite{You2018} we set $k_{cc} = \frac{Y}{\zeta} = \frac{4 MPa}{20
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/hertzian_contact_model.png}
-    \caption{Elastic force as a function of overlap distance for the implemented Hertzian contact model with $k=2000$ and $\alpha=0.5$.}
+    \caption{Elastic force as a function of overlap distance for the implemented Hertzian contact model with $k=20000$ and $\alpha=0.5$.}
     \label{fig:hertzian_contact_model}
 \end{figure}
 
@@ -307,7 +316,7 @@ For the hard collision model, we want to enforce non-overlapping constraints bet
 Contrary to \autoref{eq:hertzian_contact_model} where the force magnitude is computed using a function based on the overlap distance, we define the force and torque contributions from each constraint directly in terms of the yet unknown force magnitude $\gamma_\alpha$ needed to satisfy the non-overlapping condition.
 
 \begin{equation}
-    \mathbf{F}_\alpha^n = \hat{\mathbf{n}}_\alpha ^n \gamma_\alpha
+    \mathbf{F}^{hard}_{ij} = \mathbf{F}_\alpha^n = \hat{\mathbf{n}}_\alpha  \gamma_\alpha
 \end{equation}
 \label{eq:constraint_force}
 
@@ -315,19 +324,20 @@ To simplify the notation we combine all lagrange multplieres $\gamma_\alpha$ int
 
 From this we can again calculate the total forces and torques acting on the colony by \autoref{eq:overdamped_langevin}. The resulting force vector $\mathbfcal{F}$ now depends linearly on the unknown multipliers $\boldsymbol{\gamma}$ and will from now on be denoted as $\mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D}\boldsymbol{\gamma}$ where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a matrix consisting of the normal vectors $\hat{\mathbf{n}}_\alpha$ and torque arms $\mathbf{y}_n \times \hat{\mathbf{n}}_\alpha$ for each constraint $\alpha$ and particle $n$. The multiplication $\mathbfcal{D}\boldsymbol{\gamma}$ thus computes the total force and torque on each particle from all constraints as described in \autoref{eq:constraint_force}.
 
-\subsection{Constraint Resolution}
+\subsubsection{Constraint Resolution}
 
-Moreover we define $\mathbf{\Phi}^k = [\dots, \Phi_\alpha, \dots]^T \in \mathbb{R}^{C}$ as the vector of signed seperation distances for the respective pair of particles at the current time step $k$.
 
-\subsubsection{Constraint Conditions}
 
-When solving for the Lagrange multipliers $\boldsymbol{\gamma}$, we are only interested in \emph{repelling} forces, i.e.\ forces that separate overlapping particles.
+When solving for the Lagrange multipliers $\boldsymbol{\gamma}$, we are only interested in \emph{repelling} forces, i.e., forces that separate overlapping particles.
 Since attractive forces are not physically meaningful, the multipliers must be nonnegative (see~\autoref{eq:gamma}).
-Furthermore, after the update step the particle configuration must be feasible, meaning that no overlaps remain (see~\autoref{eq:phi}).
 
-The multipliers act during the current step in order to enforce this feasibility in the \emph{next} configuration.
-For this reason the complementarity condition is formulated with $\Phi^{k+1}$: if a constraint is inactive after the update ($\Phi_\alpha^{k+1} > 0$), then the corresponding multiplier must vanish ($\gamma_\alpha = 0$), whereas if a multiplier is nonzero ($\gamma_\alpha > 0$), then the constraint must be active at the updated configuration ($\Phi_\alpha^{k+1} = 0$).
-This is expressed by the \emph{complementarity condition} (see~\autoref{eq:comp}).
+To formalize this, we consider $\mathbf{\Phi}^k = [\dots, \Phi_\alpha, \dots]^T \in \mathbb{R}^{C}$ as the vector of signed separation distances for each particle pair at the current time step $k$, where $\Phi_\alpha > 0$ indicates no overlap and $\Phi_\alpha < 0$ indicates penetration.
+
+After applying the contact forces, the particle configuration must be feasible, meaning that no overlaps remain (see~\autoref{eq:phi}).
+This implies a simple relationship between the multipliers and the particle distances: if two particles are separated after the update ($\Phi_\alpha^{k+1} > 0$), the corresponding multiplier must vanish ($\gamma_\alpha = 0$), whereas if the multiplier is nonzero ($\gamma_\alpha > 0$), the particles must not overlap ($\Phi_\alpha^{k+1} = 0$).
+
+This relationship is expressed by the \emph{complementarity condition} (see~\autoref{eq:comp}).
+
 
 Altogether, the contact problem can be written as
 \begin{align}
@@ -364,26 +374,9 @@ The resulting system of equations to solve for $\boldsymbol{\gamma}$ is thus
     \text{s.t.} 0       & \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^k + \Delta t (\mathbfcal{D}^T \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^T \dot{\boldsymbol{\ell}^k}) \geq 0
 \end{align}
 
-which is a well-known form of a Linear Complementarity Problem (LCP).The missing Lagrange multipliers $\boldsymbol{\gamma}$ can be solved for using various numerical methods such as the the BBPGD algorithm described in \cite{Weady2024} and can then be used to compute the resulting force vector $\mathbfcal{F}(\boldsymbol{\gamma})$ and update the colony state using \autoref{eq:colony_update}.
+which is a well-known form of a Linear Complementarity Problem (LCP). The missing Lagrange multipliers $\boldsymbol{\gamma}$ can be solved using algorithms such as the BBPGD algorithm described in \cite{Weady2024} and can then be used to compute the resulting force vector $\mathbfcal{F}(\boldsymbol{\gamma})$ and update the colony state using \autoref{eq:colony_update}.
 
 Weady et al. \cite{Weady2024} improve this basic scheme by introducing a recursive approach to resolve violations of the non-overlapping condition, which can occur due to the first-order approximation of $\mathbf{\Phi}^{k+1}$. We will not go into further detail here, but refer to their supplementary material for a comprehensive description of the full algorithm.
-
-\subsection{Stress Calculation}
-To compute the stress $\boldsymbol{\sigma}$ acting on each cell, we follow the approach of \cite{Weady2024} and sum over all compressive forces projected onto the cell’s main axis. For cell $n$ this gives
-
-\begin{equation}
-    \boldsymbol{\sigma}_n = \sum_{\alpha \in A_n}
-    \frac{1}{2} \left |\hat{\mathbf{t}}_n \cdot \hat{\mathbf{n}}_\alpha \right | f_\alpha,
-\end{equation}
-
-where $\hat{\mathbf{t}}_n$ is the unit vector perpendicular to the cell’s axis, $\hat{\mathbf{n}}_\alpha$ the contact normal of constraint $\alpha$, and $A_n$ the set of all constraints acting on cell $n$. The contact force magnitude $f_\alpha$ depends on the collision model:
-
-\begin{description}
-    \item[Hard model:]  $f_\alpha = \gamma_\alpha$, the Lagrange multiplier associated with constraint $\alpha$.
-    \item[Soft model:] $f_\alpha = k_{cc} \sqrt{d_0}\,\delta^{1.5}$, given by the Hertzian contact law (see \autoref{eq:hertzian_contact_model}).
-\end{description}
-
-
 
 \newpage
 
