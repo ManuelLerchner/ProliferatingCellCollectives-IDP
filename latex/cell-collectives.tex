@@ -31,6 +31,28 @@
 \usepackage{caption}
 \usepackage{tcolorbox}
 
+% TikZ for diagrams
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,shapes,positioning}
+\usetikzlibrary{calc,angles,quotes}
+
+% --- Macro for drawing a 2D spherocylinder ---
+% #1 = center coordinate
+% #2 = rotation angle
+% #3 = half-length
+% #4 = radius
+\newcommand{\drawSpherocyl}[4]{
+    \begin{scope}[shift={(#1)},rotate=#2]
+        \draw[line width=1pt,rounded corners=6pt] (-#3,#4) -- (#3,#4);
+        \draw[line width=1pt,rounded corners=6pt] (-#3,-#4) -- (#3,-#4);
+        \draw[line width=1pt,rounded corners=6pt] (#3,-#4) arc[start angle=-90,end angle=90,radius=#4];
+        \draw[line width=1pt,rounded corners=6pt] (-#3,#4) arc[start angle=90,end angle=270,radius=#4];
+        \fill [black] (#1) circle (2pt);
+    \end{scope}
+}
+
+
+
 \hypersetup{hidelinks}
 \DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
 
@@ -133,54 +155,117 @@ This research aims to address this critical gap by systematically implementing a
 
 The mechanical representation of cells significantly influences simulation outcomes. For many bacteria and fungal hyphae, a rigid rod approximation is a reasonable simplification, capturing their elongated morphology and the primary drivers of collective behavior. While real cells can exhibit some deformability, treating them as rigid bodies allows for a focus on the collective dynamics. This choice of a rigid rod geometry is well-supported by the experimental observations that inspire our work and aligns with common practices in modeling microbial collectives. The selected collision models are applied to these rigid rod entities.
 
-\subsection{Mathematical Formulation}
+\subsection{Cell Model}
 
 For modeling the cell collectives, we use a rod model where cells are represented as rigid rods with a certain length and radius. This is a common assumption in many cell collectives models \cite{You2018}\cite{Weady2024}\cite{Blanchard2015}\cite{Warren2019}\cite{Ghosh2015} and is supported by experimental evidence, closely matching common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} as shown in \autoref{fig:exserohilum_turcicum}.
 
 
-Each bacterium is represented by a spherocylinder with length $l$ and diameter $d$. For this implementation we consider bacteria of a fixed diameter $d_0 = 0.5$ and initialial length $l_0 = 1$. At the scale of typical bacteria, the system can be represented by an overdamped dynamics, because their Reynolds number is extremely small (Re $\ll 1$), so viscous drag stops them from coasting almost instantaneously \cite{datta2024lifelowreynoldsnumber}. The resulting dynamics is then described by the overdamped Langevin equation:
+Each bacterium is represented by a spherocylinder with initial length $l=1$ and diameter $d=0.5$. At the scale of typical bacteria, the system can be represented by an overdamped dynamics, because their Reynolds number is extremely small (Re $\ll 1$), so viscous drag stops them from coasting almost instantaneously \cite{datta2024lifelowreynoldsnumber}. The resulting dynamics is then described by the overdamped Langevin equation:
 
-$$
-    \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \mathbf{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_ij \times \mathbf{F}_{ij})
-$$
+\begin{equation}
+    \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \mathbf{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
+\end{equation}
 \label{eq:overdamped_langevin}
 
-where $\mathbf{x}_i$ is the position of the cell, $\mathbf{\omega}_i$ is the angular velocity of the cell, $\mathbf{F}_{ij}$ is the force acting on the cell from the $j$-th cell. $\zeta$ is a constant drag coefficient representing the friction of the cell in the fluid, $\mathbf{r}_ij$ is the point of contact between the two cells relative to the center of the $i$-th cell.
+where $\mathbf{x}_i$ is the position of the cell, $\mathbf{\omega}_i$ is the angular velocity of the cell, $\mathbf{F}_{ij}$ is the force acting on the cell from the $j$-th cell. $\zeta$ is a constant drag coefficient representing the friction of the cell in the fluid, $\mathbf{r}_{ij}$ is the point of contact between the two cells relative to the center of the $i$-th cell.
 
-% todo figure of colliding cells
+\autoref{fig:spherocylinder_model} illustrates the spherocylinder model and the relevant forces and torques acting on the cells during a collision.
 
-To model the bacteria growth, also keep track of the bacteria length, $\mathbfcal{l} = [\dots, l_n, \dots]^T \in \mathbb{R}^{N}$ where $l_n$ is the length of the $n$-th cell. We use the following model in accordance with \cite{Weady2024}:
-
-$$
-    \dot{\mathbfcal{l}} =  \frac{\mathbfcal{l}}{\tau} e^{\lambda \mathbfcal{\sigma}}
-$$
-
-where $\tau$ is a time scale, $\mathbfcal{\sigma} \in \mathbb{R}^{N}$ is the stress vector representing the stress along the main axis of each cell in the colony, and $\lambda$ is a stress sensitivity parameter which will later be used to control the growth rate and the macroscopic pattern formation of the colony.
-
-After bacteria have grown to be longer than a critical length $l_c = 2l_0$, they will divide into two new cells. To avoid synchronization effects, we follow \cite{Khan_2024} and slighly change the length of the daughter cells randomly between $l_0*0.98$ and $l_0*1.02$.
+\begin{figure}[H]
+    \centering
 
 
-\subsubsection{Colony Representation}
+    \begin{tikzpicture}[line cap=round,line join=round,>=Stealth]
 
-For the reimplementation of the hard collision model, we closely follow the approach of Weady et al. \cite{Weady2024} described in the supplementary material.
+        % --- Variables ---
+        \coordinate (xi) at (0,0);
+        \coordinate (xj) at (1,-1.31);
 
-Therefore we represent the current colony as a column vector $\mathbfcal{C} = [\dots, x_n^T, w_n^T, \dots]^T \in \mathbb{R}^{7N}$ where $N$ is the number of cells in the colony. Each particle is thus represented by a 7-dimensional vector consisting of a position vector $x_n \in \mathbb{R}^3$ and a unit quaternion $q_n \in \mathbb{R}^4$ representing the cell's orientation.
+        \coordinate (x) at (-3,-0.5);
+        \def\R{0.5}
 
-We determine the resulting translational and angular velocity for particles in the colony by using the force-velocity relation $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$, where $\mathbfcal{F}$ is the generalized force vector consisting of both force and torque components for the whole colony and $\mathbfcal{M}$ is the mobility matrix. Similar to $\mathbfcal{C}$, $\mathbfcal{U}$ and $\mathbfcal{F}$ are also stacked collumn vectors, where $\mathbfcal{F} = [\dots, f_n^T, t_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the force and torque for the $n$-th cell, $\mathbfcal{M} = \text{diag}([\dots, l_n, a_n, \dots]) \in \mathbb{R}^{6 \times 6}$ is a diagonal matrix consisting of the inverse of the cell's linear and angular mobility on the diagonal and $\mathbfcal{U} = [\dots, u_n^T, \omega_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the resulting translational and angular velocity for the $n$-th cell.
+        \drawSpherocyl{xi}{-10}{1.2}{\R}
+        \drawSpherocyl{xj}{15}{1}{\R}
 
-Combined with a map $\mathbfcal{G}$ mapping cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding change in position and quaternion in $\mathbb{R}^{7N}$, described in \cite{Weady2024}, we can express the resulting colony state after applying force and torque $\mathbfcal{F}$ for a time step $\Delta t$ as
+        \coordinate (contact) at  (1.33,-0.7);
 
-$$
+        % Collision point
+        \fill[black] (contact) circle (2pt) node[above right] {};
+
+        % Force vector
+        \draw[->,thick,red] (contact) -- ++(-0.258,0.965) node[pos=0.8,left] {$\mathbf{F}_{ij}$};
+
+        % Torque lever arm
+        \draw[->,thick,blue,dashed] (xi) -- (contact) node[pos=0.2,below] {$\mathbf{r}_{ij}$};
+
+        % Force vector
+        \draw[->,thick,red] (contact) -- ++($0.7*(0.258,-0.965)$) node[pos=0.8,right] {$\mathbf{F}_{ji}$};
+
+        % Torque lever arm
+        \draw[->,thick,blue,dashed] (xj) -- (contact) node[pos=0.3,left] {$\mathbf{r}_{ji}$};
+
+
+
+        % label at xi
+        \node at (xi) [left] {$\mathbf{x}_i$};
+        % label at xj
+        \node at (xj) [below] {$\mathbf{x}_j$};
+
+
+        \drawSpherocyl{x}{0}{0.5}{\R}
+
+        % label at x
+        \node at (x) [below] {$\mathbf{x}$};
+
+        \draw[<->,thick,dashed] ($(x) + (-0.5-\R,-1)$) -- ($(x) + (0.5+\R,-1)$) node[midway,below] {$\ell$};
+
+        \draw[<->,thick,dashed] ($(x) + (-0.5-\R-\R,-\R)$) -- ($(x) + (-0.5-\R-\R,\R)$) node[midway,left] {$d$};
+
+
+        % Resulting rotation around xi
+        \draw[->,thick,orange]
+        ($(xi)+(0.6,0.5)$) arc[start angle=0,end angle=160,radius=0.6]
+        node[midway, below] {$\boldsymbol{\omega}_i$};
+
+        % Resulting rotation around xj
+        \draw[->,thick,orange]
+        ($(xj)+(0.7,-0.5)$) arc[start angle=0,end angle=-150,radius=0.6]
+        node[midway, above] {$\boldsymbol{\omega}_j$};
+
+    \end{tikzpicture}
+    \caption{2D Schematic of the spherocylinder cell model. Each cell has length $\ell$ and diameter $d$. Collisions generate contact forces $\mathbf{F}_{ij}$ (red) and torque via the lever arm $\mathbf{r}_{ij}$ (dashed blue). The resulting translations are proportional to the force vectors, and the change in orientation follows from the cross product $\mathbf{r}_{ij} \times \mathbf{F}_{ij}$, indicated here in orange.
+    }
+    \label{fig:spherocylinder_model}
+
+\end{figure}
+
+
+Bacteria cells grow along their main axis using the following model in accordance with \cite{Weady2024}:
+
+\begin{equation}
+    \dot{{\ell}} =  \frac{{\ell}}{\tau} e^{\lambda \boldsymbol{\sigma}}
+\end{equation}
+
+
+where $\tau$ is a time scale, $\sigma$ is the compressive stress along the main axis of the cell, and $\lambda$ is a stress sensitivity parameter which will later be used to control the growth rate and the macroscopic pattern formation of the colony.
+
+Once a bacteria cell reaches a certain length ($\ell_0 = 2\ell_0$), it will divide into two new cells. To avoid synchronization effects, we adapt the model from \cite{Weady2024} and slighly change the length of the daughter cells randomly between $\ell_0 \cdot 0.98$ and $\ell_0 \cdot 1.02$ as proposed in \cite{Khan_2024}.
+
+\newpage
+\subsection{Colony Representation}
+
+For the implementation we closely follow the approach of Weady et al. \cite{Weady2024} described in the supplementary material where the whole bacteria colony gets represented in a single global vector $\mathbfcal{C} = [\dots, x_n^T, w_n^T, \dots]^T \in \mathbb{R}^{7N}$ where $N$ is the number of cells in the colony. Each particle is thus represented by a 7-dimensional vector consisting of a position vector $x_n \in \mathbb{R}^3$ and a unit quaternion $q_n \in \mathbb{R}^4$ representing the cell's orientation. The length vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^T \in \mathbb{R}^{N}$ is stored seperately.
+
+\subsection{Colony Dynamics}
+
+We determine the resulting translational and angular velocity for particles in the colony by using the force-velocity relation $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$, where $\mathbfcal{F}$ is the generalized force vector consisting of both force and torque components for the whole colony and $\mathbfcal{M}$ is the mobility matrix. $\mathbfcal{U}$ and $\mathbfcal{F}$ are also stacked collumn vectors, where $\mathbfcal{F} = [\dots, f_n^T, t_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the force and torque for the $n$-th cell, $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{l_n}, \frac{12}{l_n^3}, \dots]) \in \mathbb{R}^{6 \times 6}$ is a diagonal matrix consisting of the inverse of the cell's linear and angular mobility on the diagonal and $\mathbfcal{U} = [\dots, u_n^T, \omega_n^T, \dots]^T \in \mathbb{R}^{6}$ represents the resulting translational and angular velocity for the $n$-th cell.
+
+Combined with a map $\mathbfcal{G}$ mapping cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding change in position and quaternion in $\mathbb{R}^{7N}$, described in \cite{Weady2024}, we can express the resulting colony state after applying force and torque $\mathbfcal{F}$ for an euler timestep $\Delta t$ as:
+
+\begin{equation}
     \mathbfcal{C}^{k+1}  = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k\mathbfcal{U} = \mathbfcal{C}_k + \Delta t \, \mathbfcal{G}\mathbfcal{M} \mathbfcal{F}
-$$
+\end{equation}
 \label{eq:colony_update}
-
-
-To keep track of the bacteria length, we also keep track of a length vector $\mathbfcal{L} = [\dots, l_n, \dots]^T \in \mathbb{R}^{N}$ where $l_n$ is the length of the $n$-th cell.
-
-
-
-
 
 
 
@@ -194,9 +279,9 @@ For the soft collision model, we consider a potential-based approach inspired by
 
 We use the following Model:
 
-$$
+\begin{equation}
     F_{elastic} =k_{cc} \sqrt{d_0} \delta^{1.5} \hat{\mathbf{n}}
-$$
+\end{equation}
 
 where $\delta$ is the overlap distance between the particles, $k_{cc}$ is the elastic constant, and $\hat{\mathbf{n}}$ is the normal vector at the point of contact.
 
@@ -223,18 +308,18 @@ For the hard collision model, we want to enforce non-overlapping constraints bet
 
 The applied force and torque of such a constraint $\alpha$ on a particle $n$ can then be expressed as:
 
-$$
+\begin{equation}
     \mathbf{F}_\alpha^n = - \hat{\mathbf{n}}_\alpha ^n \gamma_\alpha \in \mathbb{R}^3, \qquad \mathbf{T}_\alpha^n = \mathbf{y}_n \times \mathbf{F}_\alpha^n \in \mathbb{R}^3
-$$
+\end{equation}
 \label{eq:constraint_force}
 
 where $\hat{\mathbf{n}}_\alpha ^n$ is the normal vector at point $\mathbf{y}_n$ pointing away from the other particle and $\gamma_\alpha$ is the yet unknown Lagrange multiplier associated with constraint $\alpha$ representing the magnitude of the force needed to satisfy the non-overlapping condition.
 
 By aggregating the contributions from all constraints $A_n$ affecting the $n$-th particle, we can express the combined force and torque on a particle as:
 
-$$
+\begin{equation}
     \mathbf{F}_n = \sum_{\alpha \in A_n} \mathbf{F}_\alpha^n, \qquad \mathbf{T}_n = \sum_{\alpha \in A_n} \mathbf{T}_\alpha^n
-$$
+\end{equation}
 \label{eq:total_force}
 
 From those two components for each particle, we can construct the full force vector $\mathbfcal{F} = [ \dots, F_n^T, T_n^T, \dots]^T$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
@@ -272,9 +357,9 @@ Where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a matrix consisting of the
 
 As $\mathbf{\Phi}^{k+1}$ is difficult to express directly as it depends on the updated colony state $\mathbfcal{C}^{k+1}$ which itself depends on $\mathbf{\gamma}$, we approximate it using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$:
 
-$$
+\begin{equation}
     \mathbf{\Phi}^{k+1} \approx \mathbf{\Phi}^k + \Delta t \mathbf{D}^k \dot{\mathbfcal{C}^k} = \mathbf{\Phi}^k + \Delta t \mathbf{D}^k \mathbfcal{G}^k \mathbfcal{M} \mathbfcal{D} \mathbf{\gamma}
-$$
+\end{equation}
 
 The resulting system of equations to solve for $\mathbf{\gamma}$ is thus:
 
