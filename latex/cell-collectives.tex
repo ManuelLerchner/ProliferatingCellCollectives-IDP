@@ -277,20 +277,18 @@ Now we can define the specific implementations of hard and soft collision models
 
 For the soft collision model, we consider a potential-based approach inspired by \cite{Warren2019} and \cite{You2018} where overlapping cells exert repelling forces on each other based on a predefined potential function. In particular, we implement a Hertzian potential, which provides a smooth force response as particles approach each other.
 
-We use the following Model:
+We use the following Model for the elastic force between two overlapping particles:
 
 \begin{equation}
-    F_{elastic} =k_{cc} \sqrt{d_0} \delta^{1.5} \hat{\mathbf{n}}
+    \mathbf{F}_{elastic} =k_{cc} \sqrt{d_0} \delta^{1.5} \hat{\mathbf{n}}
 \end{equation}
+\label{eq:hertzian_contact_model}
 
-where $\delta$ is the overlap distance between the particles, $k_{cc}$ is the elastic constant, and $\hat{\mathbf{n}}$ is the normal vector at the point of contact.
+where $\delta$ is the overlap distance between the particles, $k_{cc}$ is the elastic constant, and $\hat{\mathbf{n}}$ is the normal vector at the point of contact. \autoref{fig:hertzian_contact_model} illustrates the force response of this model as a function of overlap distance.
 
-The overlap distance $\delta$ is calculated as the distance between the two closest points on the surface of the two particles minus the sum of their radii. If the particles are not overlapping, $\delta$ is set to zero. Using equation \autoref{eq:overdamped_langevin} we can then express the total force and torque of each cell. From this we can construct the full force vector $\mathbfcal{F} = [ \dots, F_n^T, T_n^T, \dots]^T$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
+Using equation \autoref{eq:overdamped_langevin} we can then express the total force and torque of each cell. From this we can construct the full force vector $\mathbfcal{F}$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
 
-Inspired from the used parameters in \cite{You2018} we set $k_{cc} = \frac{Y}{\zeta} = \frac{4 MPa}{200 Pa h} = 20000 \frac{1}{h}$.
-
-
-The equations \autoref{eq:colony_update} represents an explicit Euler integration scheme, which is typcially applied using  a timestep $\Delta t \approx 10^{-5} h$ \cite{Khan_2024}\cite{You2018}\cite{Blanchard2015}.
+Inspired from  \cite{You2018} we set $k_{cc} = \frac{Y}{\zeta} = \frac{4 MPa}{200 Pa h} = 20000 \frac{1}{h}$ and use a typical time step $\Delta t \approx 10^{-5} h$ \cite{Khan_2024}\cite{You2018}\cite{Blanchard2015}.
 
 
 \begin{figure}[H]
@@ -306,71 +304,84 @@ The equations \autoref{eq:colony_update} represents an explicit Euler integratio
 
 For the hard collision model, we want to enforce non-overlapping constraints between cells using a constraint-based approach. Therefore we create a constraint $\alpha$ for each pair of nearby cells consisting of the two closest points $\mathbf{y}_n$ and $\mathbf{y}_m$ on the surfaces of the two particles.
 
-The applied force and torque of such a constraint $\alpha$ on a particle $n$ can then be expressed as:
+Contrary to \autoref{eq:hertzian_contact_model} where the force magnitude is computed using a function based on the overlap distance, we define the force and torque contributions from each constraint directly in terms of the yet unknown force magnitude $\gamma_\alpha$ needed to satisfy the non-overlapping condition.
 
 \begin{equation}
-    \mathbf{F}_\alpha^n = - \hat{\mathbf{n}}_\alpha ^n \gamma_\alpha \in \mathbb{R}^3, \qquad \mathbf{T}_\alpha^n = \mathbf{y}_n \times \mathbf{F}_\alpha^n \in \mathbb{R}^3
+    \mathbf{F}_\alpha^n = \hat{\mathbf{n}}_\alpha ^n \gamma_\alpha
 \end{equation}
 \label{eq:constraint_force}
 
-where $\hat{\mathbf{n}}_\alpha ^n$ is the normal vector at point $\mathbf{y}_n$ pointing away from the other particle and $\gamma_\alpha$ is the yet unknown Lagrange multiplier associated with constraint $\alpha$ representing the magnitude of the force needed to satisfy the non-overlapping condition.
+To simplify the notation we combine all lagrange multplieres $\gamma_\alpha$ into a single vector $\boldsymbol{\gamma} = [\dots, \gamma_\alpha, \dots]^T \in \mathbb{R}^{C}$ where $C$ is the total number of constraints in the system.
 
-By aggregating the contributions from all constraints $A_n$ affecting the $n$-th particle, we can express the combined force and torque on a particle as:
+From this we can again calculate the total forces and torques acting on the colony by \autoref{eq:overdamped_langevin}. The resulting force vector $\mathbfcal{F}$ now depends linearly on the unknown multipliers $\boldsymbol{\gamma}$ and will from now on be denoted as $\mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D}\boldsymbol{\gamma}$ where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a matrix consisting of the normal vectors $\hat{\mathbf{n}}_\alpha$ and torque arms $\mathbf{y}_n \times \hat{\mathbf{n}}_\alpha$ for each constraint $\alpha$ and particle $n$. The multiplication $\mathbfcal{D}\boldsymbol{\gamma}$ thus computes the total force and torque on each particle from all constraints as described in \autoref{eq:constraint_force}.
 
-\begin{equation}
-    \mathbf{F}_n = \sum_{\alpha \in A_n} \mathbf{F}_\alpha^n, \qquad \mathbf{T}_n = \sum_{\alpha \in A_n} \mathbf{T}_\alpha^n
-\end{equation}
-\label{eq:total_force}
+\subsection{Constraint Resolution}
 
-From those two components for each particle, we can construct the full force vector $\mathbfcal{F} = [ \dots, F_n^T, T_n^T, \dots]^T$ for the whole colony and use \autoref{eq:colony_update} to update the colony state.
+Moreover we define $\mathbf{\Phi}^k = [\dots, \Phi_\alpha, \dots]^T \in \mathbb{R}^{C}$ as the vector of signed seperation distances for the respective pair of particles at the current time step $k$.
 
+\subsubsection{Constraint Conditions}
 
-\subsubsection{Constraint Resolution}
+When solving for the Lagrange multipliers $\boldsymbol{\gamma}$, we are only interested in \emph{repelling} forces, i.e.\ forces that separate overlapping particles.
+Since attractive forces are not physically meaningful, the multipliers must be nonnegative (see~\autoref{eq:gamma}).
+Furthermore, after the update step the particle configuration must be feasible, meaning that no overlaps remain (see~\autoref{eq:phi}).
 
-The equations presented in \autoref{eq:colony_update} and \autoref{eq:constraint_force} depend on the unknown Lagrange multipliers $\gamma_\alpha$ for each constraint $\alpha$. This factor scales each constraint force to ensure that the non-overlapping conditions are satisfied after each update step, i.e., that no two particles overlap.
+The multipliers act during the current step in order to enforce this feasibility in the \emph{next} configuration.
+For this reason the complementarity condition is formulated with $\Phi^{k+1}$: if a constraint is inactive after the update ($\Phi_\alpha^{k+1} > 0$), then the corresponding multiplier must vanish ($\gamma_\alpha = 0$), whereas if a multiplier is nonzero ($\gamma_\alpha > 0$), then the constraint must be active at the updated configuration ($\Phi_\alpha^{k+1} = 0$).
+This is expressed by the \emph{complementarity condition} (see~\autoref{eq:comp}).
 
-To simplify the notation we combine all lagrange multplieres $\gamma_\alpha$ into a single vector $\mathbf{\gamma} = [\dots, \gamma_\alpha, \dots]^T \in \mathbb{R}^{C}$ where $C$ is the total number of constraints in the system. Moreover we define a signed seperation distance function $\Phi_{\alpha}$ for each constraint $\alpha$ such that $\Phi_{\alpha} > 0$ if the two particles are separated, $\Phi_{\alpha} = 0$ if they are just touching and $\Phi_{\alpha} < 0$ if they are overlapping. Again we simplify the notation by combining all seperation distances into a single vector $\mathbf{\Phi} = [\dots, \Phi_\alpha, \dots]^T \in \mathbb{R}^{C}$.
-
-
-We only ever want repelling forces, i.e., $\gamma_\alpha \geq 0$ for all constraints $\alpha$, and require $\Phi_{k}^{k+1} \geq 0$ after the update step to ensure that all particle overlaps are resolved. Moreover we only want to apply forces for constraints where $\Phi_{\alpha} < 0$ to resolve overlaps and need $\gamma_\alpha = 0$ otherwise to ensure that non-overlapping particles do not exert forces on each other. This is elegantly expressed by the complementarity condition $\mathbf{\Phi} \bot \mathbf{\gamma} = \mathbf{\Phi}^T \mathbf{\gamma}$ which states that for each constraint $\alpha$ if the particles are not overlapping ($\Phi_\alpha \geq 0$) then the corresponding force magnitude must be zero ($\gamma_\alpha = 0$) or if there is a non-zero force ($\gamma_\alpha > 0$) then the particles must be in contact ($\Phi_\alpha = 0$).
-
-This can be expressed as the conditions:
-
+Altogether, the contact problem can be written as
 \begin{align}
-    \text{Positivity of multipliers:} \qquad  0 & \leq \gamma        \\
-    \text{Non-overlapping condition:} \qquad  0 & \leq \Phi^{k+1}    \\
-    \text{Complementarity condition:} \qquad  0 & = \gamma \bot \Phi
-\end{align}:
-
-which is often abreviated as $\mathbf{0} \leq \mathbf{\gamma} \perp \mathbf{\Phi} \geq \mathbf{0}$.
-
-
-The combined update rule in \autoref{eq:colony_update} and the constraint conditions above can be combined into a single system of equations to solve for the unknown Lagrange multipliers $\mathbf{\gamma}$:
-
-\begin{align}
-    \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}\mathbfcal{M} \mathbfcal{D}(\mathbf{\gamma}) \\
-    \text{s.t.} 0       & \leq \mathbf{\gamma} \perp \mathbf{\Phi}^{k+1} \geq 0
+    \text{Positivity of multipliers:} \qquad & \boldsymbol{\gamma} \geq 0, \label{eq:gamma}                   \\
+    \text{Non-overlap condition:} \qquad     & \mathbf{\Phi}^{k+1} \geq 0, \label{eq:phi}                     \\
+    \text{Complementarity condition:} \qquad & \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}, \label{eq:comp}
 \end{align}
+which is often abbreviated as $\mathbf{0} \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1} \geq \mathbf{0}$.
 
-Where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a matrix consisting of the normal vectors $\hat{\mathbf{n}}_\alpha$ and torque arms $\mathbf{y}_n \times \hat{\mathbf{n}}_\alpha$ for each constraint $\alpha$ and particle $n$. The multiplication $\mathbfcal{D}\mathbf{\gamma}$ thus computes the total force and torque on each particle from all constraints as described in \autoref{eq:total_force}.
 
-
-As $\mathbf{\Phi}^{k+1}$ is difficult to express directly as it depends on the updated colony state $\mathbfcal{C}^{k+1}$ which itself depends on $\mathbf{\gamma}$, we approximate it using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$:
-
-\begin{equation}
-    \mathbf{\Phi}^{k+1} \approx \mathbf{\Phi}^k + \Delta t \mathbf{D}^k \dot{\mathbfcal{C}^k} = \mathbf{\Phi}^k + \Delta t \mathbf{D}^k \mathbfcal{G}^k \mathbfcal{M} \mathbfcal{D} \mathbf{\gamma}
-\end{equation}
-
-The resulting system of equations to solve for $\mathbf{\gamma}$ is thus:
+The combined update rule in \autoref{eq:colony_update} and the constraint conditions above can be combined into a single system of equations to solve for the unknown Lagrange multipliers $\boldsymbol{\gamma}$:
 
 \begin{align}
-    \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}\mathbfcal{M} \mathbfcal{D}(\mathbf{\gamma})                                                            \\
-    \text{s.t.} 0       & \leq \mathbf{\gamma} \perp \left( \mathbf{\Phi}^k + \Delta t \mathbf{D}^k \mathbfcal{G}^k \mathbfcal{M} \mathbfcal{D} \mathbf{\gamma} \right) \geq 0
+    \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}\mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}\mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
+    \text{s.t.} 0       & \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1} \geq 0
 \end{align}
 
 
-This set of conditions is known as a Linear Complementarity Problem (LCP) and the missing Lagrange multipliers $\mathbf{\gamma}$ can be solved for using various numerical methods such as the the BBPGD algorithm described in \cite{Weady2024}. This allows us to compute the exact forces needed to resolve all overlaps in a single update step (excluding approximation errors from the Taylor expansion), ensuring that the non-overlapping conditions are satisfied at all times.
+As $\mathbf{\Phi}^{k+1}$ is difficult to express in closed form as it depends on the updated colony state $\mathbfcal{C}^{k+1}$ which itself depends on $\boldsymbol{\gamma}$, Weady et al. \cite{Weady2024} approximate it using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$:
 
+\begin{align}
+    \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t (\mathbfcal{D}^T \dot{\mathbfcal{C}^k} - \mathbfcal{L}^T \dot{\boldsymbol{\ell}^k})                                   \\
+                        & = \mathbf{\Phi}^k + \Delta t (\mathbfcal{D}^T \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^T \dot{\boldsymbol{\ell}^k})
+\end{align}.
+
+It is obvious from the equation that the change in signed seperation distances $\mathbf{\Phi}$ depends on two factors: the motion of the cells and their growth. The term $\dot{\mathbfcal{C}^k} = \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}$ describes how the colony state changes due to the forces exerted by the constraints, while $\dot{\boldsymbol{\ell}^k}$ describes how the lengths of the cells change. The matrix $\mathbfcal{L}$ consists of the stre
+
+where $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ consists of the normalized stress values acting on a pair of cells for each constraint $\alpha$.
+
+The resulting system of equations to solve for $\boldsymbol{\gamma}$ is thus
+
+\begin{align}
+    \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}\mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}                                                                                                 \\
+    \text{s.t.} 0       & \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^k + \Delta t (\mathbfcal{D}^T \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^T \dot{\boldsymbol{\ell}^k}) \geq 0
+\end{align}
+
+which is a well-known form of a Linear Complementarity Problem (LCP).The missing Lagrange multipliers $\boldsymbol{\gamma}$ can be solved for using various numerical methods such as the the BBPGD algorithm described in \cite{Weady2024} and can then be used to compute the resulting force vector $\mathbfcal{F}(\boldsymbol{\gamma})$ and update the colony state using \autoref{eq:colony_update}.
+
+Weady et al. \cite{Weady2024} improve this basic scheme by introducing a recursive approach to resolve violations of the non-overlapping condition, which can occur due to the first-order approximation of $\mathbf{\Phi}^{k+1}$. We will not go into further detail here, but refer to their supplementary material for a comprehensive description of the full algorithm.
+
+\subsection{Stress Calculation}
+To compute the stress $\boldsymbol{\sigma}$ acting on each cell, we follow the approach of \cite{Weady2024} and sum over all compressive forces projected onto the cell’s main axis. For cell $n$ this gives
+
+\begin{equation}
+    \boldsymbol{\sigma}_n = \sum_{\alpha \in A_n}
+    \frac{1}{2} \left |\hat{\mathbf{t}}_n \cdot \hat{\mathbf{n}}_\alpha \right | f_\alpha,
+\end{equation}
+
+where $\hat{\mathbf{t}}_n$ is the unit vector perpendicular to the cell’s axis, $\hat{\mathbf{n}}_\alpha$ the contact normal of constraint $\alpha$, and $A_n$ the set of all constraints acting on cell $n$. The contact force magnitude $f_\alpha$ depends on the collision model:
+
+\begin{description}
+    \item[Hard model:]  $f_\alpha = \gamma_\alpha$, the Lagrange multiplier associated with constraint $\alpha$.
+    \item[Soft model:] $f_\alpha = k_{cc} \sqrt{d_0}\,\delta^{1.5}$, given by the Hertzian contact law (see \autoref{eq:hertzian_contact_model}).
+\end{description}
 
 
 
