@@ -169,7 +169,7 @@ Each bacterium is modeled as a spherocylinder with an initial length $l = 1$ and
     \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \boldsymbol{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
 \end{equation}
 
-where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ is its angular velocity, and $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$. The constant $\zeta$ is a drag coefficient representing friction with the surrounding fluid, and $\mathbf{r}_{ij}$ is the vector from the center of cell $i$ to the point of contact with cell $j$.
+where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ is its orientation, and $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$. The constant $\zeta$ is a drag coefficient representing friction with the surrounding fluid, and $\mathbf{r}_{ij}$ is the vector from the center of cell $i$ to the point of contact with cell $j$.
 
 \autoref{fig:spherocylinder_model} illustrates the spherocylinder model and the forces and torques acting on cells during a collision.
 
@@ -413,7 +413,7 @@ Substituting the approximation from \autoref{eq:phi_expanded} into the constrain
 
 \subsubsection{Energy Minimization Solution}
 
-This NCP is equivalent to the first-order optimality condition for minimizing a non-convex energy function subject to $\boldsymbol{\gamma} \ge \mathbf{0}$:
+This NCP is equivalent to the first-order optimality condition for minimizing a convex energy function subject to $\boldsymbol{\gamma} \ge \mathbf{0}$:
 
 \begin{equation}
     \small
@@ -486,9 +486,9 @@ All figures presented in the following sections, together with the data used for
 The full simulation framework, including all features and implementations described in this work, is openly available on GitHub at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP}.
 The repository enables reproduction of the presented results as well as adaptation of the framework for related research problems.
 
-\subsection{Pattern Formation Analysis}
+\section{Pattern Formation Analysis}
 
-\subsubsection{Concentric Ring Patterns}
+\subsection{Concentric Ring Patterns}
 
 We begin by validating our implementations through the reproduction of concentric ring patterns that arise under stress-sensitive growth, as reported in~\cite{Weady2024}. Simulations were performed for $\lambda = 10^{-1}, 10^{-2}, 10^{-3}$ using both hard and soft collision models. As shown in \autoref{fig:pattern_formation}, both models successfully produce qualitatively similar ring structures. This demonstrates that the soft collision model, despite its simpler formulation, can capture the essential dynamics responsible for these macroscopic patterns, making it a viable and potentially more efficient option for studying pattern formation.
 
@@ -496,9 +496,14 @@ Importantly, the soft model reproduces the expected concentric rings while emplo
 
 
 
-\subsubsection{Microdommain formation}
+\subsection{Microdommain formation}
 
 ~\cite{You2018}
+
+
+\subsection{Alignment}
+
+~\cite{You_2021}
 
 
 \subsection{Quantitative Comparison}
@@ -606,45 +611,102 @@ To provide a more quantitative assessment, we analyze three key metrics: the rad
 
 \section{Computational Performance}
 
-While both models reproduce the observed patterns, our preliminary analysis suggests significant performance differences. The hard collision model's requirement to solve an LCP at each time step introduces a computational bottleneck, potentially limiting its scalability for very large systems or long simulation times. In contrast, the direct force calculation in the soft collision model is inherently less complex per interaction but typical needs to be computed using a finder time step to avoid instabilities.
+Both models reproduce the observed patterns, but their computational requirements differ substantially.
+The hard collision model requires solving a gradient-based optimization problem at each time step,
+while the soft collision model relies on direct force calculations that can be implemented efficiently
+with standard molecular dynamics techniques such as Linked-Cells or Verlet lists~\cite{Gratl2019}.
+
+\subsection{Computational Complexity and Scalability}
+\label{sec:complexity_scalability}
+
+The key distinction between the two approaches lies in how computations and communication are distributed.
+The hard collision model incurs a significant per-step cost, since each time step requires the iterative
+solution of a global optimization problem. This introduces a computational bottleneck and limits scalability:
+all processors must participate in the solver and exchange data about the entire system at every iteration.
+
+In contrast, the soft collision model evaluates only local interactions. Its computations scale linearly
+with particle number, and locality ensures that communication in parallel implementations is restricted
+to neighboring subdomains. This enables efficient scaling to larger systems and higher processor counts.
+
+\autoref{fig:wall_time_simulation} shows the total wall time for simulations of both models
+as a function of particle number for $\lambda = 10^{-2}$.
+The soft model consistently outperforms the hard model, with a speedup factor of about 1.8x across all tested system sizes.
 
 
-Moreover solving a LCP requires global information about the system, as it is essentially optimizing a global system of constraints. This can lead to increased communication overhead in parallel implementations, as all processors take part in an iterative solver and are required to share information about all particles in the system during each optimization step.
+% 4. Per-Particle Cost
+
+% Wall time per particle vs. particle number (log-log).
+% Motivation: Reveal scaling law .
 
 
-In contrast, the soft collision model only requires local information about neighboring particles to compute forces, and can be efficiencyly computed using common molecular dynamics techniques such as cell lists or Verlet lists (See~\cite{Gratl2019}). This locality greatly reduces the amount of inter-processor communication needed in a parallel implementation, as each processor can largely operate independently on its own subset of particles, only needing to occasionally exchange information about particles near the boundaries of its domain.
+% 5. Communication vs. Computation Breakdown
+
+% Fraction of time spent in:
+% Force evaluation (soft model)
+% Solver iterations (hard model)
+% Communication (MPI)
 
 
-\begin{figure}
+\subsection{Critical Time Step}
+
+While the soft collision model is cheaper per interaction, it typically requires smaller integration time steps
+to maintain numerical stability. This constraint can offset some of its per-step performance advantage
+in long simulations, depending on the stiffness of the system.
+
+\subsection{Solver Behavior in the Hard Model}
+
+\autoref{fig:bbpgd_iterations_simulation} illustrates the number of ReLCP solver iterations required per time step in the hard collision model.
+
+
+\subsection{Strong and Weak Scaling}
+
+TODO
+
+\subsection{Insights into BBPGD Iterations}
+
+TODO
+
+
+
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparisons/wall_time_simulation.png}
-    \caption{Comparison of the total simulation time for the hard and soft collision models over number of particles. The soft model is generally faster by a factor of 1.8.}
-    \label{figure:wall_time_simulation}
+    \caption{Total simulation time for the hard and soft collision models as a function of particle number. The soft model is generally faster by a factor of 1.8.} \label{fig:wall_time_simulation}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparisons/bbpgd_iterations_simulation.png}
-    \caption{ReLCP solver iterations for the hard collision model. To maintain constant particle separation, the hard model needs to solve an LCP iteratively at each time step. The required number of iterations increases with the number of particles.}
-    \label{figure:bbpgd_iterations_simulation}
+    \caption{ReLCP solver iterations in the hard collision model. To enforce particle separation, the model must iteratively solve an LCP at each time step, with the required number of iterations increasing with particle count.} \label{fig:bbpgd_iterations_simulation}
 \end{figure}
 
 \newpage
+
 \section{Discussion}
+
 \subsection{Model Selection Insights}
 
+The choice between hard and soft collision models involves a clear trade-off between physical fidelity and computational efficiency.
+The hard model enforces strict non-overlap, which can be useful for capturing precise mechanical interactions or stress distributions in densely packed cell populations. However, it comes at considerable computational cost, requiring iterative global solvers and limiting scalability to large systems or long simulations.
 
-The choice between hard and soft collision models for simulating proliferating cell collectives presents a clear trade-off. The hard model offers precision in enforcing non-overlap but at a considerable computational cost due to LCP solving. The soft model, by employing continuous potentials, offers a potentially much faster simulation pathway, crucially important for exploring large-scale systems or parameter spaces. For many biological pattern formation scenarios, where the precise moment of contact is less critical than the emergent macroscopic behavior, the computational efficiency of the soft model makes it a highly attractive option.
+By contrast, the soft model uses continuous repulsive potentials to approximate collisions. This approach is computationally efficient and scalable, making it well-suited for exploring large colonies or wide parameter spaces.
+
+Importantly, for many emergent pattern-formation scenarios—such as concentric ring formation—the exact enforcement of non-overlap seems less critical. Other factors, such as stress-dependent growth and a use of an adequate time step, appear to dominate the macroscopic behavior.
+
+In this context, the soft model provides a realistic approximation of cellular interactions: biological cells are deformable, and mechanical interactions in vivo are rarely perfectly rigid. Indeed, recent studies \cite{Khan_2024, Ghosh2015, SantosDiaz2025} suggest that finite stiffness or soft repulsive forces are sufficient to capture key structural and morphological features of growing bacterial colonies.
 
 \subsection{Biological Relevance}
 
-Our findings suggest that the simplified mechanics of the soft collision model are sufficient to recapitulate key emergent behaviors like concentric ring formation. This implies that the fundamental drivers of these patterns may be robust to the specific details of collision resolution. The biological plausibility of the soft model lies in its ability to represent continuous pressure and proximity effects between cells, which might be more representative of cellular interactions than instantaneous, purely geometric constraints. The potential for faster simulations with the soft model could enable more extensive exploration of how proliferation rates, cell mechanics, and environmental factors influence colony morphogenesis.
+Our results indicate that the soft collision model successfully reproduces major emergent patterns despite its simplified mechanics. This aligns with the view that colony-level behaviors are robust to the details of individual cell interactions, provided that key features like stress-dependent growth are captured.
 
-\newpage
+Furthermore, the soft model naturally represents continuous pressure and proximity effects, which are biologically more plausible than instantaneous, perfectly rigid constraints. This makes it a compelling choice for simulating biological systems where cells exhibit elasticity and deformability.
 
 \section{Conclusion}
 
-This work demonstrates that a computationally efficient soft collision model can effectively simulate proliferating cell collectives and reproduce complex emergent patterns observed in bacterial colonies, such as concentric rings. While the hard collision model provides exact non-overlap, its computational demands are substantial. The soft collision model offers a compelling alternative, promising significantly improved performance and scalability without a critical loss in qualitative pattern formation fidelity. This makes the soft approach a valuable tool for future large-scale simulations in computational biology and active matter research. Future work will focus on quantitatively detailing these performance benefits and exploring the soft model's behavior under more varied growth and environmental conditions.
+This paper demonstrates that a computationally efficient soft collision model can reproduce complex emergent patterns in proliferating cell collectives, including concentric rings observed in bacterial colonies.
+
+While hard collision models offer exact non-overlap and may be valuable when studying precise mechanical stresses or jamming phenomena, they are computationally intensive and less scalable. Soft models, using finite repulsion to approximate contact interactions, achieve a realistic balance between biological plausibility and computational performance.
+
 
 \newpage
 \tableofcontents
