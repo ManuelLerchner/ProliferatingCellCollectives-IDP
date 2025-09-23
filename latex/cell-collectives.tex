@@ -174,6 +174,29 @@ where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ i
 
 \autoref{fig:spherocylinder_model} illustrates the spherocylinder model and the forces and torques acting on cells during a collision.
 
+
+\subsection{Cell Growth and Division}
+
+Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024}:
+
+\begin{equation} \label{eq:growth}
+    \dot{{\ell_i}} = \frac{{\ell_i}}{\tau} e^{\lambda \sigma_i}
+\end{equation}
+
+where $\tau$ is a characteristic time scale, $\sigma_i$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. This parameter controls the growth rate and ultimately the macroscopic pattern formation of the colony. The stress $\sigma_i$ on each cell is computed by projecting all contact forces onto the cell's longitudinal axis, defined by the unit tangent vector $\hat{\mathbf{t}}_i$~\cite{Weady2024}:
+
+\begin{equation} \label{eq:stress}
+    \sigma_i = \sum_{j} \frac{1}{2}\, \hat{\mathbf t}_i \cdot \mathbf F_{ij}
+\end{equation}
+
+
+A cell divides into two daughter cells once it reaches a critical length ($\ell_\text{div} = 2\ell_0$). To prevent artificial synchronization of division events, we introduce randomness in the daughter cells' lengths, which are randomly set between $0.98\ell_0$ and $1.02\ell_0$, following the approach in~\cite{Khan_2024}.
+
+\subsection{Rotational Diffusion}
+
+Moreover, we add a small random rotational perturbation to the orientation of all cells at each timestep to account for Brownian rotational diffusion. This small pertubation ensures that the cells break perfect alignment over time, which is important for realistic colony morphology.
+
+
 \begin{figure}[H]
     \centering
 
@@ -260,27 +283,6 @@ where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ i
     \label{fig:spherocylinder_model}
 
 \end{figure}
-
-\subsection{Cell Growth and Division}
-
-Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024}:
-
-\begin{equation} \label{eq:growth}
-    \dot{{\ell_i}} = \frac{{\ell_i}}{\tau} e^{\lambda \sigma_i}
-\end{equation}
-
-where $\tau$ is a characteristic time scale, $\sigma_i$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. This parameter controls the growth rate and ultimately the macroscopic pattern formation of the colony. The stress $\sigma_i$ on each cell is computed by projecting all contact forces onto the cell's longitudinal axis, defined by the unit tangent vector $\hat{\mathbf{t}}_i$~\cite{Weady2024}:
-
-\begin{equation} \label{eq:stress}
-    \sigma_i = \sum_{j} \frac{1}{2}\, \hat{\mathbf t}_i \cdot \mathbf F_{ij}
-\end{equation}
-
-
-A cell divides into two daughter cells once it reaches a critical length ($\ell_\text{div} = 2\ell_0$). To prevent artificial synchronization of division events, we introduce randomness in the daughter cells' lengths, which are randomly set between $0.98\ell_0$ and $1.02\ell_0$, following the approach in~\cite{Khan_2024}.
-
-\subsection{Rotational Diffusion}
-
-Moreover, we add a small random rotational perturbation to the orientation of all cells at each timestep to account for Brownian rotational diffusion. This small pertubation ensures that the cells break perfect alignment over time, which is important for realistic colony morphology.
 
 \newpage
 
@@ -447,7 +449,7 @@ This NCP is equivalent to the first-order optimality condition for minimizing a 
         \boldsymbol{\gamma}^\top\boldsymbol{\Phi}^k
          & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-        \left( \frac{\boldsymbol{\ell}}{\tau} \circ e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)                                \\
+        \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)                                \\
     \end{aligned}
 \end{equation}
 
