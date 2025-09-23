@@ -32,6 +32,7 @@
 \usepackage{tcolorbox}
 \usepackage{empheq}
 \usepackage{varwidth}
+\usepackage{balance}
 
 \usepackage[ngerman,main=english]{babel}
 
@@ -47,10 +48,10 @@
 % #4 = radius
 \newcommand{\drawSpherocyl}[4]{
     \begin{scope}[shift={(#1)},rotate=#2]
-        \draw[line width=1pt,rounded corners=6pt] (-#3,#4) -- (#3,#4);
-        \draw[line width=1pt,rounded corners=6pt] (-#3,-#4) -- (#3,-#4);
-        \draw[line width=1pt,rounded corners=6pt] (#3,-#4) arc[start angle=-90,end angle=90,radius=#4];
-        \draw[line width=1pt,rounded corners=6pt] (-#3,#4) arc[start angle=90,end angle=270,radius=#4];
+        \draw[line width=1pt,rounded corners=6pt] (-#3 + #4,#4) -- (#3 - #4,#4);
+        \draw[line width=1pt,rounded corners=6pt] (-#3 + #4,-#4) -- (#3 - #4,-#4);
+        \draw[line width=1pt,rounded corners=6pt] (#3 - #4,-#4) arc[start angle=-90,end angle=90,radius=#4];
+        \draw[line width=1pt,rounded corners=6pt] (-#3 + #4,#4) arc[start angle=90,end angle=270,radius=#4];
         \fill [black] (#1) circle (2pt);
     \end{scope}
 }
@@ -106,7 +107,7 @@
 \section{Introduction}
 \subsection{Biological Motivation}
 
-The collective behaviors of biological entities, ranging from simple microbial colonies to complex multicellular tissues, are fundamental to unraveling the intricate processes of life. These systems often exhibit emergent spatio-temporal patterns, driven by the interplay of simple local interactions and individual growth dynamics. Bacterial colonies, for instance, showcase remarkable self-organization, developing sophisticated spatial structures in response to environmental stimuli. Specifically, experimental observations have highlighted the phenomenon of growth rate reduction in the colony's center due to mechanical pressure exerted by surrounding cells~\cite{Wittmann2023}. For various bacteria, such as E. coli, Bacillus subtilis, and Proteus mirabilis, and fungi like Setosphaeria rostrata and Exserohilum Turcicum, which experience different local cell densities across their growth phases, this pressure-induced deceleration contributes to the formation of characteristic concentric ring patterns~\cite{YAMAZAKI2005136}.
+The collective behaviors of biological entities, ranging from simple microbial colonies to complex multicellular tissues, are fundamental to understanding the intricate processes of life. These systems often exhibit emergent spatio-temporal patterns, driven by the interplay of simple local interactions and individual growth dynamics. Bacterial colonies, for instance, showcase remarkable self-organization, developing sophisticated spatial structures in response to environmental stimuli. Specifically, experimental observations have highlighted the phenomenon of growth rate reduction in the colony's center due to mechanical pressure exerted by surrounding cells~\cite{Wittmann2023}. For various bacteria, such as E. coli, Bacillus subtilis, and Proteus mirabilis, and fungi like Setosphaeria rostrata and Exserohilum Turcicum, which experience different local cell densities across their growth phases, this pressure-induced deceleration contributes to the formation of characteristic concentric ring patterns~\cite{YAMAZAKI2005136}.
 
 \begin{figure}
     \centering
@@ -115,7 +116,7 @@ The collective behaviors of biological entities, ranging from simple microbial c
     \label{fig:exserohilum_turcicum}
 \end{figure}
 
-These biologically fascinating phenomena pose significant computational modeling challenges, demanding the accurate integration of both mechanical cell interactions and proliferation dynamics.
+These biologically fascinating phenomena pose significant computational challenges, demanding the accurate integration of both mechanical cell interactions and proliferation dynamics.
 
 This work is directly inspired by these observations, particularly the formation of concentric rings in growing bacterial communities. These patterns represent a key manifestation of self-organization under controlled conditions, as further explored in~\cite{Weady2024}. Comprehending these emergent structures necessitates robust computational models capable of capturing the dynamic interplay between individual cell mechanics, intercellular interactions, and proliferation.
 
@@ -163,7 +164,7 @@ The mechanical representation of cells is a critical factor in determining simul
 
 We model the cell collective using a rigid rod representation, where each cell has a defined length and radius. This approach is common in models of cellular collectives~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015} and is justified by experimental evidence, closely matching the morphology of common bacteria and fungi such as E. coli and Setosphaeria rostrata (see \autoref{fig:exserohilum_turcicum}).
 
-Each bacterium is modeled as a spherocylinder with an initial length $l = 1$ and diameter $d = 0.5$. At the bacterial scale, the Reynolds number is extremely small (Re $\ll 1$), placing the system firmly in the overdamped regime where viscous forces dominate inertial forces~\cite{datta2024lifelowreynoldsnumber}. Consequently, the dynamics are governed by the overdamped Langevin equation:
+Each bacterium is modeled as a spherocylinder with an initial length $\ell_0 = 1$ and diameter $d = 0.5$. At the bacterial scale, the Reynolds number is extremely small (Re $\ll 1$), placing the system firmly in the overdamped regime where viscous forces dominate inertial forces~\cite{datta2024lifelowreynoldsnumber}. Consequently, the dynamics are governed by the overdamped Langevin equation:
 
 \begin{equation} \label{eq:overdamped_langevin}
     \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \boldsymbol{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
@@ -180,28 +181,28 @@ where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ i
     \begin{tikzpicture}[line cap=round,line join=round,>=Stealth]
 
         % --- Variables ---
-        \coordinate (xi) at (0,0);
-        \coordinate (xj) at (1,-1.31);
+        \coordinate (xi) at (0.8,-0.5);
+        \coordinate (xj) at (1.4,-1.8);
 
         \coordinate (x) at (-3,-0.5);
         \def\R{0.5}
 
-        \drawSpherocyl{xi}{-10}{1.2}{\R}
-        \drawSpherocyl{xj}{15}{1}{\R}
+        \drawSpherocyl{xi}{-10}{1.4}{\R}
+        \drawSpherocyl{xj}{15}{1.3}{\R}
 
-        \coordinate (contact) at  (1.33,-0.7);
+        \coordinate (contact) at  (1.85,-1.15);
 
         % Collision point
         \fill[black] (contact) circle (2pt) node[above right] {};
 
         % Force vector
-        \draw[->,thick,red] (contact) -- ++(-0.258,0.965) node[pos=0.8,left] {$\mathbf{F}_{ij}$};
+        \draw[->,thick,red] (contact) -- ++($0.9*(-0.258,0.965)$) node[pos=0.9,left] {$\mathbf{F}_{ij}$};
 
         % Torque lever arm
         \draw[->,thick,blue,dashed] (xi) -- (contact) node[pos=0.2,below] {$\mathbf{r}_{ij}$};
 
         % Force vector
-        \draw[->,thick,red] (contact) -- ++($0.7*(0.258,-0.965)$) node[pos=0.8,right] {$\mathbf{F}_{ji}$};
+        \draw[->,thick,red] (contact) -- ++($0.8*(0.258,-0.965)$) node[pos=0.6,right] {$\mathbf{F}_{ji}$};
 
         % Torque lever arm
         \draw[->,thick,blue,dashed] (xj) -- (contact) node[pos=0.3,left] {$\mathbf{r}_{ji}$};
@@ -214,14 +215,33 @@ where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ i
         \node at (xj) [below] {$\mathbf{x}_j$};
 
 
-        \drawSpherocyl{x}{0}{0.5}{\R}
+        \drawSpherocyl{x}{0}{2}{\R};
+
+        % Add division constriction: two daughters forming
+        \coordinate (left_daughter) at ($(x)+(-1,-1.25)$);
+        \coordinate (right_daughter) at ($(x)+(1, -1.25)$);
+
+        \drawSpherocyl{left_daughter}{0}{1}{\R};
+        \drawSpherocyl{right_daughter}{0}{1}{\R};
+
 
         % label at x
         \node at (x) [below] {$\mathbf{x}$};
+        % label at left daughter
+        \node at (left_daughter) [below] {$\mathbf{x}_\text{left}$};
+        % label at right daughter
+        \node at (right_daughter) [below] {$\mathbf{x}_\text{right}$};
 
-        \draw[<->,thick,dashed] ($(x) + (-0.5-\R,-1)$) -- ($(x) + (0.5+\R,-1)$) node[midway,below] {$\ell$};
+        \draw[<->,thick,dashed] ($(x) + (-2,1)$) -- ($(x) + (2,1)$) node[midway,above] {$2\ell_0$};
 
-        \draw[<->,thick,dashed] ($(x) + (-0.5-\R-\R,-\R)$) -- ($(x) + (-0.5-\R-\R,\R)$) node[midway,left] {$d$};
+        \draw[<->,thick,dashed] ($(x) + (-1.5-\R-\R,-\R)$) -- ($(x) + (-1.5-\R-\R,\R)$) node[midway,left] {$d$};
+
+        \draw[<->,thick,dashed] ($(right_daughter) + (-2.5-\R-\R,-\R)$) -- ($(right_daughter) + (-2.5-\R-\R,\R)$) node[midway,left] {$d$};
+
+        \draw[<->,thick,dashed] ($(left_daughter) + (-1,-1)$) -- ($(left_daughter) + (1,-1)$) node[midway,below] {$\ell_0$};
+
+        \draw[<->,thick,dashed] ($(right_daughter) + (-1,-1)$) -- ($(right_daughter) + (1,-1)$) node[midway,below] {$\ell_0$};
+
 
 
         % Resulting rotation around xi
@@ -229,13 +249,14 @@ where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ i
         ($(xi)+(0.6,0.5)$) arc[start angle=0,end angle=160,radius=0.6]
         node[midway, below] {$\boldsymbol{\omega}_i$};
 
+
         % Resulting rotation around xj
         \draw[->,thick,orange]
         ($(xj)+(0.7,-0.5)$) arc[start angle=0,end angle=-150,radius=0.6]
         node[midway, above] {$\boldsymbol{\omega}_j$};
 
     \end{tikzpicture}
-    \caption{2D schematic of the spherocylinder cell model. Each cell has length $\ell$ and diameter $d$. Collisions generate contact forces $\mathbf{F}_{ij}$ and $\mathbf{F}_{ji}$ (red). Torque arises from the cross product of the lever arm $\mathbf{r}_{ij}$ (dashed blue) and the contact force, leading to changes in orientation $\boldsymbol{\omega}$ (orange).}
+    \caption{2D schematic of the spherocylinder cell model. Each cell is represented as a rigid rod with length $\ell$ and diameter $d$. Cells grow along their longitudinal axis and divide into two daughter cells upon reaching a critical length of $2\ell_0$. Collisions generate contact forces $\mathbf{F}_{ij}$ and $\mathbf{F}_{ji}$ (red). Torque arises from the cross product of the lever arm $\mathbf{r}_{ij}$ (dashed blue) and the contact force, leading to changes in orientation $\boldsymbol{\omega}$ (orange).}
     \label{fig:spherocylinder_model}
 
 \end{figure}
@@ -256,6 +277,10 @@ where $\tau$ is a characteristic time scale, $\sigma_i$ is the compressive stres
 
 
 A cell divides into two daughter cells once it reaches a critical length ($\ell_\text{div} = 2\ell_0$). To prevent artificial synchronization of division events, we introduce randomness in the daughter cells' lengths, which are randomly set between $0.98\ell_0$ and $1.02\ell_0$, following the approach in~\cite{Khan_2024}.
+
+\subsection{Rotational Diffusion}
+
+Moreover, we add a small random rotational perturbation to the orientation of all cells at each timestep to account for Brownian rotational diffusion. This small pertubation ensures that the cells break perfect alignment over time, which is important for realistic colony morphology.
 
 \newpage
 
@@ -681,6 +706,7 @@ TODO
 \end{figure}
 
 \newpage
+\clearpage
 
 \section{Discussion}
 
@@ -707,12 +733,29 @@ This paper demonstrates that a computationally efficient soft collision model ca
 
 While hard collision models offer exact non-overlap and may be valuable when studying precise mechanical stresses or jamming phenomena, they are computationally intensive and less scalable. Soft models, using finite repulsion to approximate contact interactions, achieve a realistic balance between biological plausibility and computational performance.
 
+\newpage
+\section{Future Work}
+
+The current implementation provides a functional baseline for hard collision modeling, yet significant opportunities exist for performance optimization in the constraint solver.
+
+\subsection{Hard Collision Model}
+The present PETSc-based implementation of the ReLCP constraint solver faces computational bottlenecks that limit its scalability, primarily due to dynamic memory management strategies for constraint matrices and vectors. While an allocation factor mitigates frequent reallocations, sudden increases in collision events still trigger costly memory recopies. Furthermore, allocated memory is not reused between solver iterations, necessitating complete cleanup and reallocation at each time step.
+
+Future work should focus on developing a more sophisticated memory management strategy that leverages PETSc's advanced features, such as memory pooling for constraint matrices and vectors, matrix preallocation routines with accurate nonzero pattern prediction, and incremental growth strategies to minimize MPI synchronization overhead.
+
+\subsection{Soft Collision Model}
+
+Beyond optimizing the hard model's solver, a promising avenue is the acceleration of the soft model using advanced molecular dynamics techniques. Libraries like AutoPas\cite{AutoPasGithub,Gratl2019,Newcome2023} offer a node-level auto-tuning framework specifically designed for particle simulations.AutoPas can dynamically select the optimal combination of algorithms (e.g., for particle interaction traversal and container data structures) tailored to the specific simulation scenario and underlying hardware architecture.
+
+Integrating such a framework could automatically accelerate the computation of repulsive forces in the soft collision model, especially for large-scale colonies where efficient neighbor-search and force evaluation are critical.
+
+\newpage
+
+\balance
+\bibliographystyle{IEEEtran}
+\bibliography{literature}
 
 \newpage
 \tableofcontents
-
-
-\bibliographystyle{IEEEtran}
-\bibliography{literature}
 
 \end{document}
