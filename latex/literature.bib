@@ -241,3 +241,25 @@
   year      = {2021},
   month     = jan
 }
+
+@article{Newcome2023,
+  title    = {Towards auto-tuning Multi-Site Molecular Dynamics simulations with AutoPas},
+  journal  = {Journal of Computational and Applied Mathematics},
+  volume   = {433},
+  pages    = {115278},
+  year     = {2023},
+  issn     = {0377-0427},
+  doi      = {https://doi.org/10.1016/j.cam.2023.115278},
+  url      = {https://www.sciencedirect.com/science/article/pii/S0377042723002224},
+  author   = {Samuel James Newcome and Fabio Alexander Gratl and Philipp Neumann and Hans-Joachim Bungartz},
+  keywords = {Molecular Dynamics, High performance computing, Auto-tuning, AutoPas, Multi-Site Molecular Dynamics},
+  abstract = {There exists an extensive literature of algorithms for short-range pairwise interactions in particle simulations, however, there is no single algorithm that performs the most optimally in every scenario, motivating the use of auto-tuning to select the optimal pairwise interaction algorithm. Previous efforts to auto-tune Molecular Dynamics have focused on Single-Site Molecular Dynamics, where the computational cost for the intermolecular force calculation is constant. Alternatively, for Multi-Site Molecular Dynamics, the cost of this calculation varies with the number of sites, which, as we show in this paper, can result in different optimal algorithms. Despite this further benefit for auto-tuning, it has yet to be applied to Multi-Site Molecules. In this paper, we introduce an implementation of Multi-Site Molecular Dynamics that is integrated with AutoPas. Using this implementation, we analyse how the relative performance between these algorithms varies as the number of sites varies, for both homogeneous and heterogeneous molecule distributions, and for two different hardware. Furthermore, we demonstrate the advantage of auto-tuning in the context of Multi-Site Molecular Dynamics using the node-level short-range particle simulation library, AutoPas.}
+}
+
+@misc{AutoPasGithub,
+  author       = {Gratl, Florian A. and Seckler, Stefan and Bungartz, Hans-Joachim and Neumann, Peter and others},
+  title        = {AutoPas: A node-level auto-tuned particle simulation library},
+  howpublished = {\url{https://github.com/AutoPas/AutoPas}},
+  year         = {2019},
+  note         = {Version 2.0.0; BSD-2-Clause License}
+}
