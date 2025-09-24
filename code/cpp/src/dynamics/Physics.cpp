@@ -16,6 +16,83 @@
 #include "util/DynamicPetsc.h"
 #include "util/PetscRaii.h"
 
+// initialize static random number generator
+std::mt19937 gen;
+
+VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
+  // l is a (global_num_particles, 1) vector
+  VecWrapper l;
+  VecCreate(PETSC_COMM_WORLD, l.get_ref());
+  VecSetSizes(l, local_particles.size(), PETSC_DETERMINE);
+  VecSetFromOptions(l);
+
+  // Set values using global indices
+  for (int i = 0; i < local_particles.size(); i++) {
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLength(), INSERT_VALUES));
+  }
+
+  VecAssemblyBegin(l);
+  VecAssemblyEnd(l);
+
+  return l;
+}
+
+void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations, PhysicsConfig physics_config) {
+  PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(U_ext));
+
+  // Create a vector for external forces
+  // PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(F_ext_workspace));
+
+  // // U_ext = M * F_ext
+  // PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F_ext_workspace, U_ext));
+
+  // Add Brownian motion
+  if (physics_config.temperature > 0 && constraint_iterations == 0) {
+    for (const auto& particle : local_particles) {
+      auto brownian_vel = particle.calculateBrownianVelocity(physics_config.temperature, physics_config.monolayer, physics_config.xi, dt, gen);
+
+      PetscInt ix[] = {particle.getGID() * 6, particle.getGID() * 6 + 1, particle.getGID() * 6 + 2, particle.getGID() * 6 + 3, particle.getGID() * 6 + 4, particle.getGID() * 6 + 5};
+
+      PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(U_ext, 6, ix, brownian_vel.data(), ADD_VALUES));
+    }
+  }
+
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyBegin(U_ext));
+  PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(U_ext));
+}
+
+void calculate_impedance_inplace(VecWrapper& stresses_and_impedance_out, double lambda) {
+  // I is a (num_bodies, 1) vector
+  // I = np.exp(-lamb * stress_matrix)
+  // This function modifies the input vector in-place.
+
+  VecScale(stresses_and_impedance_out, -lambda);
+  VecExp(stresses_and_impedance_out);
+}
+
+void calculate_growth_rate_vector(const VecWrapper& l, VecWrapper& sigma_and_impedance_out, double lambda, double tau, VecWrapper& growth_rates_out) {
+  // growth rate is a (num_bodies, 1) vector
+  // growth_rate = l / tau * I
+
+  calculate_impedance_inplace(sigma_and_impedance_out, lambda);
+
+  // sigma_and_impedance_out now contains the impedance
+  VecPointwiseMult(growth_rates_out, l, sigma_and_impedance_out);
+  VecScale(growth_rates_out, 1 / tau);
+}
+
+void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& stress_curr_out, VecWrapper& impedance_curr_out) {
+  // Use impedance_curr_out as a temporary vector to store stresses (sigma)
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(L, gamma, stress_curr_out));
+
+  // We now have stresses in impedance_curr_out.
+  // We need to calculate the growth rate, which will overwrite ldot_curr_out,
+  // and the final impedance, which will overwrite the stresses in impedance_curr_out.
+
+  VecCopy(stress_curr_out, impedance_curr_out);
+  calculate_growth_rate_vector(l, impedance_curr_out, lambda, tau, ldot_curr_out);
+};
+
 void calculate_jacobian_local(
     MatWrapper& D,
     const std::vector<Constraint>& local_constraints,

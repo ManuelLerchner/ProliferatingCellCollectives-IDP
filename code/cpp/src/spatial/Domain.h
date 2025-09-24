@@ -4,7 +4,6 @@
 #include <memory>
 #include <vector>
 
-#include "dynamics/PhysicsEngine.h"
 #include "logger/ConstraintLogger.h"
 #include "logger/DomainLogger.h"
 #include "logger/ParticleLogger.h"
@@ -14,14 +13,14 @@
 
 class Domain {
  public:
-  Domain(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, bool preserve_existing = false, size_t step = 0, const std::string& output_dir = "./vtk_output");
+  Domain(const SimulationParameters params, bool preserve_existing = false, size_t step = 0, const std::string& output_dir = "./vtk_output");
 
   void queueNewParticles(std::vector<Particle> particles);
   void commitNewParticles();
   void run();
 
   // Initialize simulation state from VTK file/directory
-  static Domain initializeFromVTK(const SimulationConfig& sim_config, const PhysicsConfig& physics_config, const SolverConfig& solver_config, const std::string& vtk_path, const std::string& output_dir);
+  static Domain initializeFromVTK(const SimulationParameters& params, const std::string& vtk_path, const std::string& output_dir);
 
  private:
   void rebalance();
@@ -44,11 +43,9 @@ class Domain {
   void assignGlobalIDsToNewParticles();
   void assignGlobalIDs();
 
-  void adjustDt(const PhysicsEngine::SolverSolution& solver_solution);
+  void adjustDt(const ParticleManager::SolverSolution& solver_solution);
 
-  SimulationConfig sim_config_;
-  PhysicsConfig physics_config_;
-  SolverConfig solver_config_;
+  SimulationParameters params_;
 
   std::unique_ptr<ParticleManager> particle_manager_;
   std::unique_ptr<vtk::ParticleLogger> particle_logger_;

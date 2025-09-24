@@ -17,18 +17,16 @@
 
 #include "dynamics/Constraint.h"
 #include "dynamics/Physics.h"
-#include "dynamics/PhysicsEngine.h"
+#include "dynamics/models/Hard.h"
+#include "dynamics/models/Soft.h"
 #include "logger/ParticleLogger.h"
 
-ParticleManager::ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode)
-    : sim_config_(sim_config), physics_config_(physics_config), solver_config_(solver_config), particle_logger_(particle_logger), constraint_logger_(constraint_logger), mode_(mode) {
-  physics_engine = std::make_unique<PhysicsEngine>(physics_config, solver_config);
+ParticleManager::ParticleManager(SimulationParameters params, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode)
+    : params_(params), particle_logger_(particle_logger), constraint_logger_(constraint_logger), mode_(mode), collision_detector_(CollisionDetector(params.solver_config.tolerance, params.solver_config.linked_cell_size)) {
 }
 
 // Updated move function using helpers
-void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution) {
-  double dt = sim_config_.dt_s;
-
+void ParticleManager::moveLocalParticlesFromSolution(const MovementSolution& solution, double dt) {
   // Collect all needed global indices (7 per particle)
   std::vector<PetscInt> indicesConfig;
   std::vector<PetscInt> indicesVelocity;
@@ -88,9 +86,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const PhysicsEngine::Moveme
   cleanupScatteredResources(dU_local, dU_scatter, dU_is);
 }
 
-void ParticleManager::growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution) {
-  double dt = sim_config_.dt_s;
-
+void ParticleManager::growLocalParticlesFromSolution(const GrowthSolution& solution, double dt) {
   // Collect needed global indices and maintain mapping
   std::vector<PetscInt> indices;
   std::vector<size_t> local_indices;  // Maps to position in local_particles
@@ -144,16 +140,18 @@ std::vector<Particle> ParticleManager::divideParticles() {
   return new_particles;
 }
 
-PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()> exchangeGhostParticles) {
+ParticleManager::SolverSolution ParticleManager::step(int i, std::function<void()> exchangeGhostParticles) {
   for (auto& p : local_particles) {
     p.reset();
   }
 
+  double dt = params_.sim_config.dt_s;
+
   if (mode_ == "soft") {
-    auto solver_solution = physics_engine->solveSoftPotential(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+    auto solver_solution = solveSoftPotential(*this, collision_detector_, params_, dt, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
     return solver_solution;
   } else if (mode_ == "hard") {
-    auto solver_solution = physics_engine->solveConstraintsRecursive(*this, sim_config_.dt_s, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
+    auto solver_solution = solveHardModel(*this, collision_detector_, params_, dt, i, exchangeGhostParticles, particle_logger_, constraint_logger_);
     return solver_solution;
   }
 
@@ -161,14 +159,14 @@ PhysicsEngine::SolverSolution ParticleManager::step(int i, std::function<void()>
 }
 
 void ParticleManager::updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
-  physics_engine->updateCollisionDetectorBounds(min_bounds, max_bounds);
+  collision_detector_.updateBounds(min_bounds, max_bounds);
 }
 
 void ParticleManager::printProgress(int current_iteration, int total_iterations) const {
   PetscPrintf(PETSC_COMM_WORLD, "\rProgress: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d",
               current_iteration, total_iterations,
               (double)current_iteration / total_iterations * 100,
-              (double)current_iteration * sim_config_.dt_s / 60,
-              (double)total_iterations * sim_config_.dt_s / 60,
+              (double)current_iteration * params_.sim_config.dt_s / 60,
+              (double)total_iterations * params_.sim_config.dt_s / 60,
               global_particle_count);
 }

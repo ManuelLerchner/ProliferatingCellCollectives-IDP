@@ -14,8 +14,7 @@
 std::optional<Domain> createDomain(const SimulationParameters& params) {
   if (params.starter_vtk.empty()) {
     // Create a new domain
-    Domain domain(params.sim_config, params.physics_config,
-                  params.solver_config, false, 0, params.mode);
+    Domain domain(params, false, 0, params.mode);
 
     // Add initial particle
     int rank;
@@ -31,8 +30,7 @@ std::optional<Domain> createDomain(const SimulationParameters& params) {
     return domain;
   } else {
     // Initialize from VTK file
-    return Domain::initializeFromVTK(params.sim_config, params.physics_config,
-                                     params.solver_config,
+    return Domain::initializeFromVTK(params,
                                      params.starter_vtk, params.mode);
   }
 }
