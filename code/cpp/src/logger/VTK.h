@@ -394,7 +394,6 @@ void VTKDataLogger<T>::writePoints(std::ofstream& out) {
 template <typename T>
 void VTKDataLogger<T>::writeCells(std::ofstream& out) {
   const auto& connectivity = grid.GetCells().GetConnectivity();
-  if (connectivity.empty()) return;
 
   out << "      <Cells>\n";
 
