@@ -149,8 +149,8 @@ SimulationParameters parseCommandLineOrDefaults() {
   // Default configs
   params.sim_config = {
       .dt_s = 0.5 * 1e-4,
-      .end_radius = 42,
-      .log_frequency_seconds = 0.01,
+      .end_radius = 50,
+      .log_frequency_seconds = 0.1,
       .min_box_size = {2.0, 2.0, 0},
   };
 
