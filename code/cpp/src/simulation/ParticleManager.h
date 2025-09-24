@@ -8,24 +8,45 @@
 #include <string>
 #include <vector>
 
-#include "dynamics/PhysicsEngine.h"
 #include "logger/ConstraintLogger.h"
 #include "logger/ParticleLogger.h"
 #include "simulation/Particle.h"
+#include "spatial/CollisionDetector.h"
 #include "util/Config.h"
+#include "util/PetscRaii.h"
 
 class ParticleManager {
  public:
-  ParticleManager(SimulationConfig sim_config, PhysicsConfig physics_config, SolverConfig solver_config, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode);
+  struct MovementSolution {
+    const VecWrapper& dC;
+    const VecWrapper& f;
+    const VecWrapper& u;
+  };
+
+  struct GrowthSolution {
+    const VecWrapper& dL;
+    const VecWrapper& impedance;
+    const VecWrapper& stress;
+  };
+
+  struct SolverSolution {
+    std::vector<Constraint> constraints;
+    int constraint_iterations;
+    long long bbpgd_iterations;
+    double residual;
+    double max_overlap;
+  };
+
+  ParticleManager(SimulationParameters params, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode);
 
   void queueNewParticles(Particle p);
   void commitNewParticles();
 
-  void moveLocalParticlesFromSolution(const PhysicsEngine::MovementSolution& solution);
-  void growLocalParticlesFromSolution(const PhysicsEngine::GrowthSolution& solution);
+  void moveLocalParticlesFromSolution(const MovementSolution& solution, double dt);
+  void growLocalParticlesFromSolution(const GrowthSolution& solution, double dt);
 
   std::vector<Particle> divideParticles();
-  PhysicsEngine::SolverSolution step(int i, std::function<void()> exchangeGhostParticles);
+  SolverSolution step(int i, std::function<void()> exchangeGhostParticles);
 
   void redistributeParticles();
   void updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
@@ -34,11 +55,8 @@ class ParticleManager {
   std::vector<Particle> ghost_particles;
   PetscInt global_particle_count = 0;
 
-  std::unique_ptr<PhysicsEngine> physics_engine;
-
-  SimulationConfig sim_config_;
-  PhysicsConfig physics_config_;
-  SolverConfig solver_config_;
+  SimulationParameters params_;
+  CollisionDetector collision_detector_;
 
  private:
   void printProgress(int current_iteration, int total_iterations) const;
