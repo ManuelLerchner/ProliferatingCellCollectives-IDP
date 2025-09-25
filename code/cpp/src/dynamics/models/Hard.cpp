@@ -48,7 +48,7 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
         GAMMA_PREV.incrementSize(old_constraints.size());
       }
 
-      // create_gamma_vector_local(GAMMA_PREV, new_constraints, col_offset);
+      create_gamma_vector_local(GAMMA_PREV, new_constraints, col_offset);
 
       VecAssemblyBegin(GAMMA_PREV);
       GAMMA_PREV.incrementSize(new_constraints.size());
@@ -96,47 +96,11 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   // PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info2.nz_allocated, (PetscInt)info2.nz_used, (PetscInt)info2.nz_unneeded);
 }
 
-double residual(const VecWrapper& gradient_val, const VecWrapper& gamma, int N) {
-  // This function computes the infinity norm of the projected gradient.
-  // The projection is defined as:
-  //   projected_gradient_i = gradient_val_i, if gamma_i > 0
-  //   projected_gradient_i = min(0, gradient_val_i), if gamma_i <= 0
-
-  // Get local size and pointers to vector data
-  PetscInt n_local;
-  const PetscScalar *grad_array, *gamma_array;
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gradient_val, &n_local));
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val, &grad_array));
-  PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma, &gamma_array));
-
-  // Compute projected gradient component-wise
-  double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
-
-#pragma omp parallel for reduction(max : res)
-  for (PetscInt i = 0; i < N; ++i) {
-    double v;
-    if (PetscRealPart(gamma_array[i]) > 0) {
-      v = grad_array[i];
-    } else {
-      v = std::min(0.0, PetscRealPart(grad_array[i]));
-    }
-    res = std::max(res, std::abs(v));  // Take absolute value for infinity norm
-  }
-
-  // Restore arrays
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val, &grad_array));
-  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma, &gamma_array));
-
-  // Compute the infinity norm of the projected gradient: max(abs(projected_gradient_i))
-  auto res_global = globalReduce(res, MPI_MAX);
-
-  return res_global;
-}
-
 struct RecursiveSolverWorkspaces {
   RecursiveSolverWorkspaces(const MatWrapper& D_PREV, const MatWrapper& M, const MatWrapper& G, const MatWrapper& L_PREV, const VecWrapper& GAMMA_PREV, const VecWrapper& PHI_PREV, const VecWrapper& l) {
     // movement
     gamma_diff_workspace = VecWrapper::Like(GAMMA_PREV);
+    VecCopy(GAMMA_PREV, gamma_diff_workspace);
     phi_dot_movement_workspace = VecWrapper::Like(PHI_PREV);
     F_g_workspace = VecWrapper::FromMat(D_PREV);
     U_c_workspace = VecWrapper::FromMat(M);
@@ -266,9 +230,7 @@ void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const V
 }
 
 enum class SolverState {
-  RUNNING,
   CONVERGED,
-  TOO_MANY_CONSTRAINTS,
   NOT_CONVERGED,
 };
 
@@ -308,12 +270,11 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   std::vector<Constraint> all_constraints_set;
 
-  SolverState solver_state = SolverState::RUNNING;
+  SolverState solver_state = SolverState::NOT_CONVERGED;
 
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
-    double tolerance = constraint_iterations == 0 ? 0.1 : 0.01;
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, tolerance);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations,  params.solver_config.tolerance);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
                                                [](double acc, const Constraint& c) {
@@ -322,7 +283,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
                                MPI_MAX);
 
     // Check convergence
-    if (max_overlap < 0.1 && constraint_iterations > 0) {
+    if (max_overlap <= params.solver_config.tolerance && constraint_iterations > 0) {
       solver_state = SolverState::CONVERGED;
       break;
     }
@@ -396,9 +357,46 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
       PetscCallAbort(PETSC_COMM_WORLD, VecMAXPY(phi_next_out, 2, scales, vecs_to_add));
     };
 
+    auto residual = [&](const VecWrapper& gradient_val, const VecWrapper& gamma, int N) {
+      // This function computes the infinity norm of the projected gradient.
+      // The projection is defined as:
+      //   projected_gradient_i = gradient_val_i, if gamma_i > 0
+      //   projected_gradient_i = min(0, gradient_val_i), if gamma_i <= 0
+
+      // Get local size and pointers to vector data
+      PetscInt n_local;
+      const PetscScalar *grad_array, *gamma_array;
+      PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gradient_val, &n_local));
+      PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val, &grad_array));
+      PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma, &gamma_array));
+
+      // Compute projected gradient component-wise
+      double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
+
+#pragma omp parallel for reduction(max : res)
+      for (PetscInt i = 0; i < N; ++i) {
+        double v;
+        if (PetscRealPart(gamma_array[i]) > 0) {
+          v = grad_array[i];
+        } else {
+          v = std::min(0.0, PetscRealPart(grad_array[i]));
+        }
+        res = std::max(res, std::abs(v));  // Take absolute value for infinity norm
+      }
+
+      // Restore arrays
+      PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val, &grad_array));
+      PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma, &gamma_array));
+
+      // Compute the infinity norm of the projected gradient: max(abs(projected_gradient_i))
+      auto res_global = globalReduce(res, MPI_MAX);
+
+      return res_global;
+    };
+
     // Solver
     int N = GAMMA.getSize();
-    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, N);
+    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter, N);
 
     res = bbpgd_result_recursive.residual;
     bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
@@ -427,21 +425,6 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     constraint_iterations++;
     exchangeGhostParticles();
-  }
-
-  switch (solver_state) {
-    case SolverState::CONVERGED:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[92mConverged in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", constraint_iterations, res, max_overlap, bbpgd_iterations);
-      break;
-    case SolverState::TOO_MANY_CONSTRAINTS:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mToo many constraints: %ld | Constraints per particle: %4.2f\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(all_constraints_set.size(), MPI_SUM) / (double)global_num_particles, res, max_overlap, bbpgd_iterations);
-      break;
-    case SolverState::NOT_CONVERGED:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mDid not converge in %d iterations\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", constraint_iterations, res, max_overlap, bbpgd_iterations);
-      break;
-    case SolverState::RUNNING:
-      PetscPrintf(PETSC_COMM_WORLD, "\n  \033[91mRunning\033[0m | Residual: %4.2e | Overlap: %8.2e | BBPGD Iters: %4lld", res, max_overlap, bbpgd_iterations);
-      break;
   }
 
   particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace}, dt);
