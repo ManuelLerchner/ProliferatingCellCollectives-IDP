@@ -290,7 +290,7 @@ Moreover, we add a small random rotational perturbation to the orientation of al
 
 \subsection{Colony Representation}
 
-For our implementation, we closely follow the approach described by Weady et al.~\cite{Weady2024} in their supplementary material. The entire bacterial colony is represented by a single global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^T, \mathbf{q}_n^T, \dots]^T \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^T \in \mathbb{R}^{N}$.
+For our implementation, we closely follow the approach described by Weady et al.~\cite{Weady2024} in their supplementary material. The entire bacterial colony is represented by a single global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$.
 
 \subsection{Colony Dynamics}
 
@@ -298,11 +298,11 @@ The translational and angular velocities of all particles in the colony are dete
 
 \begin{itemize}
     \item
-          $\mathbfcal{F} = [\dots, \mathbf{f}_n^T, \boldsymbol{\tau}_n^T, \dots]^T \in \mathbb{R}^{6N}$ represents the force $\mathbf{f}_n$ and torque $\boldsymbol{\tau}_n$ for the $n$-th cell.
+          $\mathbfcal{F} = [\dots, \mathbf{f}_n^\top, \boldsymbol{\tau}_n^\top, \dots]^\top \in \mathbb{R}^{6N}$ represents the force $\mathbf{f}_n$ and torque $\boldsymbol{\tau}_n$ for the $n$-th cell.
     \item
           $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{\zeta l_n}\mathbf{I}, \frac{12}{\zeta l_n^3}\mathbf{I}, \dots]) \in \mathbb{R}^{6N \times 6N}$ is a block-diagonal mobility matrix, where each block contains the inverse of the cell's linear and angular mobility coefficients (from Eq.~\ref{eq:overdamped_langevin}) multiplied by an identity matrix $\mathbf{I}$ of appropriate size.
     \item
-          $\mathbfcal{U} = [\dots, \mathbf{u}_n^T, \boldsymbol{\omega}_n^T, \dots]^T \in \mathbb{R}^{6N}$ represents the resulting translational velocity $\mathbf{u}_n$ and angular velocity $\boldsymbol{\omega}_n$ for the $n$-th cell.
+          $\mathbfcal{U} = [\dots, \mathbf{u}_n^\top, \boldsymbol{\omega}_n^\top, \dots]^\top \in \mathbb{R}^{6N}$ represents the resulting translational velocity $\mathbf{u}_n$ and angular velocity $\boldsymbol{\omega}_n$ for the $n$-th cell.
 \end{itemize}
 
 
@@ -383,7 +383,7 @@ The goal is to solve for multipliers $\boldsymbol{\gamma}$ that resolve all over
 
 \begin{enumerate}
     \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq 0$. This ensures that the forces are repulsive, preventing cells from pulling on each other.
-    \item \textbf{Non-Overlap:} $\mathbf{\Phi}^{k+1} \geq 0$ where $\mathbf{\Phi}^k = [\dots, \Phi_\alpha, \dots]^T$ is the vector of signed separation distances at time step $k$. This condition ensures that after applying the forces, no cells overlap.
+    \item \textbf{Non-Overlap:} $\mathbf{\Phi}^{k+1} \geq 0$ where $\mathbf{\Phi}^k = [\dots, \Phi_\alpha, \dots]^\top$ is the vector of signed separation distances at time step $k$. This condition ensures that after applying the forces, no cells overlap.
     \item   \textbf{Complementarity:} $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$. This ensures  that if force acts, the cells separation distance must be zero after the update. Conversely, if cells are not in contact after the update, the force must have been zero.
 \end{enumerate}
 
@@ -407,17 +407,17 @@ The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a no
 
 \begin{equation}\label{eq:phi_expanded}
     \begin{split}
-        \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t \left( \mathbfcal{D}^T \dot{\mathbfcal{C}}^k - \mathbfcal{L}^T\dot{\boldsymbol{\ell}} \right)\\
-        & = \mathbf{\Phi}^k + \Delta t \Biggl( \mathbfcal{D}^T
-        \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}   - \mathbfcal{L}^T  \frac{\boldsymbol{\ell}} {\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma } } \Biggr)
+        \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t \left( \mathbfcal{D}^\top  \mathbfcal{G}^\top  \dot{\mathbfcal{C}}^k - \mathbfcal{L}^\top\dot{\boldsymbol{\ell}} \right)\\
+        & = \mathbf{\Phi}^k + \Delta t \Biggl( \mathbfcal{D}^\top
+        \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}   - \mathbfcal{L}^\top  \frac{\boldsymbol{\ell}} {\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma } } \Biggr)
     \end{split}
 \end{equation}
 
 The change in separation distances depends on two factors:
 
 \begin{enumerate}
-    \item \textbf{Cell Motion:} The term $\mathbfcal{D}^T \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}$ represents how constraint forces induce motion that changes $\mathbf{\Phi}^{k+1}$.
-    \item \textbf{Cell Growth:} The term $\mathbfcal{L}^T \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}}$ accounts for how independent cell growth affects the separation distances. The matrix $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes the sensitivity of each constraint $\alpha$ and is used to calculate the stress vector $\boldsymbol{\sigma} = \mathbfcal{L} \boldsymbol{\gamma}$ for the entire colony,
+    \item \textbf{Cell Motion:} The term $\mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}$ represents how constraint forces induce motion that changes $\mathbf{\Phi}^{k+1}$.
+    \item \textbf{Cell Growth:} The term $\mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}}$ accounts for how independent cell growth affects the separation distances. The matrix $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes the sensitivity of each constraint $\alpha$ and is used to calculate the stress vector $\boldsymbol{\sigma} = \mathbfcal{L} \boldsymbol{\gamma}$ for the entire colony,
           as described in \autoref{eq:stress}.
 \end{enumerate}
 
@@ -430,7 +430,7 @@ Substituting the approximation from \autoref{eq:phi_expanded} into the constrain
          & \mathbf{0} \leq \boldsymbol{\gamma} \perp
         \boldsymbol{\Phi}^k
         + \Delta t \Biggl(
-        \mathbfcal{D}^\top \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}
+        \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}
         - \mathbfcal{L}^\top
         \tfrac{\boldsymbol{\ell}}{\tau}
         e^{-\lambda \mathbfcal{L}\boldsymbol{\gamma}}
@@ -447,9 +447,9 @@ This NCP is equivalent to the first-order optimality condition for minimizing a 
     \begin{aligned}
         E(\boldsymbol{\gamma}) =
         \boldsymbol{\gamma}^\top\boldsymbol{\Phi}^k
-         & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{G} \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
+         & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-        \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)                                \\
+        \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)                        \\
     \end{aligned}
 \end{equation}
 

@@ -51,7 +51,7 @@ class CollisionDetector {
 
   // Track existing contact points between particle pairs to avoid duplicates
   std::unordered_map<std::pair<int, int>, std::vector<std::array<double, 3>>, pair_hash> existing_contact_points_;
-  static constexpr double CONTACT_POINT_TOLERANCE = 0.01;  // Distance below which contact points are considered the same
+  static constexpr double CONTACT_POINT_TOLERANCE = 0.00;  // Distance below which contact points are considered the same
 
   std::array<double, 3> getParticleDirection(const Particle& p);
 

@@ -137,7 +137,7 @@ void Domain::run() {
     }
 
     printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count());
-    PetscPrintf(PETSC_COMM_WORLD, "\n");
+    // PetscPrintf(PETSC_COMM_WORLD, "\n");
     iter++;
   }
 }
@@ -202,26 +202,49 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
   double progress_percent = (colony_radius / params_.sim_config.end_radius) * 100.0;
 
   std::string eta_str = "N/A";
-  if (simulation_time_seconds_ > 1.0) {
-    double current_wall_time = MPI_Wtime();
-    double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
-    double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
+  double growth_rate_wall = 0.0;  // colony radius growth per real second
 
-    if (sim_time_since_last_check > 1e-9) {
-      double wall_seconds_per_sim_seconds = wall_time_since_last_check / sim_time_since_last_check;
-      double estimated_remaining_wall_time_seconds = (params_.sim_config.end_radius - colony_radius) * wall_seconds_per_sim_seconds;
+  double current_wall_time = MPI_Wtime();
+  double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
+  double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
 
-      char buffer[100];
-      snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
-      eta_str = buffer;
+  if (wall_time_since_last_check > 1) {
+    double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
 
-      // Update for next ETA calculation
-      const_cast<Domain*>(this)->last_eta_check_time_ = current_wall_time;
-      const_cast<Domain*>(this)->last_eta_check_sim_time_ = simulation_time_seconds_;
-    }
+    // Exponential smoothing for ratio (wall/sim seconds)
+    double alpha = 0.1;
+    double smoothed_ratio = last_wall_per_sim_seconds_ * (1.0 - alpha) + current_ratio * alpha;
+
+    // --- ETA ---
+    double estimated_remaining_wall_time_seconds =
+        (params_.sim_config.end_radius - colony_radius) * smoothed_ratio;
+
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
+    eta_str = buffer;
+
+    // --- Colony growth per wall time ---
+    double delta_radius = colony_radius - last_eta_check_radius_;
+    double raw_growth_rate = delta_radius / wall_time_since_last_check;
+
+    // optional smoothing for growth rate as well
+    double smoothed_growth_rate =
+        last_growth_rate_wall_ * (1.0 - alpha) + raw_growth_rate * alpha;
+
+    growth_rate_wall = smoothed_growth_rate;
+
+    // Update for next call
+    auto self = const_cast<Domain*>(this);
+    self->last_eta_check_time_ = current_wall_time;
+    self->last_eta_check_sim_time_ = simulation_time_seconds_;
+    self->last_wall_per_sim_seconds_ = smoothed_ratio;
+    self->last_eta_check_radius_ = colony_radius;
+    self->last_growth_rate_wall_ = smoothed_growth_rate;
   }
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n Colony radius: %.1f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | dt: %4.1es | CPU: %3.1fs | Iter: %d | Particles: %d",
+  PetscPrintf(PETSC_COMM_WORLD,
+              "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
+              "dt: %4.1es | CPU: %3.1fs | Iter: %d | Particles: %d | Growth: %.4f/s\n",
               colony_radius,
               params_.sim_config.end_radius,
               progress_percent,
@@ -230,7 +253,8 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
               params_.sim_config.dt_s,
               cpu_time_s,
               current_iteration,
-              global_particle_count);
+              global_particle_count,
+              growth_rate_wall);
 }
 
 std::pair<std::array<double, 3>, std::array<double, 3>> Domain::calculateLocalBoundingBox() const {

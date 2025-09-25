@@ -41,9 +41,9 @@ void printHelp(const SimulationParameters& params) {
   PetscPrintf(PETSC_COMM_WORLD, "\nSolver Configuration:\n");
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-tolerance", "Solver tolerance",
               params.solver_config.tolerance);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %d]\n", "-max_bbpgd_iterations", "Maximum BBPGD iterations",
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %ld]\n", "-max_bbpgd_iterations", "Maximum BBPGD iterations",
               params.solver_config.max_bbpgd_iterations);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %d]\n", "-max_recursive_iterations",
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %ld]\n", "-max_recursive_iterations",
               "Maximum recursive iterations", params.solver_config.max_recursive_iterations);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-linked_cell_size", "Size of linked cells",
               params.solver_config.linked_cell_size);
@@ -79,7 +79,7 @@ void getOption(const char* name, T& value) {
     if constexpr (std::is_floating_point_v<T>)
       PetscPrintf(PETSC_COMM_WORLD, "Set %s = %g\n", name, value);
     else if constexpr (std::is_integral_v<T>)
-      PetscPrintf(PETSC_COMM_WORLD, "Set %s = %d\n", name, value);
+      PetscPrintf(PETSC_COMM_WORLD, "Set %s = %ld\n", name, value);
     else if constexpr (std::is_same_v<T, PetscBool>)
       PetscPrintf(PETSC_COMM_WORLD, "Set %s = %s\n", name, value ? "true" : "false");
   }
@@ -88,14 +88,18 @@ void getOption(const char* name, T& value) {
 template <typename T>
 void printParam(const char* label, const T& value) {
   PetscPrintf(PETSC_COMM_WORLD, "%-25s: ", label);
-  if constexpr (std::is_floating_point_v<T>)
+
+  if constexpr (std::is_floating_point_v<T>) {
     PetscPrintf(PETSC_COMM_WORLD, "%.6f\n", value);
-  else if constexpr (std::is_integral_v<T>)
-    PetscPrintf(PETSC_COMM_WORLD, "%d\n", value);
-  else if constexpr (std::is_same_v<T, bool>)
+  } else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+    PetscPrintf(PETSC_COMM_WORLD, "%lld\n", static_cast<long long>(value));
+  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+    PetscPrintf(PETSC_COMM_WORLD, "%llu\n", static_cast<unsigned long long>(value));
+  } else if constexpr (std::is_same_v<T, bool>) {
     PetscPrintf(PETSC_COMM_WORLD, "%s\n", value ? "true" : "false");
-  else
+  } else {
     PetscPrintf(PETSC_COMM_WORLD, "%s\n", value);
+  }
 }
 
 void dumpParameters(const SimulationParameters& params) {
@@ -166,11 +170,11 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   params.solver_config = {
       .tolerance = 1e-3,
-      .max_bbpgd_iterations = 100000,
+      .max_bbpgd_iterations = 5000000,
       .max_recursive_iterations = 50,
       .linked_cell_size = 2.2,
       .growth_factor = 1.5,
-      .particle_preallocation_factor = 12,
+      .particle_preallocation_factor = 16,
   };
 
   // Check for help flag

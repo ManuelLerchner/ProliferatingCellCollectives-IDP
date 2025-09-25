@@ -65,10 +65,13 @@ class Domain {
   double simulation_time_seconds_ = 0.0;
   double time_last_log_ = 0.0;
 
-  double start_time_;
-  double step_start_time_;
-  double last_eta_check_time_;
+  double start_time_ = 0;
+  double step_start_time_ = 0;
+  double last_eta_check_time_ = 0;
   double last_eta_check_sim_time_ = 0.0;
+  double last_wall_per_sim_seconds_ = 0.0;
+  double last_eta_check_radius_ = 0.0;
+  double last_growth_rate_wall_ = 0.0;
   std::chrono::steady_clock::time_point sim_start_time_;
 
   std::array<double, 3> min_bounds_ = {0, 0, 0};
