@@ -13,6 +13,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=undefined -fsanitize=address -fsanitize=leak")
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=undefined -fsanitize=address -fsanitize=leak ")
 
+
+set(CMAKE_CXX_FLAGS  "-Ofast -DNDEBUG -std=c++20 -march=native -fpic -ftree-vectorize")
+
 # let ccmake and cmake-gui offer the default build type options
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release;RelWithDebInfo;MinSizeRel")
 

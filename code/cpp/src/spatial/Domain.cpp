@@ -240,21 +240,21 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
     self->last_wall_per_sim_seconds_ = smoothed_ratio;
     self->last_eta_check_radius_ = colony_radius;
     self->last_growth_rate_wall_ = smoothed_growth_rate;
-  }
 
-  PetscPrintf(PETSC_COMM_WORLD,
-              "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
-              "dt: %4.1es | CPU: %3.1fs | Iter: %d | Particles: %d | Growth: %.4f/s\n",
-              colony_radius,
-              params_.sim_config.end_radius,
-              progress_percent,
-              time_elapsed_seconds,
-              eta_str.c_str(),
-              params_.sim_config.dt_s,
-              cpu_time_s,
-              current_iteration,
-              global_particle_count,
-              growth_rate_wall);
+    PetscPrintf(PETSC_COMM_WORLD,
+                "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
+                "dt: %4.1es | CPU: %3.1fs | Iter: %d | Particles: %d | Growth: %.4f/s\n",
+                colony_radius,
+                params_.sim_config.end_radius,
+                progress_percent,
+                time_elapsed_seconds,
+                eta_str.c_str(),
+                params_.sim_config.dt_s,
+                cpu_time_s,
+                current_iteration,
+                global_particle_count,
+                growth_rate_wall);
+  }
 }
 
 std::pair<std::array<double, 3>, std::array<double, 3>> Domain::calculateLocalBoundingBox() const {

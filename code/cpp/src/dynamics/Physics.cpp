@@ -83,7 +83,7 @@ void calculate_growth_rate_vector(const VecWrapper& l, VecWrapper& sigma_and_imp
 
 void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& stress_curr_out, VecWrapper& impedance_curr_out) {
   // Use impedance_curr_out as a temporary vector to store stresses (sigma)
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(L, gamma, stress_curr_out));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(L, gamma, stress_curr_out));
 
   // We now have stresses in impedance_curr_out.
   // We need to calculate the growth rate, which will overwrite ldot_curr_out,
@@ -115,13 +115,16 @@ void calculate_jacobian_local(
 
     PetscInt c_global_idx = offset + c_local_idx;
 
+    PetscInt cols[6] = {c_global_idx, c_global_idx, c_global_idx, c_global_idx, c_global_idx, c_global_idx};
+
     PetscInt rows_i[6] = {constraint.gidI * 6 + 0, constraint.gidI * 6 + 1, constraint.gidI * 6 + 2,
                           constraint.gidI * 6 + 3, constraint.gidI * 6 + 4, constraint.gidI * 6 + 5};
-    PetscCallAbort(PETSC_COMM_WORLD, MatSetValues(D, 6, rows_i, 1, &c_global_idx, F_i, INSERT_VALUES));
+
+    PetscCallAbort(PETSC_COMM_WORLD, MatSetValues(D, 1, cols, 6, rows_i, F_i, INSERT_VALUES));
 
     PetscInt rows_j[6] = {constraint.gidJ * 6 + 0, constraint.gidJ * 6 + 1, constraint.gidJ * 6 + 2,
                           constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
-    PetscCallAbort(PETSC_COMM_WORLD, MatSetValues(D, 6, rows_j, 1, &c_global_idx, F_j, INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, MatSetValues(D, 1, cols, 6, rows_j, F_j, INSERT_VALUES));
   }
 }
 
@@ -150,8 +153,9 @@ void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>&
   for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {
     const auto& constraint = local_constraints[c_idx];
     PetscInt c_global_idx = offset + c_idx;
-    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidI, c_global_idx, constraint.stressI, INSERT_VALUES));
-    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, constraint.gidJ, c_global_idx, constraint.stressJ, INSERT_VALUES));
+
+    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, c_global_idx, constraint.gidI, constraint.stressI, INSERT_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, c_global_idx, constraint.gidJ, constraint.stressJ, INSERT_VALUES));
   }
 }
 

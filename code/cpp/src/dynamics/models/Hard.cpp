@@ -14,14 +14,12 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
 
   if (D_PREV_cleared || L_PREV_cleared) {
-    MatMPIAIJSetPreallocation(D_PREV, 8 * last_recursive_iteration, NULL, 2 * last_recursive_iteration, NULL);
-    MatMPIAIJSetPreallocation(L_PREV, 8 * last_recursive_iteration, NULL, 2 * last_recursive_iteration, NULL);
-    MatSetOption(D_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
-    MatSetOption(L_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+    MatSetOption(D_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE);
+    MatSetOption(L_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE);
   }
 
   PetscInt ownership_start, ownership_end;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(D_PREV, &ownership_start, &ownership_end));
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(D_PREV, &ownership_start, &ownership_end));
 
   // Calculate offset for new data
   PetscInt col_offset = ownership_start + PHI_PREV.getSize();
@@ -55,6 +53,15 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
     }
 #pragma omp section
     {
+      // if (D_PREV_cleared) {
+      // auto all_constraints = old_constraints;
+      // all_constraints.insert(all_constraints.end(), new_constraints.begin(), new_constraints.end());
+
+      // preallocate_jacobian_local(D_PREV, all_constraints, ownership_start);
+
+      // } else {
+      // }
+
       if (D_PREV_cleared) {
         calculate_jacobian_local(D_PREV, old_constraints, ownership_start);
         D_PREV.incrementSize(old_constraints.size());
@@ -67,10 +74,12 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
 #pragma omp section
     {
       if (L_PREV_cleared) {
+        // preallocate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
         calculate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
         L_PREV.incrementSize(old_constraints.size());
       }
 
+      // preallocate_stress_matrix_local(L_PREV, new_constraints, col_offset);
       calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
       MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
       L_PREV.incrementSize(new_constraints.size());
@@ -83,6 +92,8 @@ void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, 
   VecAssemblyEnd(GAMMA_PREV);
   MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY);
+
+  // MatView(D_PREV, PETSC_VIEWER_DRAW_WORLD);
 
   // Get info about number of mallocs
   // MatInfo info;
@@ -102,12 +113,12 @@ struct RecursiveSolverWorkspaces {
     gamma_diff_workspace = VecWrapper::Like(GAMMA_PREV);
     VecCopy(GAMMA_PREV, gamma_diff_workspace);
     phi_dot_movement_workspace = VecWrapper::Like(PHI_PREV);
-    F_g_workspace = VecWrapper::FromMat(D_PREV);
+    F_g_workspace = VecWrapper::FromMatRows(D_PREV);
     U_c_workspace = VecWrapper::FromMat(M);
-    U_total_workspace = VecWrapper::FromMat(D_PREV);
+    U_total_workspace = VecWrapper::FromMatRows(D_PREV);
 
     // growth
-    phi_dot_growth_result = VecWrapper::FromMatRows(L_PREV);
+    phi_dot_growth_result = VecWrapper::FromMat(L_PREV);
 
     ldot_curr_workspace = VecWrapper::Like(l);
     ldot_diff_workspace = VecWrapper::Like(l);
@@ -121,7 +132,7 @@ struct RecursiveSolverWorkspaces {
     F_ext_workspace = VecWrapper::FromMat(M);
 
     // force
-    df = VecWrapper::FromMat(D_PREV);
+    df = VecWrapper::FromMatRows(D_PREV);
     du = VecWrapper::FromMat(M);
     dC = VecWrapper::FromMat(G);
   }
@@ -154,7 +165,7 @@ void estimate_phi_dot_movement_inplace(
   // phi_dot = D^T (U_known + M * D * gamma)
 
   // Step 1: F_g = D * gamma
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma, F_g));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, gamma, F_g));
 
   // Step 2: U_c = M * F_g
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F_g, U_c));
@@ -163,19 +174,19 @@ void estimate_phi_dot_movement_inplace(
   PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(U_total, 1.0, U_known, U_c));
 
   // Step 4: phi_dot_out = D^T * U_total
-  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, U_total, phi_dot_out));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, U_total, phi_dot_out));
 }
 
 void estimate_phi_dot_growth_inplace(
     const MatWrapper& Sigma,
     const VecWrapper& ldot,
     VecWrapper& phi_dot_growth_result) {
-  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(Sigma, ldot, phi_dot_growth_result));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(Sigma, ldot, phi_dot_growth_result));
 }
 
 void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
   // f = D @ gamma
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, gamma, F));
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, gamma, F));
 
   // U = M @ f
   PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F, U));
@@ -274,7 +285,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations,  params.solver_config.tolerance);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, params.solver_config.tolerance);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
                                                [](double acc, const Constraint& c) {
