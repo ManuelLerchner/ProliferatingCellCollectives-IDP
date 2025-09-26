@@ -58,33 +58,36 @@ class DynamicVecWrapper {
 class DynamicMatWrapper {
  private:
   MatWrapper mat;
-  PetscInt local_rows;
-  PetscInt local_capacity;
-  PetscInt size;
+  PetscInt local_cols;      // Fixed number of columns
+  PetscInt local_capacity;  // Current row capacity
+  PetscInt size;            // Current number of rows used
 
   double growth_factor;
 
  public:
-  DynamicMatWrapper(PetscInt local_rows_, int capacity_, double growth_factor_) {
+  // For transposed storage:
+  // local_cols_ = number of columns (fixed)
+  // capacity_ = initial row capacity (will grow)
+  DynamicMatWrapper(PetscInt local_cols_, int capacity_, double growth_factor_) {
     growth_factor = growth_factor_;
     local_capacity = capacity_;
-    local_rows = local_rows_;
+    local_cols = local_cols_;
     size = 0;
 
-    mat = MatWrapper::CreateAIJ(local_rows, capacity_);
-    // MatSetOption(mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+    // Create matrix with dimensions (capacity x cols)
+    mat = MatWrapper::CreateAIJ(capacity_, local_cols_);
   }
 
-  bool ensureCapacity(PetscInt additional_cols) {
-    PetscInt required_local_capacity = size + additional_cols;
+  bool ensureCapacity(PetscInt additional_rows) {
+    PetscInt required_local_capacity = size + additional_rows;
 
     auto max_required_capacity = globalReduce(required_local_capacity, MPI_MAX);
 
     if (local_capacity < max_required_capacity) {
       PetscInt new_local_capacity = max_required_capacity * growth_factor;
 
-      MatWrapper new_mat = MatWrapper::CreateAIJ(local_rows, new_local_capacity);
-      // MatSetOption(new_mat, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+      // Create new matrix with dimensions (new_capacity x cols)
+      MatWrapper new_mat = MatWrapper::CreateAIJ(new_local_capacity, local_cols);
 
       mat = std::move(new_mat);
       local_capacity = new_local_capacity;
