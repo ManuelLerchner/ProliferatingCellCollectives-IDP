@@ -8,7 +8,7 @@ from render_particles import draw_particles
 
 BIN_FOLDER = f"../code/cpp/build/src"
 
-END_RADIUS = 60
+END_RADIUS = 75
 
 
 base_physics_config = {
@@ -21,7 +21,7 @@ def run_simulation(config, mode, LAMBDA):
 
     args = " ".join([f"-{key} {value}" for key, value in config.items()])
 
-    args += f" -end_radius {END_RADIUS}"
+    args += f" -end_radius {END_RADIUS} -dt 5e-4"
 
     process = subprocess.run(
         f"make -j && mpirun -np 16 ./cellcollectives -mode {mode} {args}", shell=True, cwd=BIN_FOLDER)
