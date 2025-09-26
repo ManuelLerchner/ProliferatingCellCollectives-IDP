@@ -79,7 +79,7 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   VecWrapper U_ext = VecWrapper::FromMat(M);
   calculate_external_velocities(U_ext, F_ext, particle_manager.local_particles, M, dt, 0, params.physics_config);
 
-   VecWrapper U = VecWrapper::FromMat(M);
+  VecWrapper U = VecWrapper::FromMat(M);
   VecWrapper deltaC = VecWrapper::FromMat(G);
 
   // U = M @ f
@@ -100,10 +100,10 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   VecWrapper stress = VecWrapper::Like(length);
 
   // Calculate growth rates using elastic forces
-  MatWrapper L = MatWrapper::CreateAIJ(particle_manager.local_particles.size(), new_constraints.size());
+  MatWrapper L = MatWrapper::CreateAIJ(new_constraints.size(), particle_manager.local_particles.size());
 
   PetscInt ownership_start, ownership_end;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(L, &ownership_start, &ownership_end));
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(L, &ownership_start, &ownership_end));
 
   calculate_stress_matrix_local(L, new_constraints, ownership_start);
   MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
