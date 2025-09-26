@@ -2,11 +2,11 @@
 #include <petsc.h>
 
 #include <array>
+#include <iostream>
 #include <optional>
 #include <random>
 #include <vector>
 
-#include <iostream>
 #include "ParticleData.h"
 
 class Particle {

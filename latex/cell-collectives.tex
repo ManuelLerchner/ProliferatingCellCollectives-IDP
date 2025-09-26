@@ -108,55 +108,39 @@
 \section{Introduction}
 \subsection{Biological Motivation}
 
-The collective behaviors of biological entities, ranging from simple microbial colonies to complex multicellular tissues, are fundamental to understanding the intricate processes of life. These systems often exhibit emergent spatio-temporal patterns, driven by the interplay of simple local interactions and individual growth dynamics. Bacterial colonies, for instance, showcase remarkable self-organization, developing sophisticated spatial structures in response to environmental stimuli. Specifically, experimental observations have highlighted the phenomenon of growth rate reduction in the colony's center due to mechanical pressure exerted by surrounding cells~\cite{Wittmann2023}. For various bacteria, such as E. coli, Bacillus subtilis, and Proteus mirabilis, and fungi like Setosphaeria rostrata and Exserohilum Turcicum, this pressure-induced deceleration contributes to the formation of characteristic concentric ring patterns~\cite{YAMAZAKI2005136}.
+The collective behaviors of biological entities, from microbial colonies to multicellular tissues, are fundamental to understanding life’s complex dynamics. These systems often exhibit emergent spatio-temporal patterns driven by local interactions and, crucially, by the growth and division of individual cells. In bacterial colonies, continuous cell proliferation at the periphery generates mechanical forces that slow growth in the densely packed center~\cite{Wittmann2023}. For species such as \textit{E. coli}, \textit{Bacillus subtilis}, and \textit{Proteus mirabilis}, as well as fungi like \textit{Setosphaeria rostrata} and \textit{Exserohilum turcicum}, this combination of expansion and central pressure produces the characteristic concentric ring patterns observed experimentally~\cite{YAMAZAKI2005136} (See \autoref{fig:exserohilum_turcicum}).
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/real-bacteria/Exserohilum turcicum.png}
-    \caption{Morphology of \textit{Exserohilum turcicum}. The left image displays a colony of Exserohilum turcicum, while the right image shows a single cell of the same species. Source:~\cite{Bankole2023}.}
+    \caption{Morphology of \textit{Exserohilum turcicum}. The left image displays a colony of \textit{Exserohilum turcicum}, while the right image shows a single cell of the same species. Source:~\cite{Bankole2023}.}
     \label{fig:exserohilum_turcicum}
 \end{figure}
 
-These phenomena pose significant computational challenges, demanding the accurate integration of both mechanical cell interactions and proliferation dynamics.
+Understanding these emergent structures requires computational models that capture the dynamic interplay between cell growth and division, mechanical forces, and intercellular interactions. However, simulating such dense, proliferating cell collectives presents significant computational challenges, particularly in resolving cell-cell collisions efficiently and accurately.
 
-This work is directly inspired by these observations, particularly the formation of concentric rings in growing bacterial communities. These patterns represent a key manifestation of self-organization under controlled conditions, as further explored in~\cite{Weady2024}. Comprehending these emergent structures necessitates robust computational models capable of capturing the dynamic interplay between individual cell mechanics, intercellular interactions, and proliferation.
-
-\subsection{Computational Challenges}
-
-Simulating large populations of interacting and proliferating agents, such as individual cells, presents substantial computational hurdles. Accurately representing the dynamics of active matter systems where particles interact with each other and alter the system composition through growth, demands the development of efficient algorithms. A critical challenge lies in the accurate and stable resolution of inter-particle interactions, especially in the context of collisions.
-
-Existing constraint-based (hard) collision models, which enforce strict non-overlapping conditions via an optimization framework, offer high physical precision. However, they can incur significant computational overhead, as constraints typically require iterative, global resolution across the entire system at each simulation step. This process can become a considerable bottleneck, particularly for simulations involving vast numbers of particles or frequent collision events.
-
-In contrast, potential-based (soft) collision models, which permit minor overlaps and employ repulsive forces to manage interactions, provide a computationally more tractable alternative by relying solely on local computations.
-
-Moreover, these two approaches may exhibit different stability constraints on the simulation step size, with soft collision models often requiring smaller steps to maintain numerical stability, whereas hard models may tolerate larger steps. \todo{check}
-
-% TODO: quantify or explore step size differences for both approaches
-
-Despite the established trade-offs, the comparative effectiveness of hard versus soft collision models in accurately reproducing biologically relevant patterns and their computational performance within the context of proliferating cell collectives remains an underexplored area. This research aims to address this gap by systematically comparing these two modeling approaches by investigating the computational performance of both models and their ability to reproduce biologically relevant patterns.
+This work is directly inspired by these observations, particularly by the work of Weady et al.~\cite{Weady2024}, who developed such a computational model to study the growth of bacterial colonies and the resulting pattern formation.
 
 
 
 \section{Related Work}
 
-The simulation of collective biological behaviors, such as bacterial colony formation, relies on agent-based models (ABMs) that capture individual cell mechanics and proliferation. A critical computational challenge in these ABMs is the efficient and accurate resolution of cell-cell collisions. This section reviews the two primary collision modeling paradigms and identifies a significant gap in their comparative benchmarking from a high-performance computing (HPC) perspective.
-
 \subsection{Collision Modeling Paradigms}
 
-Two primary paradigms exist for handling collisions in ABMs: potential-based (soft) and constraint-based (hard) models.
+
+A critical computational challenge in agent-based models (ABMs) is the resolution of cell-cell collisions. Two primary paradigms exist for this purpose: potential-based (soft) and constraint-based (hard) models, each with distinct trade-offs in physical fidelity, computational cost, and numerical stability.
 
 \begin{description}[style=nextline]
     \item[Potential-Based (Soft) Collision Models]
-        These models manage interactions by employing repulsive forces, defined by potentials like Hertzian or Lennard-Jones, when agents overlap. Their primary advantage is computational tractability, as they rely on local force calculations that are highly amenable to parallelization. This has enabled large-scale simulations, such as the work by \cite{Warren2019}, who modeled millions of cells in 3D. However, a well-known limitation is numerical stiffness, which forces the use of small integration timesteps. Furthermore, as noted by \cite{Yan2019}, the finite range of repulsive forces causes particles to behave as soft and deformable, leading to an "effective" diameter smaller than the intended geometric size.
+        These models manage interactions by employing repulsive forces, defined by potentials like Hertzian or Lennard-Jones, when agents overlap. Their primary advantage is computational tractability, as they rely on local force calculations that are highly amenable to parallelization. This has enabled large-scale simulations, such as the work by \cite{Warren2019}, who modeled millions of cells in 3D. However, a well-known limitation is numerical stiffness, which forces the use of small integration timesteps to maintain stability. Furthermore, as noted by \cite{Yan2019}, the finite range of repulsive forces causes particles to behave as soft and deformable, leading to an "effective" diameter smaller than the intended geometric size.
 
     \item[Constraint-Based (Hard) Collision Models]
-        These models enforce strict non-overlapping geometric constraints, ensuring high physical fidelity by treating agents as truly impenetrable. A notable application is the work of \cite{Rudge2012}, who simulated growing bacterial colonies using a constraint-based method. They highlighted its computational intensity, often requiring solutions to large constraint systems, but demonstrated the feasibility of simulating tens of thousands of cells with GPU acceleration. The method of \cite{Yan2019} presents a advanced hard constraint approach that specifically addresses the drawbacks of soft models: it eliminates numerical stiffness—allowing timesteps to be increased by 10–100 times—and guarantees particles maintain their precise geometric dimensions.
-
+        These models enforce strict non-overlapping geometric constraints, ensuring high physical fidelity by treating agents as truly impenetrable. A notable application is the work of \cite{Rudge2012}, who simulated growing bacterial colonies using a constraint-based method. They highlighted its computational intensity, as resolving constraints often requires iterative, global solutions to large systems of equations, creating a potential bottleneck. However, modern implementations like that of \cite{Yan2019} specifically address the drawbacks of soft models: they eliminate numerical stiffness—allowing timesteps to be increased by 10–100 times—and guarantee particles maintain their precise geometric dimensions. The trade-off is a higher computational cost per timestep due to the constraint-solving process.
 \end{description}
 
 \subsection{The Benchmarking Gap}
 
-The reviewed literature reveals a clear dichotomy. Soft models offer computational simplicity and have been scaled to high agent counts, but at the cost of numerical stiffness and compromised physical fidelity. Hard models, particularly modern implementations like that of \cite{Yan2019}, offer a solution to these limitations, promising greater timesteps and rigorous geometry.
+The reviewed literature presents two distinct computational philosophies. Soft models offer computational simplicity and have been scaled to high agent counts, but at the cost of numerical stiffness and compromised physical fidelity. Hard models, particularly modern implementations like that of \cite{Yan2019}, offer a solution to these limitations, promising greater timesteps and rigorous geometry.
 
 However, this presents a critical, unquantified trade-off: does the hard model's ability to take larger timesteps outweigh its inherently higher computational cost per timestep? This question is especially pertinent in simulations of proliferating cell collectives, where exponentially increasing density dramatically alters the computational load of the collision resolution algorithm.
 
@@ -164,19 +148,21 @@ A systematic benchmarking focusing on this computational trade-off between the m
 
 \section{Cell Mechanics}
 
-The mechanical representation of cells is a critical factor in determining simulation outcomes. For many bacteria and fungal hyphae, approximating them as rigid rods is a reasonable simplification that captures their elongated morphology and the primary drivers of their collective behavior. Although real cells can deform, treating them as rigid bodies allows us to focus on emergent collective dynamics. This choice of a rigid rod geometry is well-supported by the experimental observations that inspire our work and aligns with established practices in modeling microbial systems. The following collision models are applied to these rigid rod entities.
+The mechanical representation of cells is a critical factor in determining simulation outcomes. For many bacteria and fungal hyphae, approximating them as rigid rods is a reasonable simplification that captures their elongated morphology and the primary drivers of their collective behavior. Although real cells exhibit some degree of flexibility and deformability, the rigid rod model effectively captures the essential mechanics of cell-cell interactions and colony expansion, reproducing key emergent patterns observed experimentally~\cite{Rudge2012,Khan_2024,Rudge2013,Langeslay_2023,Ghosh2015}.
+
+This choice of rigid rod geometry is well-supported by experimental observations and aligns with established practices in modeling microbial systems. The following collision models are applied to these rigid rod entities.
 
 \subsection{Physical Cell Model}
 
 We model the cell collective using a rigid rod representation, where each cell has a defined length and radius. This approach is common in models of cellular collectives~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015} and is justified by experimental evidence, closely matching the morphology of common bacteria and fungi such as E. coli and Setosphaeria rostrata (see \autoref{fig:exserohilum_turcicum}).
 
-Each bacterium is modeled as a spherocylinder with an initial length $\ell_0 = 1$ and diameter $d = 0.5$. At the bacterial scale, the Reynolds number is extremely small (Re $\ll 1$), placing the system firmly in the overdamped regime where viscous forces dominate inertial forces~\cite{datta2024lifelowreynoldsnumber}. Consequently, the dynamics are governed by the overdamped Langevin equation:
+Following the established literature, each bacterium is modeled as a spherocylinder with a variable length $\ell$ and a constant diameter $d$. At the bacterial scale, the Reynolds number is extremely small (Re $\ll 1$), placing the system firmly in the overdamped regime where viscous forces dominate inertial forces~\cite{datta2024lifelowreynoldsnumber,Rudge2012 }. Consequently, the dynamics are governed by the overdamped Langevin equation:
 
 \begin{equation} \label{eq:overdamped_langevin}
     \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \boldsymbol{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
 \end{equation}
 
-where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ is its orientation, and $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$. The constant $\zeta$ is a drag coefficient representing friction with the surrounding fluid, and $\mathbf{r}_{ij}$ is the vector from the center of cell $i$ to the point of contact with cell $j$.
+where $\mathbf{x}_i$ is the position of the $i$-th cell, $\boldsymbol{\omega}_i$ is its orientation, and $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$. The constant $\zeta$ is a drag coefficient representing friction with the surrounding fluid, and $\mathbf{r}_{ij}$ is the vector from the center of cell $i$ to the point of contact with cell $j$.
 
 \autoref{fig:spherocylinder_model} illustrates the spherocylinder model and the forces and torques acting on cells during a collision.
 
@@ -186,17 +172,18 @@ where $\mathbf{x}i$ is the position of the $i$-th cell, $\boldsymbol{\omega}i$ i
 Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024}:
 
 \begin{equation} \label{eq:growth}
-    \dot{{\ell_i}} = \frac{{\ell_i}}{\tau} e^{\lambda \sigma_i}
+    \dot{{\ell}} = \frac{{\ell}}{\tau} e^{\lambda \sigma}
 \end{equation}
 
-where $\tau$ is a characteristic time scale, $\sigma_i$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. This parameter controls the growth rate and ultimately the macroscopic pattern formation of the colony. The stress $\sigma_i$ on each cell is computed by projecting all contact forces onto the cell's longitudinal axis, defined by the unit tangent vector $\hat{\mathbf{t}}_i$~\cite{Weady2024}:
+where $\tau$ is a characteristic time scale, $\sigma$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. This parameter controls the growth rate and ultimately the macroscopic pattern formation of the colony.
+
+The stress $\sigma_i$ for a cell $i$ is computed by projecting all contact forces from neighboring cells onto the cell's longitudinal axis, defined by the unit tangent vector $\hat{\mathbf{t}}_i$:
 
 \begin{equation} \label{eq:stress}
-    \sigma_i = \sum_{j} \frac{1}{2}\, \hat{\mathbf t}_i \cdot \mathbf F_{ij}
+    \sigma_i = \sum_{j} \frac{1}{2} \left| \hat{\mathbf t}_i \cdot \mathbf F_{ij} \right|
 \end{equation}
 
-
-A cell divides into two daughter cells once it reaches a critical length ($\ell_\text{div} = 2\ell_0$). To prevent artificial synchronization of division events, we introduce randomness in the daughter cells' lengths, which are randomly set between $0.98\ell_0$ and $1.02\ell_0$, following the approach in~\cite{Khan_2024}.
+For the simulations presented here, we chose an initial cell length of $\ell = 1$ and a diameter of $d = 0.5$, following. Once a cell reaches a critical length of $\ell_{crit} = 2$, it divides into two daughter cells. To prevent artificial synchronization of division events, we introduce randomness in the daughter cells' lengths, which are randomly set between $0.98\ell_0$ and $1.02\ell_0$, following the approach in~\cite{Khan_2024}.
 
 \subsection{Rotational Diffusion}
 
@@ -306,17 +293,19 @@ The translational and angular velocities of all particles in the colony are dete
     \item
           $\mathbfcal{F} = [\dots, \mathbf{f}_n^\top, \boldsymbol{\tau}_n^\top, \dots]^\top \in \mathbb{R}^{6N}$ represents the force $\mathbf{f}_n$ and torque $\boldsymbol{\tau}_n$ for the $n$-th cell.
     \item
-          $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{\zeta l_n}\mathbf{I}, \frac{12}{\zeta l_n^3}\mathbf{I}, \dots]) \in \mathbb{R}^{6N \times 6N}$ is a block-diagonal mobility matrix, where each block contains the inverse of the cell's linear and angular mobility coefficients (from Eq.~\ref{eq:overdamped_langevin}) multiplied by an identity matrix $\mathbf{I}$ of appropriate size.
+          $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{\zeta l_n}\mathbf{I}, \frac{12}{\zeta l_n^3}\mathbf{I}, \dots]) \in \mathbb{R}^{6N \times 6N}$ is a diagonal mobility matrix, consisting of the inverses of the cell's linear and angular mobility coefficients (from Eq.~\ref{eq:overdamped_langevin}) along its diagonal. Here, $\mathbf{I}$ is the $3 \times 3$ identity matrix.
     \item
           $\mathbfcal{U} = [\dots, \mathbf{u}_n^\top, \boldsymbol{\omega}_n^\top, \dots]^\top \in \mathbb{R}^{6N}$ represents the resulting translational velocity $\mathbf{u}_n$ and angular velocity $\boldsymbol{\omega}_n$ for the $n$-th cell.
 \end{itemize}
 
 
-Combined with a mapping function $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (as described in~\cite{Weady2024}), we can express the colony's state update for an Euler timestep $\Delta t$ as:
+Combined with a mapping function $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (as described in~\cite{Weady2024, Tasora2008}), we can express the colony's state update for an Euler timestep $\Delta t$ as:
 
 \begin{equation} \label{eq:colony_update}
     \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{M} \mathbfcal{F}
 \end{equation}
+
+The mapping function $\mathbfcal{G}$ is required because the colony state is represented using quaternions, whereas the dynamics are expressed in terms of angular velocities that specify an instantaneous axis of rotation and rotation rate; $\mathbfcal{G}$ converts these into quaternion derivatives, enabling consistent integration using an Euler step\cite{Weady2024, Tasora2008}.
 
 
 The specific implementations of the hard and soft collision models are defined by how the generalized force vector $\mathbfcal{F}$ is computed in each case.
@@ -348,11 +337,7 @@ These forces and torques are assembled into the global generalized force vector 
 
 \subsubsection{Model Parameters}
 
-The elastic constant $k_{cc}$ is a crucial parameter that determines the effective stiffness of the cells. Following~\cite{You2018}, we define it as the ratio of the cell's Young's modulus $Y$ to the fluid drag coefficient $\zeta$:
-
-\begin{equation}
-    k_{cc} = \frac{Y}{\zeta}
-\end{equation}
+The elastic constant $k_{cc} = \frac{Y}{\zeta}$ is a crucial parameter that determines the effective stiffness of the cells. Following~\cite{You2018}, we define it as the ratio of the cell's Young's modulus $Y$ to the fluid drag coefficient $\zeta$:
 
 Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{You2018, Blanchard2015} and $\zeta \approx 200$ Pa$\cdot$h~\cite{You2018}), we set $k_{cc} = 20000$ h$^{-1}$. The simulation uses a timestep of $\Delta t = 10^{-5}$ h, which is standard for maintaining numerical stability in such overdamped systems~\cite{Khan_2024, You2018, Blanchard2015}.
 
@@ -365,42 +350,49 @@ Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{Y
 
 \subsection{Hard Collision Model}
 
-The hard collision model enforces strict non-overlapping constraints between cells using a constraint-based method. For each pair of nearby cells, a constraint $\alpha$ is defined based on the two closest points, $\mathbf{y}_n$ and $\mathbf{y}_m$, on their surfaces.
-
-Contrary to the soft Hertzian model, the hard model defines the force and torque from each constraint via an unknown scalar Lagrange multiplier $\gamma_\alpha$, which represents the magnitude of the impulse required to prevent penetration. The force on cell $n$ due to constraint $\alpha$ is:
+The hard collision model enforces strict non-overlapping constraints between cells using a constraint-based method. For each pair of nearby cells, a constraint $\alpha$ is defined based on the two closest points, $\mathbf{y}_n$ and $\mathbf{y}_m$, on their surfaces~\cite{Weady2024}. Contrary to the soft Hertzian model, the hard model defines the force and torque from each constraint via an yet unknown scalar Lagrange multiplier $\gamma_\alpha$. This multiplier represents the magnitude of the impulse required to prevent penetration. The force on cell $n$ due to constraint $\alpha$ is:
 
 \begin{equation} \label{eq:constraint_force}
     \mathbf{F}^{hard}_{n\alpha} = \hat{\mathbf{n}}_\alpha \gamma_\alpha
 \end{equation}
 
-where $\hat{\mathbf{n}}_\alpha$ is the normal vector at the contact point. The corresponding torque is $\boldsymbol{\tau}_{n\alpha} = (\mathbf{y}_n - \mathbf{x}_n) \times \hat{\mathbf{n}}_\alpha \gamma_\alpha$.
-
-All $C$ constraint multipliers are collected into a vector $\boldsymbol{\gamma} \in \mathbb{R}^{C}$. The total generalized force vector $\mathbfcal{F}$ for the colony depends linearly on these multipliers:
+where $\hat{\mathbf{n}}_\alpha$ is the normal vector at the contact point. The corresponding torque is $\boldsymbol{\tau}_{\alpha} = (\mathbf{y}_n - \mathbf{x}_n) \times \hat{\mathbf{n}}_\alpha \gamma_\alpha$. The total generalized force vector $\mathbfcal{F}$ for the colony depends linearly on the multipliers $\boldsymbol{\gamma} = [\dots, \gamma_\alpha, \dots]^\top \in \mathbb{R}^{C}$ and can be conveniently expressed in matrix form:
 
 \begin{equation}
     \mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D} \boldsymbol{\gamma}
 \end{equation}
 
-where the sparse matrix $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ maps each multiplier to the resultant forces and torques on the involved cells.
+where the sparse matrix $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ consists of blocks consisting of $\hat{\mathbf{n}}_\alpha$ and lever arms $(\mathbf{y}_n - \mathbf{x}_n) \times \hat{\mathbf{n}}_\alpha$ for each constraint $\alpha$. Similarly, the total stress of the colony can also be expressed as a linear function of the multipliers:
 
-\subsubsection{Constraint Resolution via a Nonlinear Complementarity Problem (NCP)}
+\begin{equation}
+    \boldsymbol{\sigma}(\boldsymbol{\gamma}) = \mathbfcal{L} \boldsymbol{\gamma}
+\end{equation}
 
-The goal is to solve for multipliers $\boldsymbol{\gamma}$ that resolve all overlaps. The solution must satisfy three physical conditions:
+where $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ is another sparse matrix consisting of entries encoding how each constraint $\alpha$ contributes to the stress on the associated cells. Specifically each entry $L_{i\alpha} = \frac{1}{2} |\hat{\mathbf{t}}_i \cdot \hat{\mathbf{n}}_\alpha|$ if cell $i$ is part of constraint $\alpha$ and zero otherwise. The matrix vector product mimics \autoref{eq:stress}.
+
+\subsubsection{Constraint Conditions}
+
+To ensure that solving for the multipliers $\boldsymbol{\gamma}$ leads to physically meaningful results, three key conditions must be satisfied:
+
 
 \begin{enumerate}
-    \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq 0$. This ensures that the forces are repulsive, preventing cells from pulling on each other.
-    \item \textbf{Non-Overlap:} $\mathbf{\Phi}^{k+1} \geq 0$ where $\mathbf{\Phi}^k = [\dots, \Phi_\alpha, \dots]^\top$ is the vector of signed separation distances at time step $k$. This condition ensures that after applying the forces, no cells overlap.
-    \item   \textbf{Complementarity:} $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$. This ensures  that if force acts, the cells separation distance must be zero after the update. Conversely, if cells are not in contact after the update, the force must have been zero.
+    \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq \mathbf{0}$. This ensures that the forces are repulsive, preventing cells from attracting each other.
+    \item \textbf{Non-Overlap:} $\mathbf{\Phi}^{k+1} \geq \mathbf{0}$ where $\mathbf{\Phi}^k = [\dots, \Phi_\alpha^k, \dots]^\top$ is the vector of signed separation distances between the pairs of cells associated with each constraint $\alpha$ at timestep $k$.
+          $\Phi_\alpha$ is computed as the minimum separation distance between the associated cells. We use the robust geometric algorithm described by \cite{Yan2019, GeometricTools} to compute these distances efficiently.
+          A positive value $\Phi_\alpha^k$ indicates that the cells are separated, while a negative value indicates overlap.
+          This condition ensures that in the updated configuration at timestep $k+1$, no cells overlap.
+    \item   \textbf{Complementarity:} $\boldsymbol{\gamma}^\top \mathbf{\Phi}^{k+1} = \mathbf{0}$ (alternatively written as $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$). This condition enforces that if two cells are in contact (i.e., $\Phi_\alpha^{k+1} = 0$), then a non-negative repulsive force may act ($\gamma_\alpha \geq 0$) to prevent overlap.
+          Conversely, if there is no contact ($\Phi_\alpha^{k+1} > 0$), then no force should be applied ($\gamma_\alpha = 0$).
 \end{enumerate}
 
-These three conditions are often abbreviated as:
+These conditions are often abbreviated as:
 
 \begin{equation}
     \mathbf{0} \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1} \geq \mathbf{0}.
 \end{equation}
 
 
-The colony update rule and constraint condition combine to form a system where the future state $\mathbfcal{C}^{k+1}$ (and thus $\mathbf{\Phi}^{k+1}$) depends on $\boldsymbol{\gamma}$:
+The colony update rule and additional conditions combine to form a system where the future state $\mathbfcal{C}^{k+1}$ (and thus $\mathbf{\Phi}^{k+1}$) depends on $\boldsymbol{\gamma}$:
 
 \begin{equation} \label{eq:colony_update_with_constraints}
     \begin{split}
@@ -409,32 +401,46 @@ The colony update rule and constraint condition combine to form a system where t
     \end{split}
 \end{equation}
 
-The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$. Weady et al.~\cite{Weady2024} linearize this relationship using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$:
+\subsubsection{Linearization of the Constraint Condition}
+
+
+
+The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and is non-trivial to compute directly. Weady et al.~\cite{Weady2024} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}$ using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$ and lengths $\boldsymbol{\ell}^k$. The change in $\mathbf{\Phi}$ in our model arises from two main effects:
+
+
+\begin{enumerate}
+    \item \textbf{Cell Motion:} All constraint distances change due to the motion of cells driven by collision forces. This is captured by the term $\dot{\mathbf{\Phi}^k}_{\text{motion}} = \frac{d \mathbf{\Phi}^k}{d \mathbfcal{C}} \frac{d \mathbfcal{C}}{dt} = (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}$.
+    \item \textbf{Cell Growth:} Simultaneously, the cells grow, which also affects the constraint distances. This is represented by $\dot{\mathbf{\Phi}^k}_{\text{growth}} = \frac{d \mathbf{\Phi}^k}{d \boldsymbol{\ell}} \frac{d \boldsymbol{\ell}}{dt} =-(\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}}$. (Note the negative sign here, as growth reduces the separation distance between cells.)
+\end{enumerate}
+
+Combining these two effects, leads to the following approximation for $\mathbf{\Phi}^{k+1}$:
+
 
 \begin{equation}\label{eq:phi_expanded}
+    \small
     \begin{split}
-        \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t \left( \mathbfcal{D}^\top  \mathbfcal{G}^\top  \dot{\mathbfcal{C}}^k - \mathbfcal{L}^\top\dot{\boldsymbol{\ell}} \right)\\
-        & = \mathbf{\Phi}^k + \Delta t \Biggl( \mathbfcal{D}^\top
-        \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}   - \mathbfcal{L}^\top  \frac{\boldsymbol{\ell}} {\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma } } \Biggr)
+        \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t \Bigl( \dot{\mathbf{\Phi}}_{\text{motion}} + \dot{\mathbf{\Phi}}_{\text{growth}} \Bigr)\\
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}^k - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \mathbfcal{G} \mathbfcal{M}  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( \mathbfcal{D}^\top \mathbfcal{M}  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda  \boldsymbol{\sigma}(\boldsymbol{\gamma})} \Bigr)\\
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \Bigr)
     \end{split}
 \end{equation}
 
-The change in separation distances depends on two factors:
 
-\begin{enumerate}
-    \item \textbf{Cell Motion:} The term $\mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}$ represents how constraint forces induce motion that changes $\mathbf{\Phi}^{k+1}$.
-    \item \textbf{Cell Growth:} The term $\mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}}$ accounts for how independent cell growth affects the separation distances. The matrix $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes the sensitivity of each constraint $\alpha$ and is used to calculate the stress vector $\boldsymbol{\sigma} = \mathbfcal{L} \boldsymbol{\gamma}$ for the entire colony,
-          as described in \autoref{eq:stress}.
-\end{enumerate}
+Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = \mathbfcal{G}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while $\mathbfcal{G}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See \cite{Weady2024, Tasora2008} for details).
 
-Substituting the approximation from \autoref{eq:phi_expanded} into the constraint conditions of \autoref{eq:colony_update_with_constraints} yields a nonlinear complementarity problem (NCP) for $\boldsymbol{\gamma}$:
+It can be shown that $\mathbfcal{L}^\top = \nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k \in \mathbb{R}^{C \times N}$ is the Jacobian that maps changes in cell lengths $\boldsymbol{\ell}$ to changes in the signed distance functions $\mathbf{\Phi}$~\cite{Weady2024}, simplifying the growth term in the last line of \autoref{eq:phi_expanded}.
+
+
+Substituting the approximation of $\mathbf{\Phi}^{k+1}$ from \autoref{eq:phi_expanded} into the constraint conditions of \autoref{eq:colony_update_with_constraints} yields a nonlinear complementarity problem (NCP) for $\boldsymbol{\gamma}$ which no longer depends on the unknown future state $\mathbfcal{C}^{k+1}(\boldsymbol{\gamma})$:
 
 \begin{empheq}[box=\fbox]{equation} \label{eq:ncp_boxed}
     \small
     \begin{aligned}
          & \text{Find } \boldsymbol{\gamma} \ \text{such that} \\
          & \mathbf{0} \leq \boldsymbol{\gamma} \perp
-        \boldsymbol{\Phi}^k
+        \mathbf{\Phi}^k
         + \Delta t \Biggl(
         \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}
         - \mathbfcal{L}^\top
@@ -444,45 +450,57 @@ Substituting the approximation from \autoref{eq:phi_expanded} into the constrain
     \end{aligned}
 \end{empheq}
 
+
+
 \subsubsection{Energy Minimization Solution}
 
-This NCP is equivalent to the first-order optimality condition for minimizing a convex energy function subject to $\boldsymbol{\gamma} \ge \mathbf{0}$~\cite{Yan2019}:
+To solve this NCP efficiently, we reformulate it as an optimization problem. We construct an energy function $E(\boldsymbol{\gamma})$ such that $\nabla_{\boldsymbol{\gamma}} E = \boldsymbol{\Phi}^{k+1}$ by integrating each term in the linearized constraint condition:
 
 \begin{equation}
     \small
     \begin{aligned}
         E(\boldsymbol{\gamma}) =
-        \boldsymbol{\gamma}^\top\boldsymbol{\Phi}^k
+        \boldsymbol{\gamma}^\top\mathbf{\Phi}^k
          & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-        \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)                        \\
+        \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right).
     \end{aligned}
 \end{equation}
 
-A central property of this energy function is that its gradient yields the linearized prediction of the vector of signed separation distances for the next time step: $\nabla_{\boldsymbol{\gamma}} E = \boldsymbol{\Phi}^{k+1}$.
+By construction, the gradient of this energy equals the linearized prediction:
 
-The equivalence between the NCP in \autoref{eq:ncp_boxed} and the first-order optimality (KKT) conditions for the minimization of $E(\boldsymbol{\gamma})$ is a standard result in optimization theory~\cite{Nocedal2006}.
+\begin{equation}
+    \begin{split}
+        \nabla_{\boldsymbol{\gamma}} E & = \boldsymbol{\Phi}^k + \Delta t \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \Delta t \mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \\
+        & = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma})
+    \end{split}
+\end{equation}
 
-This equivalence, combined with the physical interpretation of the gradient as the predicted separation $\boldsymbol{\Phi}^{k+1}$, ensures that the KKT conditions for the minimization problem directly map onto the NCP conditions. Specifically, at the optimum $\boldsymbol{\gamma}^*$:
+Because $E(\boldsymbol{\gamma})$ is convex, the KKT conditions are both necessary and sufficient for optimality. These conditions map directly onto the physical constraints of the NCP:
 
 \begin{itemize}
-    \item \textbf{Primal feasibility} ($\boldsymbol{\gamma}^* \ge \mathbf{0}$) ensures the repulsive force condition is satisfied: $\boldsymbol{\gamma}^* \ge \mathbf{0}$.
-    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) \ge \mathbf{0}$) ensures the predicted separation is non-negative: $\boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*) \ge \mathbf{0}$.
-    \item \textbf{Complementary slackness} ($(\boldsymbol{\gamma}^*)^\top \nabla E(\boldsymbol{\gamma}^*) = 0$) ensures the perpendicularity condition: $\boldsymbol{\gamma}^* \perp \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*)$.
+    \item \textbf{Primal feasibility} ($\boldsymbol{\gamma}^* \ge 0$): Forces are repulsive.
+    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) = \boldsymbol{\Phi}^{k+1} \ge 0$): No overlaps in predicted state.
+    \item \textbf{Complementary slackness} ($\boldsymbol{\gamma}^{*\top} \boldsymbol{\Phi}^{k+1} = 0$): Forces are zero for separated contacts.
 \end{itemize}
 
-Since the energy function $E(\boldsymbol{\gamma})$ is convex, the optimal Lagrange multiplier vector $\boldsymbol{\gamma}^*$ is the unique global solution that resolves all contacts according to the physical laws of rigid body contact.
+Thus, the unique global minimizer $\boldsymbol{\gamma}^*$ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence is a standard result in optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Tasora2008, Yan2019, Li2021, Weady2024,Rudge2012,Macklin2014,Ferguson2021}.
 
-The solution to this constrained minimization problem is computed using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, also implemented in~\cite{Weady2024}. This method iteratively refines the estimate of $\boldsymbol{\gamma}$ by taking adaptive gradient steps while enforcing the non-negativity constraint through projection.
+\subsubsection{Numerical Solution via Projected Gradient Descent}
 
-The algorithm continues until a convergence criteria is met, and the final solution $\boldsymbol{\gamma}^*$ is used to compute the generalized forces $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$. The colony state is then updated using \autoref{eq:colony_update}. This process is repeated at each simulation timestep to ensure that all collisions are resolved while maintaining the physical integrity of the cell collective.
+This constrained minimization problem is solved using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, also implemented in~\cite{Weady2024}, which iteratively refines $\boldsymbol{\gamma}$ with adaptive gradient steps while enforcing non-negativity via projection. The algorithm continues until a convergence criterion is met, and the final solution $\boldsymbol{\gamma}^*$ is used to compute the generalized forces $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$. The colony state can then be updated using \autoref{eq:colony_update}. This process is repeated at each simulation timestep to ensure that all collisions are resolved while maintaining the physical integrity of the cell collective.
+
+\subsubsection{Limitations of the Linearization}
+
+One of the impacts of the linearization is that orthogonal motions (rotations about the contact points and translations within the half-space defined by the contact plane and the negative surface normal) will not be constrained. To address this, Weady et al.~\cite{Weady2024} developed the \textit{recursively generated linear complementarity problem} (ReLCP) method, which iteratively identifies and adds new constraints to the system until all overlaps are resolved. Its details will not be repeated here.
+
 
 \newpage
 
 \section{Implementation}
 
-All simulations in this paper were performed with a custom C++ framework developed for large-scale simulations of proliferating cell collectives. The framework is designed for distributed-memory parallel computing and leverages standard HPC libraries to ensure scalability and efficiency. Its core components are:
-
+All simulations in this paper were performed with a custom C++ framework developed for large-scale simulations of proliferating cell collectives. The framework is designed for distributed-memory parallel computing and leverages standard HPC libraries to ensure scalability and efficiency. It combines ideas from the original implementation by Weady et al.~\cite{Weady2024} aswell as similar frameworks such as \cite{Tasora2008,Yan2019}. Its core components are:
+The colony update rule
 \subsection{Distributed Computing Architecture}
 
 The core architecture is built on two foundational libraries:
@@ -759,6 +777,11 @@ The current implementation provides a functional baseline for hard collision mod
 The present PETSc-based implementation of the ReLCP constraint solver faces computational bottlenecks that limit its scalability, primarily due to dynamic memory management strategies for constraint matrices and vectors. While an allocation factor mitigates frequent reallocations, sudden increases in collision events still trigger costly memory recopies. Furthermore, allocated memory is not reused between solver iterations, necessitating complete cleanup and reallocation at each time step.
 
 Future work should focus on developing a more sophisticated memory management strategy that leverages PETSc's advanced features, such as memory pooling for constraint matrices and vectors, matrix preallocation routines with accurate nonzero pattern prediction, and incremental growth strategies to minimize MPI synchronization overhead.
+
+
+\subsection{GPU Acceleration}
+
+\cite{Tasora2008}
 
 \subsection{Soft Collision Model}
 

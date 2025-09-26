@@ -208,7 +208,7 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
   double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
   double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
 
-  if (wall_time_since_last_check > 1) {
+  if (wall_time_since_last_check > 0) {
     double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
 
     // Exponential smoothing for ratio (wall/sim seconds)
