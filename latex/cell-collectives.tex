@@ -33,9 +33,10 @@
 \usepackage{empheq}
 \usepackage{varwidth}
 \usepackage{balance}
-
+\usepackage{todonotes}
+ 
 \usepackage[ngerman,main=english]{babel}
-
+ 
 % TikZ for diagrams
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,shapes,positioning}
@@ -96,7 +97,7 @@
 \maketitle
 
 \begin{abstract}
-    This work investigates the computational modeling of proliferating cell collectives, comparing an established constraint-based collision model as developed by~\cite{Weady2024} with a simpler potential-based collision model. While both approaches are demonstrated to reproduce key emergent patterns observed in bacterial colony growth, we highlight that ...............
+    This work investigates the computational modeling of proliferating cell collectives, comparing an established constraint-based collision model as developed by Weady et al.~\cite{Weady2024} with a simpler potential-based collision model employing a nonlinear Hertzian contact law. While both approaches are demonstrated to reproduce key emergent patterns observed in bacterial colony growth, we highlight that  ...............
 
 \end{abstract}
 
@@ -107,7 +108,7 @@
 \section{Introduction}
 \subsection{Biological Motivation}
 
-The collective behaviors of biological entities, ranging from simple microbial colonies to complex multicellular tissues, are fundamental to understanding the intricate processes of life. These systems often exhibit emergent spatio-temporal patterns, driven by the interplay of simple local interactions and individual growth dynamics. Bacterial colonies, for instance, showcase remarkable self-organization, developing sophisticated spatial structures in response to environmental stimuli. Specifically, experimental observations have highlighted the phenomenon of growth rate reduction in the colony's center due to mechanical pressure exerted by surrounding cells~\cite{Wittmann2023}. For various bacteria, such as E. coli, Bacillus subtilis, and Proteus mirabilis, and fungi like Setosphaeria rostrata and Exserohilum Turcicum, which experience different local cell densities across their growth phases, this pressure-induced deceleration contributes to the formation of characteristic concentric ring patterns~\cite{YAMAZAKI2005136}.
+The collective behaviors of biological entities, ranging from simple microbial colonies to complex multicellular tissues, are fundamental to understanding the intricate processes of life. These systems often exhibit emergent spatio-temporal patterns, driven by the interplay of simple local interactions and individual growth dynamics. Bacterial colonies, for instance, showcase remarkable self-organization, developing sophisticated spatial structures in response to environmental stimuli. Specifically, experimental observations have highlighted the phenomenon of growth rate reduction in the colony's center due to mechanical pressure exerted by surrounding cells~\cite{Wittmann2023}. For various bacteria, such as E. coli, Bacillus subtilis, and Proteus mirabilis, and fungi like Setosphaeria rostrata and Exserohilum Turcicum, this pressure-induced deceleration contributes to the formation of characteristic concentric ring patterns~\cite{YAMAZAKI2005136}.
 
 \begin{figure}
     \centering
@@ -116,7 +117,7 @@ The collective behaviors of biological entities, ranging from simple microbial c
     \label{fig:exserohilum_turcicum}
 \end{figure}
 
-These biologically fascinating phenomena pose significant computational challenges, demanding the accurate integration of both mechanical cell interactions and proliferation dynamics.
+These phenomena pose significant computational challenges, demanding the accurate integration of both mechanical cell interactions and proliferation dynamics.
 
 This work is directly inspired by these observations, particularly the formation of concentric rings in growing bacterial communities. These patterns represent a key manifestation of self-organization under controlled conditions, as further explored in~\cite{Weady2024}. Comprehending these emergent structures necessitates robust computational models capable of capturing the dynamic interplay between individual cell mechanics, intercellular interactions, and proliferation.
 
@@ -128,33 +129,38 @@ Existing constraint-based (hard) collision models, which enforce strict non-over
 
 In contrast, potential-based (soft) collision models, which permit minor overlaps and employ repulsive forces to manage interactions, provide a computationally more tractable alternative by relying solely on local computations.
 
+Moreover, these two approaches may exhibit different stability constraints on the simulation step size, with soft collision models often requiring smaller steps to maintain numerical stability, whereas hard models may tolerate larger steps. \todo{check}
+
+% TODO: quantify or explore step size differences for both approaches
+
 Despite the established trade-offs, the comparative effectiveness of hard versus soft collision models in accurately reproducing biologically relevant patterns and their computational performance within the context of proliferating cell collectives remains an underexplored area. This research aims to address this gap by systematically comparing these two modeling approaches by investigating the computational performance of both models and their ability to reproduce biologically relevant patterns.
+
 
 
 \section{Related Work}
 
-The simulation of collective biological behaviors, particularly the emergent patterns observed in bacterial colonies, necessitates robust computational models that accurately capture both individual cell mechanics and proliferation dynamics. Agent-based models (ABMs) are a prevalent approach, representing individual cells as discrete agents interacting within a simulated environment. A critical computational bottleneck within these ABMs is the accurate and efficient resolution of cell-cell collisions. This section reviews existing approaches to collision modeling, their computational underpinnings, and highlights a significant gap in the comparative benchmarking of these methods, particularly from a high-performance computing (HPC) perspective.
+The simulation of collective biological behaviors, such as bacterial colony formation, relies on agent-based models (ABMs) that capture individual cell mechanics and proliferation. A critical computational challenge in these ABMs is the efficient and accurate resolution of cell-cell collisions. This section reviews the two primary collision modeling paradigms and identifies a significant gap in their comparative benchmarking from a high-performance computing (HPC) perspective.
 
-\subsection{Collision Models}
+\subsection{Collision Modeling Paradigms}
 
-Two primary paradigms exist for handling collisions in ABMs: constraint-based (hard) collision models and potential-based (soft) collision models.
-
+Two primary paradigms exist for handling collisions in ABMs: potential-based (soft) and constraint-based (hard) models.
 
 \begin{description}[style=nextline]
-    \item[Constraint-Based (Hard) Collision Models]
-        Constraint-based models enforce strict non-overlapping conditions between agents. This is typically achieved through optimization frameworks that resolve collisions by adjusting agent positions or velocities to satisfy geometric constraints. These methods offer high physical fidelity, ensuring that simulated agents behave as if they are truly impenetrable.~\cite{Rudge2012} demonstrated a notable application of this approach for growing bacterial colonies. Their work highlighted the significant computational intensity of hard collisions, requiring methods like sparse matrix inversions for constraint resolution. They showcased the benefits of GPU acceleration for performance, achieving simulations of 30,000 cells in 30 minutes on their hardware, illustrating the substantial computational cost of such precise collision handling. This study provides a rare, explicit runtime measurement for a hard collision model, underscoring its computational demands.
-
     \item[Potential-Based (Soft) Collision Models]
-        In contrast, potential-based (soft) collision models manage interactions by employing repulsive forces when agents approach or overlap, generally offering greater computational tractability. These models typically rely on local computations, such as calculating inter-particle forces based on proximity, making them more amenable to parallelization and large-scale simulations.~\cite{Warren2019} presented a soft collision model that enabled simulations of 3D growth and complex structures, achieving impressive scalability by simulating millions of cells on multi-core CPUs. This work provides valuable insights into the performance scaling of soft collision approaches.
+        These models manage interactions by employing repulsive forces, defined by potentials like Hertzian or Lennard-Jones, when agents overlap. Their primary advantage is computational tractability, as they rely on local force calculations that are highly amenable to parallelization. This has enabled large-scale simulations, such as the work by \cite{Warren2019}, who modeled millions of cells in 3D. However, a well-known limitation is numerical stiffness, which forces the use of small integration timesteps. Furthermore, as noted by \cite{Yan2019}, the finite range of repulsive forces causes particles to behave as soft and deformable, leading to an "effective" diameter smaller than the intended geometric size.
+
+    \item[Constraint-Based (Hard) Collision Models]
+        These models enforce strict non-overlapping geometric constraints, ensuring high physical fidelity by treating agents as truly impenetrable. A notable application is the work of \cite{Rudge2012}, who simulated growing bacterial colonies using a constraint-based method. They highlighted its computational intensity, often requiring solutions to large constraint systems, but demonstrated the feasibility of simulating tens of thousands of cells with GPU acceleration. The method of \cite{Yan2019} presents a advanced hard constraint approach that specifically addresses the drawbacks of soft models: it eliminates numerical stiffness—allowing timesteps to be increased by 10–100 times—and guarantees particles maintain their precise geometric dimensions.
+
 \end{description}
 
-\subsection{The Benchmarking Gap: Comparative Performance of Collision Models}
+\subsection{The Benchmarking Gap}
 
-While collision models have been implemented and applied to a wide range of biological systems, there is a notable lack of direct, systematic comparison focusing on their computational performance trade-offs. Many existing studies, including those that explore mechanical interactions using bacteria simulation frameworks such as~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024}, tend to prioritize biological insights without providing comprehensive runtime analyses or detailed HPC benchmarking across different interaction paradigms.
+The reviewed literature reveals a clear dichotomy. Soft models offer computational simplicity and have been scaled to high agent counts, but at the cost of numerical stiffness and compromised physical fidelity. Hard models, particularly modern implementations like that of \cite{Yan2019}, offer a solution to these limitations, promising greater timesteps and rigorous geometry.
 
-Specifically, the comparative effectiveness and computational cost of hard versus soft collision models within the context of proliferating cell collectives remain underexplored. A unified analysis that directly contrasts their performance characteristics (e.g., execution time, scalability, numerical stability (critical timestep), etc.) is largely absent.
+However, this presents a critical, unquantified trade-off: does the hard model's ability to take larger timesteps outweigh its inherently higher computational cost per timestep? This question is especially pertinent in simulations of proliferating cell collectives, where exponentially increasing density dramatically alters the computational load of the collision resolution algorithm.
 
-This research aims to address this critical gap by systematically implementing and comparing these two collision models within a unified ABM framework, providing a much-needed computational analysis from an HPC perspective to quantify these trade-offs.
+A systematic benchmarking focusing on this computational trade-off between the models is largely absent. Existing studies~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024} typically validate their models by comparing simulation results to experimental data (e.g., microscopy images of bacterial colonies)~\cite{Rudge2012,Khan_2024, Rudge2013,Langeslay_2023, Ghosh2015}, prioritizing biological insights over a rigorous HPC analysis of runtime, scalability, and numerical stability under proliferation. Consequently, there is no clear guidance for modelers on which paradigm is more efficient for a given problem scale. This work aims to fill this gap by implementing both models within a unified ABM framework to provide a direct, quantitative comparison of their computational performance.
 
 \section{Cell Mechanics}
 
@@ -440,7 +446,7 @@ Substituting the approximation from \autoref{eq:phi_expanded} into the constrain
 
 \subsubsection{Energy Minimization Solution}
 
-This NCP is equivalent to the first-order optimality condition for minimizing a convex energy function subject to $\boldsymbol{\gamma} \ge \mathbf{0}$:
+This NCP is equivalent to the first-order optimality condition for minimizing a convex energy function subject to $\boldsymbol{\gamma} \ge \mathbf{0}$~\cite{Yan2019}:
 
 \begin{equation}
     \small
@@ -672,6 +678,9 @@ The soft model consistently outperforms the hard model, with a speedup factor of
 % Force evaluation (soft model)
 % Solver iterations (hard model)
 % Communication (MPI)
+
+\subsection{Performance}
+\cite{Yan2019}
 
 
 \subsection{Critical Time Step}
