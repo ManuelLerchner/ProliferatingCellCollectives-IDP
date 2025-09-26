@@ -68,7 +68,7 @@ inline BBPGDResult BBPGD(
   // Compute initial gradient and residual
 
   gradient(gamma, phi_curr);
-  double res = residual(phi_curr, gamma, N);
+  double res = residual(phi_curr, gamma);
 
   if (res <= allowed_residual) {
     return {.bbpgd_iterations = 0, .residual = res};
@@ -102,7 +102,7 @@ inline BBPGDResult BBPGD(
 
     // if (iteration % 10 == 0) {
     // Step 8: res_next := res(γ_next)
-    res = residual(g_next, gamma_next, N);
+    res = residual(g_next, gamma_next);
 
     if (bbpgd_logger) {
       double grad_norm, dummy;

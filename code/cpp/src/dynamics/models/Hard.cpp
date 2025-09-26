@@ -285,7 +285,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, params.solver_config.tolerance);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 100 * params.solver_config.tolerance);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
                                                [](double acc, const Constraint& c) {
@@ -368,7 +368,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
       PetscCallAbort(PETSC_COMM_WORLD, VecMAXPY(phi_next_out, 2, scales, vecs_to_add));
     };
 
-    auto residual = [&](const VecWrapper& gradient_val, const VecWrapper& gamma, int N) {
+    auto residual = [&](const VecWrapper& gradient_val, const VecWrapper& gamma) {
       // This function computes the infinity norm of the projected gradient.
       // The projection is defined as:
       //   projected_gradient_i = gradient_val_i, if gamma_i > 0
@@ -385,7 +385,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
       double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
 
 #pragma omp parallel for reduction(max : res)
-      for (PetscInt i = 0; i < N; ++i) {
+      for (PetscInt i = 0; i < n_local; ++i) {
         double v;
         if (PetscRealPart(gamma_array[i]) > 0) {
           v = grad_array[i];
