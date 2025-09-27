@@ -3,6 +3,7 @@
 #include <petsc.h>
 
 #include <utility>
+#include <vector>
 
 #include "MPIUtil.h"
 
