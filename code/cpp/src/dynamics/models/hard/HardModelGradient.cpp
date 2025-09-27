@@ -150,6 +150,7 @@ double HardModelGradient::residual(const VecWrapper& gradient_val, const VecWrap
     } else {
       v = std::min(0.0, PetscRealPart(grad_array[i]));
     }
+
     res = std::max(res, std::abs(v));  // Take absolute value for infinity norm
   }
 

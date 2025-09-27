@@ -295,7 +295,7 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   }
   double center_penalty = 1.0 - relative_distance * relative_distance;  // Quadratic falloff
 
-  constraint.gamma = signed_distance >= 0.0 ? 0.0 : -signed_distance;
+  constraint.gamma = signed_distance >= 0.0 ? 0.0 : -signed_distance * 5e2;
 
   return constraint;
 }

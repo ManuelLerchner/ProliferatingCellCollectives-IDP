@@ -16,7 +16,7 @@ struct SimulationStep {
 
   // Solver metrics
   int recursive_iterations;
-  long long bbpgd_iterations;
+  size_t bbpgd_iterations;
   double max_overlap;
   double residual;
   double dt_s;

@@ -32,7 +32,7 @@ class ParticleManager {
   struct SolverSolution {
     std::vector<Constraint> constraints;
     int constraint_iterations;
-    long long bbpgd_iterations;
+    size_t bbpgd_iterations;
     double residual;
     double max_overlap;
   };

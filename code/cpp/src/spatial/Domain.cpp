@@ -93,6 +93,39 @@ void Domain::run() {
                         }),
         MPI_MAX);
 
+    // Log simulation parameters with performance metrics
+
+    // Get performance metrics
+    double memory_usage_mb = utils::getCurrentMemoryUsageMB();
+    double peak_memory_mb = utils::getPeakMemoryUsageMB();
+    double cpu_time_s = utils::getCPUTimeSeconds();
+    double load_imbalance = utils::calculateLoadImbalance(particle_manager_->local_particles.size());
+
+    size_t total_constraints = globalReduce(solver_solution.constraints.size(), MPI_SUM);
+
+    vtk::SimulationStep step_data{
+        .simulation_time_s = simulation_time_seconds_,
+        .step_duration_s = MPI_Wtime() - step_start_time_,
+        .step = iter,
+
+        .num_particles = global_particle_count,
+        .num_constraints = total_constraints,
+        .colony_radius = colony_radius,
+
+        // Solver metrics
+        .recursive_iterations = solver_solution.constraint_iterations,
+        .bbpgd_iterations = solver_solution.bbpgd_iterations,
+        .max_overlap = solver_solution.max_overlap,
+        .residual = solver_solution.residual,
+        .dt_s = params_.sim_config.dt_s,
+
+        // Add performance metrics
+        .memory_usage_mb = memory_usage_mb,
+        .peak_memory_mb = peak_memory_mb,
+        .cpu_time_s = cpu_time_s,
+        .mpi_comm_time_s = mpi_comm_time,
+        .load_imbalance = load_imbalance};
+
     if (simulation_time_seconds_ - time_last_log_ > params_.sim_config.log_frequency_seconds) {
       step_start_time_ = MPI_Wtime();
       particle_logger_->log(particle_manager_->local_particles);
@@ -100,43 +133,11 @@ void Domain::run() {
       domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
       time_last_log_ = simulation_time_seconds_;
 
-      // Get performance metrics
-      double memory_usage_mb = utils::getCurrentMemoryUsageMB();
-      double peak_memory_mb = utils::getPeakMemoryUsageMB();
-      double cpu_time_s = utils::getCPUTimeSeconds();
-      double load_imbalance = utils::calculateLoadImbalance(particle_manager_->local_particles.size());
-
-      size_t total_constraints = globalReduce(solver_solution.constraints.size(), MPI_SUM);
-
-      // Log simulation parameters with performance metrics
-      vtk::SimulationStep step_data{
-          .simulation_time_s = simulation_time_seconds_,
-          .step_duration_s = MPI_Wtime() - step_start_time_,
-          .step = iter,
-
-          .num_particles = global_particle_count,
-          .num_constraints = total_constraints,
-          .colony_radius = colony_radius,
-
-          // Solver metrics
-          .recursive_iterations = solver_solution.constraint_iterations,
-          .bbpgd_iterations = solver_solution.bbpgd_iterations,
-          .max_overlap = solver_solution.max_overlap,
-          .residual = solver_solution.residual,
-          .dt_s = params_.sim_config.dt_s,
-
-          // Add performance metrics
-          .memory_usage_mb = memory_usage_mb,
-          .peak_memory_mb = peak_memory_mb,
-          .cpu_time_s = cpu_time_s,
-          .mpi_comm_time_s = mpi_comm_time,
-          .load_imbalance = load_imbalance};
-
       // Log simulation data
       simulation_logger_->log(step_data);
     }
 
-    printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count());
+    printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count(), step_data);
     // PetscPrintf(PETSC_COMM_WORLD, "\n");
     iter++;
   }
@@ -197,7 +198,7 @@ void Domain::resizeDomain() {
   particle_manager_->updateDomainBounds(min_bounds_, max_bounds_);
 }
 
-void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s) const {
+void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s, vtk::SimulationStep step) {
   double time_elapsed_seconds = simulation_time_seconds_;
   double progress_percent = (colony_radius / params_.sim_config.end_radius) * 100.0;
 
@@ -207,43 +208,43 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
   double current_wall_time = MPI_Wtime();
   double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
   double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
+ 
 
-  if (wall_time_since_last_check > 1) {
+  if (wall_time_since_last_check > 1 && sim_time_since_last_check > 1e-12) {
     double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
 
-    // Exponential smoothing for ratio (wall/sim seconds)
+    // Exponential smoothing
     double alpha = 0.1;
     double smoothed_ratio = last_wall_per_sim_seconds_ * (1.0 - alpha) + current_ratio * alpha;
 
-    // --- ETA ---
-    double estimated_remaining_wall_time_seconds =
-        (params_.sim_config.end_radius - colony_radius) * smoothed_ratio;
+    // Estimate growth rate per sim second
+    double delta_radius = colony_radius - last_eta_check_radius_;
+    double growth_rate_sim = delta_radius / sim_time_since_last_check;
+
+    // Estimate remaining sim time and convert to wall time
+    double remaining_sim_time = (params_.sim_config.end_radius - colony_radius) / growth_rate_sim;
+    double estimated_remaining_wall_time_seconds = remaining_sim_time * smoothed_ratio;
 
     char buffer[100];
     snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
     eta_str = buffer;
 
-    // --- Colony growth per wall time ---
-    double delta_radius = colony_radius - last_eta_check_radius_;
+    // Colony growth per wall time
     double raw_growth_rate = delta_radius / wall_time_since_last_check;
-
-    // optional smoothing for growth rate as well
-    double smoothed_growth_rate =
-        last_growth_rate_wall_ * (1.0 - alpha) + raw_growth_rate * alpha;
-
+    double smoothed_growth_rate = last_growth_rate_wall_ * (1.0 - alpha) + raw_growth_rate * alpha;
     growth_rate_wall = smoothed_growth_rate;
 
-    // Update for next call
-    auto self = const_cast<Domain*>(this);
-    self->last_eta_check_time_ = current_wall_time;
-    self->last_eta_check_sim_time_ = simulation_time_seconds_;
-    self->last_wall_per_sim_seconds_ = smoothed_ratio;
-    self->last_eta_check_radius_ = colony_radius;
-    self->last_growth_rate_wall_ = smoothed_growth_rate;
+    // Update for next call (mark members as mutable to avoid const_cast)
+    last_wall_per_sim_seconds_ = smoothed_ratio;
+    last_eta_check_radius_ = colony_radius;
+    last_growth_rate_wall_ = smoothed_growth_rate;
+
+    last_eta_check_time_ = current_wall_time;
+    last_eta_check_sim_time_ = simulation_time_seconds_;
 
     PetscPrintf(PETSC_COMM_WORLD,
                 "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
-                "dt: %4.1es | CPU: %3.1fs | Iter: %d | Particles: %d | Growth: %.4f/s\n",
+                "dt: %4.1es | CPU: %3.1fs | Particles: %d | Growth: %.4f/s | BBPGD iters: %ld | Residual: %.2e\n",
                 colony_radius,
                 params_.sim_config.end_radius,
                 progress_percent,
@@ -251,9 +252,10 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
                 eta_str.c_str(),
                 params_.sim_config.dt_s,
                 cpu_time_s,
-                current_iteration,
                 global_particle_count,
-                growth_rate_wall);
+                growth_rate_wall,
+                step.bbpgd_iterations,
+                step.residual);
   }
 }
 

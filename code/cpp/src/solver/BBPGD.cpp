@@ -49,7 +49,7 @@ BBPGDResult BBPGD(
   double res = G.residual(phi_curr, gamma);
 
   if (res <= allowed_residual) {
-    return {.bbpgd_iterations = 0, .residual = res};
+    return {.bbpgd_iterations = 1, .residual = res};
   }
 
   // Initial step size
@@ -65,9 +65,9 @@ BBPGDResult BBPGD(
   auto zero_vec = VecWrapper::Like(gamma);
   VecZeroEntries(zero_vec);
 
-  size_t iteration = 0;
+  size_t iteration = 2;
 
-  for (iteration = 0; iteration < max_bbpgd_iterations; iteration++) {
+  for (iteration = 2; iteration < max_bbpgd_iterations; iteration++) {
     // We compute the next gamma into a temporary, then swap.
     auto gamma_next = VecWrapper::Like(gamma);
 
@@ -114,9 +114,24 @@ BBPGDResult BBPGD(
     double denominator_val;
 
     // BB1 step: (d^T d)/(d^T g)
-    NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val);
+
+    // alternating bb1 and bb2 methods
+    if (iteration % 2 == 0) {
+      NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val);
+    } else {
+      NormAdotAB(delta_phi, delta_gamma, denominator_val, numerator_val);
+    }
+
+    if (fabs(denominator_val) < 10 * std::numeric_limits<double>::epsilon()) {
+      denominator_val += 10 * std::numeric_limits<double>::epsilon();  // prevent div 0 error
+    }
 
     alpha = numerator_val / denominator_val;
+
+    // if alpha is nan or inf or negative, reset it
+    if (std::isnan(alpha) || std::isinf(alpha) || alpha <= 0) {
+      alpha = 1.0 / res;
+    }
 
     // Prepare for next iteration by swapping buffers
     gamma = std::move(gamma_next);
