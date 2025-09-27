@@ -105,7 +105,7 @@ void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const V
 
 ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager, CollisionDetector& collision_detector, SimulationParameters params, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   int constraint_iterations = 0;
-  long long bbpgd_iterations = 0;
+  size_t total_bbpgd_iterations = 0;
 
   double res = 0.0;
   double max_overlap = 0.0;
@@ -149,7 +149,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
 
     res = bbpgd_result_recursive.residual;
-    bbpgd_iterations += bbpgd_result_recursive.bbpgd_iterations;
+    total_bbpgd_iterations += bbpgd_result_recursive.bbpgd_iterations;
 
     // Update
     PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspace.gamma_diff_workspace, -1.0, gamma_old, GAMMA));
@@ -188,5 +188,5 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     PetscPrintf(PETSC_COMM_WORLD, "\n  Warning: Maximum number of constraint iterations reached (%ld). Solution may not be fully converged.\n", params.solver_config.max_recursive_iterations);
   }
 
-  return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
+  return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = total_bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
 }
