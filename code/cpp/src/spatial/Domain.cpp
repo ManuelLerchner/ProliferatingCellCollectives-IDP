@@ -208,7 +208,6 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
   double current_wall_time = MPI_Wtime();
   double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
   double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
- 
 
   if (wall_time_since_last_check > 1 && sim_time_since_last_check > 1e-12) {
     double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
@@ -242,9 +241,12 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
     last_eta_check_time_ = current_wall_time;
     last_eta_check_sim_time_ = simulation_time_seconds_;
 
+    int total_ranks;
+    MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
+
     PetscPrintf(PETSC_COMM_WORLD,
                 "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
-                "dt: %4.1es | CPU: %3.1fs | Particles: %d | Growth: %.4f/s | BBPGD iters: %ld | Residual: %.2e\n",
+                "dt: %4.1es | CPU: %3.1fs | Particles: %d | Growth: %.4f/s | BBPGD iters: %ld | Residual: %.2e | Ranks %d\n",
                 colony_radius,
                 params_.sim_config.end_radius,
                 progress_percent,
@@ -255,7 +257,8 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
                 global_particle_count,
                 growth_rate_wall,
                 step.bbpgd_iterations,
-                step.residual);
+                step.residual,
+                total_ranks);
   }
 }
 
