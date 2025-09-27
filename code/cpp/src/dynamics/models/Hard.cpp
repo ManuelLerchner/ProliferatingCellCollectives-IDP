@@ -1,33 +1,24 @@
-
 #include "Hard.h"
 
 #include "dynamics/Physics.h"
+#include "hard/HardModelGradient.h"
+#include "hard/Workspace.h"
 #include "solver/BBPGD.h"
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
-auto resizeAndUpdateMatrices(const std::vector<Constraint>& all_constraints, ParticleManager& particle_manager) {
-  // First ensure capacity for new constraints
-
+auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleManager& particle_manager, const SimulationParameters& params) {
   auto global_max_constraints = globalReduce<size_t>(all_constraints.size(), MPI_MAX);
 
-  // resize vectors to fit global_max_constraints
+  MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, params.physics_config.xi);
+  MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
+  VecWrapper l = getLengthVector(particle_manager.local_particles);
+  VecWrapper PHI = VecWrapper::Create(global_max_constraints);
+  VecWrapper GAMMA = VecWrapper::Create(global_max_constraints);
+  MatWrapper D_PREV = MatWrapper::CreateAIJ(global_max_constraints, 6 * particle_manager.local_particles.size());
+  MatWrapper L_PREV = MatWrapper::CreateAIJ(global_max_constraints, particle_manager.local_particles.size());
 
-  VecWrapper new_PHI = VecWrapper::Create(global_max_constraints);
-  VecWrapper new_GAMMA = VecWrapper::Create(global_max_constraints);
-
-  MatWrapper new_D_PREV = MatWrapper::CreateAIJ(global_max_constraints, 6 * particle_manager.local_particles.size());
-  MatWrapper new_L_PREV = MatWrapper::CreateAIJ(global_max_constraints, particle_manager.local_particles.size());
-
-  return std::make_tuple(
-      std::move(new_PHI),
-      std::move(new_GAMMA),
-      std::move(new_D_PREV),
-      std::move(new_L_PREV));
-}
-
-void updateMatrices(VecWrapper& PHI_PREV, VecWrapper& GAMMA_PREV, MatWrapper& D_PREV, MatWrapper& L_PREV, const std::vector<Constraint>& all_constraints) {
-  // First ensure capacity for new constraints
+  Workspace workspace(D_PREV, M, G, L_PREV, GAMMA, PHI, l);
 
   PetscInt ownership_start, ownership_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(D_PREV, &ownership_start, &ownership_end));
@@ -35,114 +26,25 @@ void updateMatrices(VecWrapper& PHI_PREV, VecWrapper& GAMMA_PREV, MatWrapper& D_
   // Calculate offset for new data
   PetscInt col_offset = ownership_start;
 
-  create_phi_vector_local(PHI_PREV, all_constraints, col_offset);
-  VecAssemblyBegin(PHI_PREV);
-
-  create_gamma_vector_local(GAMMA_PREV, all_constraints, col_offset);
-  VecAssemblyBegin(GAMMA_PREV);
-
+  create_phi_vector_local(PHI, all_constraints, col_offset);
+  create_gamma_vector_local(GAMMA, all_constraints, col_offset);
   calculate_jacobian_local(D_PREV, all_constraints, col_offset);
-  MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
-
   calculate_stress_matrix_local(L_PREV, all_constraints, col_offset);
-  MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
 
-  // Final assembly
-
-  VecAssemblyEnd(PHI_PREV);
-  VecAssemblyEnd(GAMMA_PREV);
+  VecAssemblyEnd(PHI);
+  VecAssemblyEnd(GAMMA);
   MatAssemblyEnd(D_PREV, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(L_PREV, MAT_FINAL_ASSEMBLY);
 
-  // MatView(D_PREV, PETSC_VIEWER_DRAW_WORLD);
-
-  // Get info about number of mallocs
-  // MatInfo info;
-  // PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(D_PREV, MAT_GLOBAL_SUM, &info));
-  // PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info.mallocs);
-  // PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info.nz_allocated, (PetscInt)info.nz_used, (PetscInt)info.nz_unneeded);
-
-  // MatInfo info2;
-  // PetscCallAbort(PETSC_COMM_WORLD, MatGetInfo(L_PREV, MAT_GLOBAL_SUM, &info2));
-  // PetscPrintf(PETSC_COMM_WORLD, "Number of mallocs: %d\n", (PetscInt)info2.mallocs);
-  // PetscPrintf(PETSC_COMM_WORLD, "nz_allocated: %d, nz_used: %d, nz_unneeded: %d\n", (PetscInt)info2.nz_allocated, (PetscInt)info2.nz_used, (PetscInt)info2.nz_unneeded);
-}
-
-struct RecursiveSolverWorkspaces {
-  RecursiveSolverWorkspaces(const MatWrapper& D_PREV, const MatWrapper& M, const MatWrapper& G, const MatWrapper& L_PREV, const VecWrapper& GAMMA_PREV, const VecWrapper& PHI_PREV, const VecWrapper& l) {
-    // movement
-    gamma_diff_workspace = VecWrapper::Like(GAMMA_PREV);
-    VecCopy(GAMMA_PREV, gamma_diff_workspace);
-    phi_dot_movement_workspace = VecWrapper::Like(PHI_PREV);
-    F_g_workspace = VecWrapper::FromMatRows(D_PREV);
-    U_c_workspace = VecWrapper::FromMat(M);
-    U_total_workspace = VecWrapper::FromMatRows(D_PREV);
-
-    // growth
-    phi_dot_growth_result = VecWrapper::FromMat(L_PREV);
-
-    ldot_curr_workspace = VecWrapper::Like(l);
-    ldot_diff_workspace = VecWrapper::Like(l);
-    ldot_prev = VecWrapper::Like(l);
-    VecZeroEntries(ldot_prev);
-
-    impedance_curr_workspace = VecWrapper::Like(l);
-    stress_curr_workspace = VecWrapper::Like(l);
-
-    U_ext = VecWrapper::FromMat(M);
-    F_ext_workspace = VecWrapper::FromMat(M);
-
-    // force
-    df = VecWrapper::FromMatRows(D_PREV);
-    du = VecWrapper::FromMat(M);
-    dC = VecWrapper::FromMat(G);
-  }
-
-  VecWrapper gamma_diff_workspace;
-  VecWrapper phi_dot_movement_workspace;
-  VecWrapper phi_dot_growth_result;
-  VecWrapper F_g_workspace;
-  VecWrapper U_c_workspace;
-  VecWrapper U_total_workspace;
-  VecWrapper ldot_curr_workspace;
-  VecWrapper ldot_diff_workspace;
-  VecWrapper ldot_prev;
-  VecWrapper impedance_curr_workspace;
-  VecWrapper stress_curr_workspace;
-  VecWrapper U_ext;
-  VecWrapper F_ext_workspace;
-  VecWrapper df, du, dC;
-};
-
-void estimate_phi_dot_movement_inplace(
-    const MatWrapper& D,
-    const MatWrapper& M,
-    const VecWrapper& U_known,
-    const VecWrapper& gamma,
-    VecWrapper& F_g,
-    VecWrapper& U_c,
-    VecWrapper& U_total,
-    VecWrapper& phi_dot_out) {
-  // phi_dot = D^T (U_known + M * D * gamma)
-
-  // Step 1: F_g = D * gamma
-  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, gamma, F_g));
-
-  // Step 2: U_c = M * F_g
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F_g, U_c));
-
-  // Step 3: U_total = U_known + U_c
-  PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(U_total, 1.0, U_known, U_c));
-
-  // Step 4: phi_dot_out = D^T * U_total
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(D, U_total, phi_dot_out));
-}
-
-void estimate_phi_dot_growth_inplace(
-    const MatWrapper& Sigma,
-    const VecWrapper& ldot,
-    VecWrapper& phi_dot_growth_result) {
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(Sigma, ldot, phi_dot_growth_result));
+  return std::make_tuple(
+      std::move(M),
+      std::move(G),
+      std::move(l),
+      std::move(GAMMA),
+      std::move(PHI),
+      std::move(D_PREV),
+      std::move(L_PREV),
+      std::move(workspace));
 }
 
 void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
@@ -201,40 +103,17 @@ void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const V
   cleanupScatteredResources(phi_local, phi_scatter, phi_is);
 }
 
-enum class SolverState {
-  CONVERGED,
-  NOT_CONVERGED,
-};
-
 ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager, CollisionDetector& collision_detector, SimulationParameters params, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
-  int expected_recursive_iteration = 3;
-
-  int global_num_particles = globalReduce<int>(particle_manager.local_particles.size(), MPI_SUM);
-
-  int global_max_particles = globalReduce<int>(particle_manager.local_particles.size(), MPI_MAX);
-
-  // VecWrapper GAMMA = VecWrapper::Create(0);
-  // VecWrapper PHI = VecWrapper::Create(0);
-  // MatWrapper D_PREV = MatWrapper::CreateAIJ(0, 6 * particle_manager.local_particles.size());
-  // MatWrapper L_PREV = MatWrapper::CreateAIJ(0, particle_manager.local_particles.size());
-
-  std::optional<RecursiveSolverWorkspaces> workspaces;
-
-  // Create length mapping for consistent indexing
-
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
 
-  double res = 0;
-  double max_overlap = 0;
-  long long bbpgd_iterations_this_step = 0;
+  double res = 0.0;
+  double max_overlap = 0.0;
 
   // Reset collision detector state
   collision_detector.reset();
 
   std::vector<Constraint> all_constraints_set;
-
-  SolverState solver_state = SolverState::NOT_CONVERGED;
 
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
@@ -242,7 +121,9 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 0.2);
 
-    max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
+    all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
+
+    max_overlap = globalReduce(std::accumulate(all_constraints_set.begin(), all_constraints_set.end(), 0.0,
                                                [](double acc, const Constraint& c) {
                                                  return std::max(acc, c.signed_distance < 0 ? -c.signed_distance : 0);
                                                }),
@@ -250,161 +131,61 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     // Check convergence
     if (max_overlap <= params.solver_config.tolerance && constraint_iterations > 0) {
-      solver_state = SolverState::CONVERGED;
       break;
     }
 
-    MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, params.physics_config.xi);
-    MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
-    VecWrapper l = getLengthVector(particle_manager.local_particles);
+    auto [M, G, l, GAMMA, PHI, D_PREV, L_PREV, workspace] = createMatrices(all_constraints_set, particle_manager, params);
 
-    all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
-
-    // resize and update matrices
-    auto [PHI, GAMMA, D_PREV, L_PREV] = resizeAndUpdateMatrices(all_constraints_set, particle_manager);
-    workspaces.emplace(D_PREV, M, G, L_PREV, GAMMA, PHI, l);
-
-    // Calculate matrices only for the newly identified constraints
-    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, all_constraints_set);
-
-    // PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_DENSE);
-
-    // PetscPrintf(PETSC_COMM_WORLD, "L");
-    // VecView(PHI, PETSC_VIEWER_STDOUT_WORLD);
-
-    // PetscPrintf(PETSC_COMM_WORLD, "PHI");
-    // VecView(GAMMA, PETSC_VIEWER_STDOUT_WORLD);
-
-    // PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD);
-
-    auto global_total_constraints = globalReduce<size_t>(all_constraints_set.size(), MPI_SUM);
-    auto global_new_constraints_count = globalReduce<size_t>(new_constraints.size(), MPI_SUM);
-
-    // memory
-    PetscLogDouble memory_usage;
-    PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&memory_usage));
-
-    double logged_overlap = std::max(0.0, max_overlap);
-    PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4lld | Memory: %4.2f MB",
-                constraint_iterations, global_total_constraints, global_new_constraints_count, logged_overlap, res, bbpgd_iterations_this_step, memory_usage / 1024 / 1024);
-
-    // initialize solver
+    // Calculate external velocities
+    calculate_external_velocities(workspace.U_ext, workspace.F_ext_workspace, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
 
     VecWrapper gamma_old = VecWrapper::Like(GAMMA);
     VecCopy(GAMMA, gamma_old);
 
-    // Calculate external velocities
-    calculate_external_velocities(workspaces->U_ext, workspaces->F_ext_workspace, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
-
-    // Gradient
-    auto gradient = [&](const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
-
-#pragma omp sections
-      {
-#pragma omp section
-        {
-          // --- MOVEMENT PART ---
-          // gamma_diff = gamma_curr - gamma_old
-          VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, gamma_curr);
-
-          // phi_dot_movement = D * M * D^T * gamma_diff
-          estimate_phi_dot_movement_inplace(D_PREV, M, workspaces->U_ext, workspaces->gamma_diff_workspace, workspaces->F_g_workspace, workspaces->U_c_workspace, workspaces->U_total_workspace, workspaces->phi_dot_movement_workspace);
-        }
-
-#pragma omp section
-        {
-          // --- GROWTH PART ---
-          // ldot_curr = growth_rate(gamma_curr)
-          calculate_ldot_inplace(L_PREV, l, gamma_curr, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
-
-          // ldot_diff = ldot_curr - ldot_prev
-          VecWAXPY(workspaces->ldot_diff_workspace, -1.0, workspaces->ldot_prev, workspaces->ldot_curr_workspace);
-
-          // phi_dot_growth = -L^T * ldot_diff
-          estimate_phi_dot_growth_inplace(L_PREV, workspaces->ldot_diff_workspace, workspaces->phi_dot_growth_result);
-        }
-      }
-
-      // Start with the base violation: phi_next_out = phi
-      PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI, phi_next_out));
-
-      Vec vecs_to_add[] = {workspaces->phi_dot_movement_workspace, workspaces->phi_dot_growth_result};
-      PetscScalar scales[] = {dt, -dt};
-      PetscCallAbort(PETSC_COMM_WORLD, VecMAXPY(phi_next_out, 2, scales, vecs_to_add));
-    };
-
-    auto residual = [&](const VecWrapper& gradient_val, const VecWrapper& gamma) {
-      // This function computes the infinity norm of the projected gradient.
-      // The projection is defined as:
-      //   projected_gradient_i = gradient_val_i, if gamma_i > 0
-      //   projected_gradient_i = min(0, gradient_val_i), if gamma_i <= 0
-
-      // Get local size and pointers to vector data
-      PetscInt n_local;
-      const PetscScalar *grad_array, *gamma_array;
-      PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(gradient_val, &n_local));
-      PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gradient_val, &grad_array));
-      PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(gamma, &gamma_array));
-
-      // Compute projected gradient component-wise
-      double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
-
-#pragma omp parallel for reduction(max : res)
-      for (PetscInt i = 0; i < n_local; ++i) {
-        double v;
-        if (PetscRealPart(gamma_array[i]) > 0) {
-          v = grad_array[i];
-        } else {
-          v = std::min(0.0, PetscRealPart(grad_array[i]));
-        }
-        res = std::max(res, std::abs(v));  // Take absolute value for infinity norm
-      }
-
-      // Restore arrays
-      PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gradient_val, &grad_array));
-      PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArrayRead(gamma, &gamma_array));
-
-      // Compute the infinity norm of the projected gradient: max(abs(projected_gradient_i))
-      auto res_global = globalReduce(res, MPI_MAX);
-
-      return res_global;
-    };
+    // Create gradient object
+    HardModelGradient hardgradient(D_PREV, M, G, L_PREV, PHI, gamma_old, l, workspace, params, dt);
 
     // Solver
-    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
-
-    // PetscPrintf(PETSC_COMM_WORLD, "GAMMA");
-    // VecView(GAMMA, PETSC_VIEWER_STDOUT_WORLD);
+    auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
 
     res = bbpgd_result_recursive.residual;
-    bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
-    bbpgd_iterations += bbpgd_iterations_this_step;
+    bbpgd_iterations += bbpgd_result_recursive.bbpgd_iterations;
 
     // Update
-    PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspaces->gamma_diff_workspace, -1.0, gamma_old, GAMMA));
+    PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspace.gamma_diff_workspace, -1.0, gamma_old, GAMMA));
 
-    calculate_forces(workspaces->df, workspaces->du, workspaces->dC, D_PREV, M, G, workspaces->U_ext, workspaces->gamma_diff_workspace);
-    calculate_ldot_inplace(L_PREV, l, GAMMA, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, workspaces->ldot_curr_workspace, workspaces->stress_curr_workspace, workspaces->impedance_curr_workspace);
+    calculate_forces(workspace.df, workspace.du, workspace.dC, D_PREV, M, G, workspace.U_ext, workspace.gamma_diff_workspace);
+
+    calculate_ldot_inplace(L_PREV, l, GAMMA, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, workspace.ldot_curr_workspace, workspace.stress_curr_workspace, workspace.impedance_curr_workspace);
 
     // Move
-    particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du}, dt);
+    particle_manager.moveLocalParticlesFromSolution({.dC = workspace.dC, .f = workspace.df, .u = workspace.du}, dt);
 
     // Grow
-    particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_curr_workspace, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace}, dt);
+    particle_manager.growLocalParticlesFromSolution({.dL = workspace.ldot_curr_workspace, .impedance = workspace.impedance_curr_workspace, .stress = workspace.stress_curr_workspace}, dt);
 
     // update phi_prev
-    gradient(GAMMA, PHI);
+    hardgradient.gradient(GAMMA, PHI);
 
-    std::swap(workspaces->ldot_curr_workspace, workspaces->ldot_prev);
+    std::swap(workspace.ldot_curr_workspace, workspace.ldot_prev);
 
     // Update constraints with current solution values
     updateConstraintsFromSolution(all_constraints_set, GAMMA, PHI);
 
-    // log substep
-    // particle_logger.log(particle_manager.local_particles);
-    // constraint_logger.log(all_constraints_set);
-
     constraint_iterations++;
+
+    // Logging
+    double logged_overlap = std::max(0.0, max_overlap);
+
+    PetscLogDouble memory_usage;
+    PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&memory_usage));
+
+    PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4ld | Memory: %4.2f MB",
+                constraint_iterations, globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(new_constraints.size(), MPI_SUM), logged_overlap, res, bbpgd_result_recursive.bbpgd_iterations, memory_usage / 1024 / 1024);
+  }
+
+  if (constraint_iterations == params.solver_config.max_recursive_iterations) {
+    PetscPrintf(PETSC_COMM_WORLD, "\n  Warning: Maximum number of constraint iterations reached (%ld). Solution may not be fully converged.\n", params.solver_config.max_recursive_iterations);
   }
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
