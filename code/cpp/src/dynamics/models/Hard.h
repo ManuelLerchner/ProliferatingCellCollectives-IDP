@@ -1,5 +1,4 @@
 
-#include "simulation/ParticleManager.h"
 #include "logger/ConstraintLogger.h"
 #include "logger/ParticleLogger.h"
 #include "simulation/ParticleManager.h"
