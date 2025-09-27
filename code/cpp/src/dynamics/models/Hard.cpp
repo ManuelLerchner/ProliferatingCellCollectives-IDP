@@ -285,7 +285,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 100 * params.solver_config.tolerance);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 0.2);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
                                                [](double acc, const Constraint& c) {
@@ -422,6 +422,9 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     // Move
     particle_manager.moveLocalParticlesFromSolution({.dC = workspaces->dC, .f = workspaces->df, .u = workspaces->du}, dt);
 
+    // Grow
+    particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_curr_workspace, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace}, dt);
+
     // update phi_prev
     gradient(GAMMA, PHI);
 
@@ -437,8 +440,6 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     constraint_iterations++;
     exchangeGhostParticles();
   }
-
-  particle_manager.growLocalParticlesFromSolution({.dL = workspaces->ldot_prev, .impedance = workspaces->impedance_curr_workspace, .stress = workspaces->stress_curr_workspace}, dt);
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
 }

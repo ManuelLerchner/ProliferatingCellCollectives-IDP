@@ -37,7 +37,7 @@ def run_simulation(config, mode, LAMBDA):
 
 
 for mode in ["hard"]:
-    for LAMBDA in [1e-3]:
+    for LAMBDA in [1e-1]:
         config = base_physics_config.copy()
         config["LAMBDA"] = LAMBDA
         run_simulation(config, mode, LAMBDA)

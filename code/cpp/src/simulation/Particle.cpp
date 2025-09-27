@@ -38,6 +38,14 @@ void Particle::updatePosition(const PetscScalar* dC, int offset, double dt) {
   data_.position[0] += dt * PetscRealPart(dC[offset + 0]);
   data_.position[1] += dt * PetscRealPart(dC[offset + 1]);
   data_.position[2] += dt * PetscRealPart(dC[offset + 2]);
+
+  // Validate after position update
+  double move_maginitude = std::sqrt(dt * dt * (PetscRealPart(dC[offset + 0]) * PetscRealPart(dC[offset + 0]) + PetscRealPart(dC[offset + 1]) * PetscRealPart(dC[offset + 1]) + PetscRealPart(dC[offset + 2]) * PetscRealPart(dC[offset + 2])));
+
+  //  particlescan only move 5% of their length in a single step
+  if (move_maginitude > 0.05 * data_.l0) {
+    PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d moved an unusually large distance: %g (length=%g)\n", data_.gID, move_maginitude, data_.length);
+  }
 }
 
 void Particle::updateQuaternion(const PetscScalar* dC, int offset, double dt) {
