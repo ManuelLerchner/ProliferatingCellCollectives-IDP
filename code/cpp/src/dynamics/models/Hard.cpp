@@ -4,87 +4,48 @@
 #include "dynamics/Physics.h"
 #include "solver/BBPGD.h"
 #include "util/ArrayMath.h"
+#include "util/PetscRaii.h"
 
-void updateMatrices(DynamicVecWrapper& PHI_PREV, DynamicVecWrapper& GAMMA_PREV, DynamicMatWrapper& D_PREV, DynamicMatWrapper& L_PREV, const std::vector<Constraint>& new_constraints, const std::vector<Constraint>& old_constraints, int last_recursive_iteration) {
+auto resizeAndUpdateMatrices(const std::vector<Constraint>& all_constraints, ParticleManager& particle_manager) {
   // First ensure capacity for new constraints
 
-  bool PHI_PREV_cleared = PHI_PREV.ensureCapacity(new_constraints.size());
-  bool GAMMA_PREV_cleared = GAMMA_PREV.ensureCapacity(new_constraints.size());
-  bool D_PREV_cleared = D_PREV.ensureCapacity(new_constraints.size());
-  bool L_PREV_cleared = L_PREV.ensureCapacity(new_constraints.size());
+  auto global_max_constraints = globalReduce<size_t>(all_constraints.size(), MPI_MAX);
 
-  if (D_PREV_cleared || L_PREV_cleared) {
-    MatSetOption(D_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE);
-    MatSetOption(L_PREV, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE);
-  }
+  // resize vectors to fit global_max_constraints
+
+  VecWrapper new_PHI = VecWrapper::Create(global_max_constraints);
+  VecWrapper new_GAMMA = VecWrapper::Create(global_max_constraints);
+
+  MatWrapper new_D_PREV = MatWrapper::CreateAIJ(global_max_constraints, 6 * particle_manager.local_particles.size());
+  MatWrapper new_L_PREV = MatWrapper::CreateAIJ(global_max_constraints, particle_manager.local_particles.size());
+
+  return std::make_tuple(
+      std::move(new_PHI),
+      std::move(new_GAMMA),
+      std::move(new_D_PREV),
+      std::move(new_L_PREV));
+}
+
+void updateMatrices(VecWrapper& PHI_PREV, VecWrapper& GAMMA_PREV, MatWrapper& D_PREV, MatWrapper& L_PREV, const std::vector<Constraint>& all_constraints) {
+  // First ensure capacity for new constraints
 
   PetscInt ownership_start, ownership_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(D_PREV, &ownership_start, &ownership_end));
 
   // Calculate offset for new data
-  PetscInt col_offset = ownership_start + PHI_PREV.getSize();
+  PetscInt col_offset = ownership_start;
 
-// Populate matrices and vectors with new data
-#pragma omp parallel sections
-  {
-#pragma omp section
-    {
-      if (PHI_PREV_cleared) {
-        create_phi_vector_local(PHI_PREV, old_constraints, ownership_start);
-        PHI_PREV.incrementSize(old_constraints.size());
-      }
+  create_phi_vector_local(PHI_PREV, all_constraints, col_offset);
+  VecAssemblyBegin(PHI_PREV);
 
-      create_phi_vector_local(PHI_PREV, new_constraints, col_offset);
-      VecAssemblyBegin(PHI_PREV);
-      PHI_PREV.incrementSize(new_constraints.size());
-    }
+  create_gamma_vector_local(GAMMA_PREV, all_constraints, col_offset);
+  VecAssemblyBegin(GAMMA_PREV);
 
-#pragma omp section
-    {
-      if (GAMMA_PREV_cleared) {
-        create_gamma_vector_local(GAMMA_PREV, old_constraints, ownership_start);
-        GAMMA_PREV.incrementSize(old_constraints.size());
-      }
+  calculate_jacobian_local(D_PREV, all_constraints, col_offset);
+  MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
 
-      create_gamma_vector_local(GAMMA_PREV, new_constraints, col_offset);
-
-      VecAssemblyBegin(GAMMA_PREV);
-      GAMMA_PREV.incrementSize(new_constraints.size());
-    }
-#pragma omp section
-    {
-      // if (D_PREV_cleared) {
-      // auto all_constraints = old_constraints;
-      // all_constraints.insert(all_constraints.end(), new_constraints.begin(), new_constraints.end());
-
-      // preallocate_jacobian_local(D_PREV, all_constraints, ownership_start);
-
-      // } else {
-      // }
-
-      if (D_PREV_cleared) {
-        calculate_jacobian_local(D_PREV, old_constraints, ownership_start);
-        D_PREV.incrementSize(old_constraints.size());
-      }
-
-      calculate_jacobian_local(D_PREV, new_constraints, col_offset);
-      MatAssemblyBegin(D_PREV, MAT_FINAL_ASSEMBLY);
-      D_PREV.incrementSize(new_constraints.size());
-    }
-#pragma omp section
-    {
-      if (L_PREV_cleared) {
-        // preallocate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
-        calculate_stress_matrix_local(L_PREV, old_constraints, ownership_start);
-        L_PREV.incrementSize(old_constraints.size());
-      }
-
-      // preallocate_stress_matrix_local(L_PREV, new_constraints, col_offset);
-      calculate_stress_matrix_local(L_PREV, new_constraints, col_offset);
-      MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
-      L_PREV.incrementSize(new_constraints.size());
-    }
-  }
+  calculate_stress_matrix_local(L_PREV, all_constraints, col_offset);
+  MatAssemblyBegin(L_PREV, MAT_FINAL_ASSEMBLY);
 
   // Final assembly
 
@@ -246,28 +207,20 @@ enum class SolverState {
 };
 
 ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager, CollisionDetector& collision_detector, SimulationParameters params, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
-  exchangeGhostParticles();
-
   int expected_recursive_iteration = 3;
-
-  MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, params.physics_config.xi);
-  MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
 
   int global_num_particles = globalReduce<int>(particle_manager.local_particles.size(), MPI_SUM);
 
   int global_max_particles = globalReduce<int>(particle_manager.local_particles.size(), MPI_MAX);
 
-  int alloc_size = params.solver_config.getMinPreallocationSize(global_max_particles);
-
-  DynamicVecWrapper GAMMA = DynamicVecWrapper(alloc_size, params.solver_config.growth_factor);
-  DynamicVecWrapper PHI = DynamicVecWrapper(alloc_size, params.solver_config.growth_factor);
-  DynamicMatWrapper D_PREV = DynamicMatWrapper(particle_manager.local_particles.size() * 6, alloc_size, params.solver_config.growth_factor);
-  DynamicMatWrapper L_PREV = DynamicMatWrapper(particle_manager.local_particles.size(), alloc_size, params.solver_config.growth_factor);
+  // VecWrapper GAMMA = VecWrapper::Create(0);
+  // VecWrapper PHI = VecWrapper::Create(0);
+  // MatWrapper D_PREV = MatWrapper::CreateAIJ(0, 6 * particle_manager.local_particles.size());
+  // MatWrapper L_PREV = MatWrapper::CreateAIJ(0, particle_manager.local_particles.size());
 
   std::optional<RecursiveSolverWorkspaces> workspaces;
 
   // Create length mapping for consistent indexing
-  VecWrapper l = getLengthVector(particle_manager.local_particles);
 
   int constraint_iterations = 0;
   long long bbpgd_iterations = 0;
@@ -285,6 +238,8 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
+    exchangeGhostParticles();
+
     auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 0.2);
 
     max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
@@ -299,10 +254,28 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
       break;
     }
 
-    // Calculate matrices only for the newly identified constraints
-    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, new_constraints, all_constraints_set, expected_recursive_iteration);
+    MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, params.physics_config.xi);
+    MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
+    VecWrapper l = getLengthVector(particle_manager.local_particles);
 
     all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
+
+    // resize and update matrices
+    auto [PHI, GAMMA, D_PREV, L_PREV] = resizeAndUpdateMatrices(all_constraints_set, particle_manager);
+    workspaces.emplace(D_PREV, M, G, L_PREV, GAMMA, PHI, l);
+
+    // Calculate matrices only for the newly identified constraints
+    updateMatrices(PHI, GAMMA, D_PREV, L_PREV, all_constraints_set);
+
+    // PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_DENSE);
+
+    // PetscPrintf(PETSC_COMM_WORLD, "L");
+    // VecView(PHI, PETSC_VIEWER_STDOUT_WORLD);
+
+    // PetscPrintf(PETSC_COMM_WORLD, "PHI");
+    // VecView(GAMMA, PETSC_VIEWER_STDOUT_WORLD);
+
+    // PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD);
 
     auto global_total_constraints = globalReduce<size_t>(all_constraints_set.size(), MPI_SUM);
     auto global_new_constraints_count = globalReduce<size_t>(new_constraints.size(), MPI_SUM);
@@ -314,14 +287,6 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     double logged_overlap = std::max(0.0, max_overlap);
     PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4lld | Memory: %4.2f MB",
                 constraint_iterations, global_total_constraints, global_new_constraints_count, logged_overlap, res, bbpgd_iterations_this_step, memory_usage / 1024 / 1024);
-
-    // Recreate workspaces if needed
-    bool local_need_to_recreate_workspaces = !workspaces.has_value() || vecSize(GAMMA) != vecSize(workspaces->gamma_diff_workspace);
-    int global_recreate_flag = globalReduce(local_need_to_recreate_workspaces ? 1 : 0, MPI_MAX);
-
-    if (global_recreate_flag) {
-      workspaces.emplace(D_PREV, M, G, L_PREV, GAMMA, PHI, l);
-    }
 
     // initialize solver
 
@@ -406,8 +371,10 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     };
 
     // Solver
-    int N = GAMMA.getSize();
-    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter, N);
+    auto bbpgd_result_recursive = BBPGD(gradient, residual, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
+
+    // PetscPrintf(PETSC_COMM_WORLD, "GAMMA");
+    // VecView(GAMMA, PETSC_VIEWER_STDOUT_WORLD);
 
     res = bbpgd_result_recursive.residual;
     bbpgd_iterations_this_step = bbpgd_result_recursive.bbpgd_iterations;
@@ -438,7 +405,6 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     // constraint_logger.log(all_constraints_set);
 
     constraint_iterations++;
-    exchangeGhostParticles();
   }
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = bbpgd_iterations, .residual = res, .max_overlap = max_overlap};

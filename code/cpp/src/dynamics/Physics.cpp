@@ -13,7 +13,6 @@
 #include "petscmat.h"
 #include "petscsys.h"
 #include "util/ArrayMath.h"
-#include "util/DynamicPetsc.h"
 #include "util/PetscRaii.h"
 
 // initialize static random number generator
@@ -93,11 +92,48 @@ void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecW
   calculate_growth_rate_vector(l, impedance_curr_out, lambda, tau, ldot_curr_out);
 };
 
+void preallocate(MatWrapper& M, const std::vector<Constraint>& local_constraints, int dofs) {
+  PetscInt ownership_cols_start, ownership_cols_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(M, &ownership_cols_start, &ownership_cols_end));
+
+  PetscInt ownership_rows_start, ownership_rows_end;
+  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(M, &ownership_rows_start, &ownership_rows_end));
+
+  std::vector<PetscInt> d_nnz(ownership_rows_end - ownership_rows_start, 0);  // diagonal
+  std::vector<PetscInt> o_nnz(ownership_rows_end - ownership_rows_start, 0);  // off-diagonal
+
+  // Count nonzeros per row
+  for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
+    const auto& constraint = local_constraints[c_local_idx];
+
+    for (int k = 0; k < dofs; ++k) {
+      auto rowI = dofs * constraint.gidI + k;
+      auto rowJ = dofs * constraint.gidJ + k;
+
+      if (rowI >= ownership_cols_start && rowI < ownership_cols_end) {
+        d_nnz[c_local_idx]++;
+      } else {
+        o_nnz[c_local_idx]++;
+      }
+      if (rowJ >= ownership_cols_start && rowJ < ownership_cols_end) {
+        d_nnz[c_local_idx]++;
+      } else {
+        o_nnz[c_local_idx]++;
+      }
+    }
+  }
+
+  // Preallocate the matrix
+  MatMPIAIJSetPreallocation(M, 0, d_nnz.data(), 0, o_nnz.data());
+}
+
 void calculate_jacobian_local(
     MatWrapper& D,
     const std::vector<Constraint>& local_constraints,
     PetscInt offset) {
   using namespace utils::ArrayMath;
+
+  preallocate(D, local_constraints, 6);
 
 #pragma omp parallel for
   for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
@@ -148,6 +184,8 @@ void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>&
   using namespace utils::ArrayMath;
 
   PetscInt local_num_constraints = local_constraints.size();
+
+  preallocate(S, local_constraints, 1);
 
 #pragma omp parallel for
   for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {

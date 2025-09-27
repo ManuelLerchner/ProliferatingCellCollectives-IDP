@@ -153,10 +153,14 @@ bool Particle::isValid() const {
 
 void Particle::validateAndWarn() const {
   // Check position for NaN/infinity
+
+  bool has_error = false;
+
   for (int i = 0; i < POSITION_SIZE; ++i) {
     if (!std::isfinite(data_.position[i])) {
       PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d position[%d] = %g (non-finite)\n", data_.gID, i,
                   data_.position[i]);
+      has_error = true;
     }
   }
 
@@ -165,16 +169,19 @@ void Particle::validateAndWarn() const {
     if (!std::isfinite(data_.quaternion[i])) {
       PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d quaternion[%d] = %g (non-finite)\n", data_.gID, i,
                   data_.quaternion[i]);
+      has_error = true;
     }
   }
 
   // Check physical properties
   if (!std::isfinite(data_.length)) {
     PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d length = %g (non-finite)\n", data_.gID, data_.length);
+    has_error = true;
   }
 
   if (!std::isfinite(data_.diameter)) {
     PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d diameter = %g (non-finite)\n", data_.gID, data_.diameter);
+    has_error = true;
   }
 
   // Check for extremely large values that might indicate numerical issues
@@ -182,7 +189,13 @@ void Particle::validateAndWarn() const {
     if (std::abs(data_.position[i]) > 1e6) {
       PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d position[%d] = %g (extremely large)\n", data_.gID, i,
                   data_.position[i]);
+      has_error = true;
     }
+  }
+
+  if (has_error) {
+    printState();
+    throw std::runtime_error("Particle state validation failed.");
   }
 }
 
