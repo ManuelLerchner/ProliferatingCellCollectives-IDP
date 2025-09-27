@@ -10,13 +10,16 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
-void NormAdotAB(const VecWrapper& a, const VecWrapper& b, double& a_norm, double& ab, int N) {
+void NormAdotAB(const VecWrapper& a, const VecWrapper& b, double& a_norm, double& ab) {
   const PetscScalar *a_array, *b_array;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(a, &a_array));
   PetscCallAbort(PETSC_COMM_WORLD, VecGetArrayRead(b, &b_array));
 
   double a_norm_local = 0.0;
   double ab_local = 0.0;
+
+  PetscInt N;
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(a, &N));
 
 #pragma omp parallel for reduction(+ : ab_local, a_norm_local)
   for (PetscInt i = 0; i < N; ++i) {
@@ -55,8 +58,7 @@ inline BBPGDResult BBPGD(
     VecWrapper& gamma,  // in-out parameter
     double allowed_residual,
     size_t max_bbpgd_iterations,
-    size_t iter,
-    int N) {
+    size_t iter) {
   std::optional<vtk::BBPGDLogger> bbpgd_logger;
 
   if (iter % 100 == 0) {
@@ -106,9 +108,9 @@ inline BBPGDResult BBPGD(
 
     if (bbpgd_logger) {
       double grad_norm, dummy;
-      NormAdotAB(g_next, g_next, grad_norm, dummy, N);
+      NormAdotAB(g_next, g_next, grad_norm, dummy);
       double gamma_norm, dummy2;
-      NormAdotAB(gamma_next, gamma_next, gamma_norm, dummy2, N);
+      NormAdotAB(gamma_next, gamma_next, gamma_norm, dummy2);
 
       bbpgd_logger->collect({.iteration = iteration,
                              .residual = res,
@@ -133,7 +135,7 @@ inline BBPGDResult BBPGD(
     double denominator_val;
 
     // BB1 step: (d^T d)/(d^T g)
-    NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val, N);
+    NormAdotAB(delta_gamma, delta_phi, numerator_val, denominator_val);
 
     alpha = numerator_val / denominator_val;
 
