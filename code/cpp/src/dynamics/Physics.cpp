@@ -60,38 +60,6 @@ void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspac
   PetscCallAbort(PETSC_COMM_WORLD, VecAssemblyEnd(U_ext));
 }
 
-void calculate_impedance_inplace(VecWrapper& stresses_and_impedance_out, double lambda) {
-  // I is a (num_bodies, 1) vector
-  // I = np.exp(-lamb * stress_matrix)
-  // This function modifies the input vector in-place.
-
-  VecScale(stresses_and_impedance_out, -lambda);
-  VecExp(stresses_and_impedance_out);
-}
-
-void calculate_growth_rate_vector(const VecWrapper& l, VecWrapper& sigma_and_impedance_out, double lambda, double tau, VecWrapper& growth_rates_out) {
-  // growth rate is a (num_bodies, 1) vector
-  // growth_rate = l / tau * I
-
-  calculate_impedance_inplace(sigma_and_impedance_out, lambda);
-
-  // sigma_and_impedance_out now contains the impedance
-  VecPointwiseMult(growth_rates_out, l, sigma_and_impedance_out);
-  VecScale(growth_rates_out, 1 / tau);
-}
-
-void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& stress_curr_out, VecWrapper& impedance_curr_out) {
-  // Use impedance_curr_out as a temporary vector to store stresses (sigma)
-  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(L, gamma, stress_curr_out));
-
-  // We now have stresses in impedance_curr_out.
-  // We need to calculate the growth rate, which will overwrite ldot_curr_out,
-  // and the final impedance, which will overwrite the stresses in impedance_curr_out.
-
-  VecCopy(stress_curr_out, impedance_curr_out);
-  calculate_growth_rate_vector(l, impedance_curr_out, lambda, tau, ldot_curr_out);
-};
-
 void preallocate(MatWrapper& M, const std::vector<Constraint>& local_constraints, int dofs) {
   PetscInt ownership_cols_start, ownership_cols_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRangeColumn(M, &ownership_cols_start, &ownership_cols_end));
@@ -162,6 +130,8 @@ void calculate_jacobian_local(
                           constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
     PetscCallAbort(PETSC_COMM_WORLD, MatSetValues(D, 1, cols, 6, rows_j, F_j, INSERT_VALUES));
   }
+
+  MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY);
 }
 
 void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
@@ -170,6 +140,8 @@ void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& loc
     PetscInt c_global_idx = col_offset + i;
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(phi, c_global_idx, local_constraints[i].signed_distance, INSERT_VALUES));
   }
+
+  VecAssemblyBegin(phi);
 }
 
 void create_gamma_vector_local(VecWrapper& gamma, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
@@ -178,6 +150,8 @@ void create_gamma_vector_local(VecWrapper& gamma, const std::vector<Constraint>&
     PetscInt c_global_idx = col_offset + i;
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(gamma, c_global_idx, local_constraints[i].gamma, INSERT_VALUES));
   }
+
+  VecAssemblyBegin(gamma);
 }
 
 void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>& local_constraints, PetscInt offset) {
@@ -195,6 +169,8 @@ void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>&
     PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, c_global_idx, constraint.gidI, constraint.stressI, INSERT_VALUES));
     PetscCallAbort(PETSC_COMM_WORLD, MatSetValue(S, c_global_idx, constraint.gidJ, constraint.stressJ, INSERT_VALUES));
   }
+
+  MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY);
 }
 
 MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles, double xi) {
