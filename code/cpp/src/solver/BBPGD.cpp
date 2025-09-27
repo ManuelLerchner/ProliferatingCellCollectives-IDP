@@ -80,9 +80,6 @@ BBPGDResult BBPGD(
     G.gradient(gamma_next, g_next);
 
     // Step 8: res_next := res(γ_next)
-    if (iteration % 10 == 0) {
-      res = G.residual(g_next, gamma_next);
-    }
 
     if (bbpgd_logger) {
       double grad_norm, dummy;
@@ -98,12 +95,16 @@ BBPGDResult BBPGD(
       bbpgd_logger->log();
     }
 
-    // Step 9-11: Check convergence
-    if (res <= allowed_residual) {
-      gamma = std::move(gamma_next);
-      break;
+    // Step 9-11: Check convergence every 10 iterations
+    // We do not check every iteration to save computation time
+    if (iteration % 10 == 0) {
+      res = G.residual(g_next, gamma_next);
+
+      if (res <= allowed_residual) {
+        gamma = std::move(gamma_next);
+        break;
+      }
     }
-    // }
 
     // Step 12: Compute new step size
     VecWAXPY(delta_gamma, -1.0, gamma, gamma_next);
