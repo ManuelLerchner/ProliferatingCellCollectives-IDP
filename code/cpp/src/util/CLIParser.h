@@ -172,7 +172,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .tolerance = 1e-3,
       .max_bbpgd_iterations = 500000,
       .max_recursive_iterations = 50,
-      .linked_cell_size = 2.2,
+      .linked_cell_size = 2.5,
       .growth_factor = 1.5,
       .particle_preallocation_factor = 20,
   };
