@@ -6,7 +6,7 @@
 
 #include "Constraint.h"
 #include "simulation/Particle.h"
-#include "util/DynamicPetsc.h"
+#include "util/Config.h"
 #include "util/PetscRaii.h"
 
 VecWrapper getLengthVector(const std::vector<Particle>& local_particles);
