@@ -11,7 +11,6 @@ void NormAdotAB(const VecWrapper& a, const VecWrapper& b, double& a_norm, double
   PetscInt N;
   PetscCallAbort(PETSC_COMM_WORLD, VecGetLocalSize(a, &N));
 
-#pragma omp parallel for reduction(+ : ab_local, a_norm_local)
   for (PetscInt i = 0; i < N; ++i) {
     a_norm_local += (a_array[i]) * (a_array[i]);
     ab_local += (a_array[i]) * (b_array[i]);
@@ -29,15 +28,16 @@ void NormAdotAB(const VecWrapper& a, const VecWrapper& b, double& a_norm, double
   ab = global_values[1];
 }
 
+// https://journals.aps.org/prl/supplemental/10.1103/PhysRevLett.133.158402/SM.pdf
 BBPGDResult BBPGD(
     Gradient& G,
     VecWrapper& g0,  // in-out parameter
     double allowed_residual,
     size_t max_bbpgd_iterations,
-    size_t iter) {
+    bool log_bbpdg) {
   std::optional<vtk::BBPGDLogger> bbpgd_logger;
 
-  if (iter % 100 == 0) {
+  if (log_bbpdg) {
     bbpgd_logger = vtk::BBPGDLogger("logs", "bbpgdtrace", true);
   }
 
@@ -58,6 +58,10 @@ BBPGDResult BBPGD(
   double res = G.residual(g_prev, gamma_prev);
   double alpha = 1.0 / res;
 
+  if (res <= allowed_residual) {
+    return {.bbpgd_iterations = 0, .residual = res};
+  }
+
   size_t iteration = 1;
   for (; iteration < max_bbpgd_iterations; iteration++) {
     // Step 6: γ_next := max(γ_curr − α*g_prev, 0)
@@ -68,23 +72,24 @@ BBPGDResult BBPGD(
     auto& g_i = G.gradient(gamma_i);
 
     // Step 8: res_next := res(γ_next)
-
-    // Step 9-11: Check convergence every 10 iterations
-    // We do not check every iteration to save computation time
     if (iteration % 10 == 0) {
       res = G.residual(g_i, gamma_i);
 
       if (bbpgd_logger) {
-        double grad_norm, dot;
-        NormAdotAB(g_i, gamma_i, grad_norm, dot);
+        auto [linear, quad, growth, total] = G.energy(gamma_i);
 
-        bbpgd_logger->collect({.iteration = iteration,
+        bbpgd_logger->collect({.step = iteration,
                                .residual = res,
                                .step_size = alpha,
-                               .grad_norm = std::sqrt(grad_norm),
-                               .gamma_norm = dot});
+                               .linear = linear,
+                               .quadratic = quad,
+                               .growth = growth,
+                               .total = total});
         bbpgd_logger->log();
       }
+
+      // Step 9-11: Check convergence every 10 iterations
+      // We do not check every iteration to save computation time
 
       if (res <= allowed_residual) {
         break;

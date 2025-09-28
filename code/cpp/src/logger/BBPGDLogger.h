@@ -7,11 +7,13 @@
 namespace vtk {
 
 struct BBPGDStep {
-  size_t iteration;
+  size_t step;
   double residual;
   double step_size;
-  double grad_norm;
-  double gamma_norm;
+  double linear;
+  double quadratic;
+  double growth;
+  double total;
 };
 
 class BBPGDLogger {

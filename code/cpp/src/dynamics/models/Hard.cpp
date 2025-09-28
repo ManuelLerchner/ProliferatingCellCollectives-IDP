@@ -151,8 +151,10 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     // Create gradient object
     HardModelGradient hardgradient(D_PREV, M, L_PREV, U_ext, PHI, gamma_old, l, ldot, params, dt);
 
+    bool log_bbpgd = (constraint_iterations == 0 && iter % 100 == 0);
+
     // Solver
-    auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
+    auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, log_bbpgd);
 
     res = bbpgd_result_recursive.residual;
     total_bbpgd_iterations += bbpgd_result_recursive.bbpgd_iterations;

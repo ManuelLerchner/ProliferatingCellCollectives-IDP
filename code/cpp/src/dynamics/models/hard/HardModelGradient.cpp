@@ -86,7 +86,7 @@ HardModelGradient::HardModelGradient(
       params_(params),
       dt_(dt) {}
 
-  VecWrapper& HardModelGradient::gradient(const VecWrapper& gamma_curr) {
+VecWrapper& HardModelGradient::gradient(const VecWrapper& gamma_curr) {
 #pragma omp sections
   {
 #pragma omp section
@@ -145,7 +145,6 @@ double HardModelGradient::residual(const VecWrapper& gradient_val, const VecWrap
   // Compute projected gradient component-wise
   double res = 0.0;  // Initialize to 0 since we're taking max of absolute values
 
-#pragma omp parallel for reduction(max : res)
   for (PetscInt i = 0; i < n_local; ++i) {
     double v;
     if (PetscRealPart(gamma_array[i]) > 0) {
@@ -166,3 +165,49 @@ double HardModelGradient::residual(const VecWrapper& gradient_val, const VecWrap
 
   return res_global;
 };
+
+std::tuple<double, double, double, double> HardModelGradient::energy(const VecWrapper& gamma) {
+  // \begin{equation}
+  //     \small
+  //     \begin{aligned}
+  //         E(\boldsymbol{\gamma}) =
+  //         \boldsymbol{\gamma}^\top\mathbf{\Phi}^k
+  //          & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
+//          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
+  //         \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right).
+  //     \end{aligned}
+  // \end{equation}
+
+  // Term 1: gamma^T * phi
+  double term1 = 0.0;
+  PetscCallAbort(PETSC_COMM_WORLD, VecDot(gamma, PHI_, &term1));
+
+  // Term 2: (dt / 2) * gamma^T * D^T * M * D * gamma
+  VecWrapper D_gamma = VecWrapper::FromMatRows(D_PREV_);
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D_PREV_, gamma, D_gamma));
+
+  VecWrapper M_D_gamma = VecWrapper::FromMat(M_);
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M_, D_gamma, M_D_gamma));
+
+  double term2 = 0.0;
+  PetscCallAbort(PETSC_COMM_WORLD, VecDot(D_gamma, M_D_gamma, &term2));
+  term2 *= (dt_ / 2.0);
+
+  // Term 3: (dt / lambda) * sum( (l / tau) * exp(-lambda * L * gamma) )
+  VecWrapper L_gamma = VecWrapper::FromMatRows(L_PREV_);
+  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(L_PREV_, gamma, L_gamma));
+
+  VecScale(L_gamma, -params_.physics_config.getLambdaDimensionless());
+  PetscCallAbort(PETSC_COMM_WORLD, VecExp(L_gamma));
+
+  VecPointwiseMult(L_gamma, l_, L_gamma);
+
+  double term3 = 0.0;
+  PetscCallAbort(PETSC_COMM_WORLD, VecSum(L_gamma, &term3));
+
+  term3 *= (dt_ / (params_.physics_config.getLambdaDimensionless() * params_.physics_config.TAU));
+
+  double energy = term1 + term2 + term3;
+
+  return std::make_tuple(term1, term2, term3, energy);
+}
