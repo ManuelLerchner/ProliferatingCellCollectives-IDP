@@ -28,7 +28,7 @@ def run_simulation(config, mode, LAMBDA):
 
     # copy vtk_output_{mode} folder to growth_comparison_data/vtk_output_{mode}_{lambda}
     # delete old folder if it exists
-    if os.path.exists(f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA}"):
+    if os.path.exists(f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}"):
         shutil.rmtree(
             f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}")
 
