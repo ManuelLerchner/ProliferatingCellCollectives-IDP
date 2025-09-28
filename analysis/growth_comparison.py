@@ -28,7 +28,7 @@ def run_simulation(config, mode, LAMBDA):
 
     # copy vtk_output_{mode} folder to growth_comparison_data/vtk_output_{mode}_{lambda}
     # delete old folder if it exists
-    if os.path.exists(f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}"):
+    if os.path.exists(f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA}"):
         shutil.rmtree(
             f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}")
 
@@ -36,8 +36,8 @@ def run_simulation(config, mode, LAMBDA):
                     f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}/")
 
 
-for mode in ["hard", "soft"]:
-    for LAMBDA in [1e-1, 1e-2, 1e-3, 1e-4]:
+for mode in ["soft"]:
+    for LAMBDA in [1e-2]:
         config = base_physics_config.copy()
         config["LAMBDA"] = LAMBDA
         run_simulation(config, mode, LAMBDA)

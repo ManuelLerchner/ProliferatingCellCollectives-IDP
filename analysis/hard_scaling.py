@@ -4,9 +4,6 @@ import subprocess
 import os
 from time import sleep
 
-import subprocess
-import os
-from time import sleep
 
 SCRIPT_TEMPLATE = """#!/bin/bash
 #SBATCH -J HardScaling_{{MODE}}_{{NUM_RANKS}}ranks
@@ -38,14 +35,11 @@ mpirun -n {{NUM_RANKS}} ../../../cellcollectives -mode {{MODE}} -end_radius {{EN
 
 BIN_FOLDER = "../code/cpp/build/src"
 END_RADIUS = 100
-LAMBDAS = [1e-3]  # adjust if you want multiple lambdas
-MPI_RANKS = [1, 2, 4, 8, 16, 32, 64]
+
+LAMBDAS = [1e-2]  # adjust if you want multiple lambdas
+MPI_RANKS = [1, 4, 16, 28, 40, 52, 64, 76, 88, 100, 112]
+MPI_RANKS = [1, 4, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
 MODES = ["hard", "soft"]
-
-
-END_RADIUS = 5
-MPI_RANKS = [24]
-MODES = ["hard"]
 
 
 def launch_job(mode, num_ranks, cluster, partition, lambda_val):
