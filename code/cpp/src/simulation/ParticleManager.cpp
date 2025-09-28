@@ -86,7 +86,7 @@ void ParticleManager::moveLocalParticlesFromSolution(const MovementSolution& sol
   cleanupScatteredResources(dU_local, dU_scatter, dU_is);
 }
 
-void ParticleManager::growLocalParticlesFromSolution(const GrowthSolution& solution, double dt) {
+void ParticleManager::setGrowParamsFromSolution(const GrowthSolution& solution) {
   // Collect needed global indices and maintain mapping
   std::vector<PetscInt> indices;
   std::vector<size_t> local_indices;  // Maps to position in local_particles
@@ -115,9 +115,9 @@ void ParticleManager::growLocalParticlesFromSolution(const GrowthSolution& solut
   for (size_t arr_idx = 0; arr_idx < local_indices.size(); arr_idx++) {
     size_t particle_idx = local_indices[arr_idx];
 
-    local_particles[particle_idx].eulerStepLength(dL_array[arr_idx], dt);
     local_particles[particle_idx].setImpedance(impedance_array[arr_idx]);
     local_particles[particle_idx].setStress(stress_array[arr_idx]);
+    local_particles[particle_idx].setLdot(dL_array[arr_idx]);
   }
 
   // Clean up
@@ -127,6 +127,13 @@ void ParticleManager::growLocalParticlesFromSolution(const GrowthSolution& solut
   cleanupScatteredResources(dL_local, dL_scatter, dL_is);
   cleanupScatteredResources(impedance_local, impedance_scatter, impedance_is);
   cleanupScatteredResources(stress_local, stress_scatter, stress_is);
+}
+
+void ParticleManager::grow(double dt) {
+  // Process each particle using correct mapping
+  for (auto& p : local_particles) {
+    p.eulerStepLength(p.getData().ldot, dt);
+  }
 }
 
 std::vector<Particle> ParticleManager::divideParticles() {

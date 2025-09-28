@@ -15,8 +15,6 @@ Workspace::Workspace(const MatWrapper& D_PREV, const MatWrapper& M, const MatWra
 
   ldot_curr_workspace = VecWrapper::Like(l);
   ldot_diff_workspace = VecWrapper::Like(l);
-  ldot_prev = VecWrapper::Like(l);
-  VecZeroEntries(ldot_prev);
 
   impedance_curr_workspace = VecWrapper::Like(l);
   stress_curr_workspace = VecWrapper::Like(l);

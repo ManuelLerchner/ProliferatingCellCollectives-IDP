@@ -13,6 +13,7 @@ auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleMana
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, params.physics_config.xi);
   MatWrapper G = calculate_QuaternionMap(particle_manager.local_particles);
   VecWrapper l = getLengthVector(particle_manager.local_particles);
+  VecWrapper ldot = getLdotVector(particle_manager.local_particles);
   VecWrapper PHI = VecWrapper::Create(global_max_constraints);
   VecWrapper GAMMA = VecWrapper::Create(global_max_constraints);
   MatWrapper D_PREV = MatWrapper::CreateAIJ(global_max_constraints, 6 * particle_manager.local_particles.size());
@@ -40,6 +41,7 @@ auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleMana
       std::move(M),
       std::move(G),
       std::move(l),
+      std::move(ldot),
       std::move(GAMMA),
       std::move(PHI),
       std::move(D_PREV),
@@ -115,6 +117,10 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   std::vector<Constraint> all_constraints_set;
 
+  for (auto& p : particle_manager.local_particles) {
+    p.reset();
+  }
+
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
     // Use a larger tolerance for initial collision detection
     exchangeGhostParticles();
@@ -134,7 +140,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
       break;
     }
 
-    auto [M, G, l, GAMMA, PHI, D_PREV, L_PREV, workspace] = createMatrices(all_constraints_set, particle_manager, params);
+    auto [M, G, l, ldot, GAMMA, PHI, D_PREV, L_PREV, workspace] = createMatrices(all_constraints_set, particle_manager, params);
 
     // Calculate external velocities
     calculate_external_velocities(workspace.U_ext, workspace.F_ext_workspace, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
@@ -143,7 +149,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     VecCopy(GAMMA, gamma_old);
 
     // Create gradient object
-    HardModelGradient hardgradient(D_PREV, M, G, L_PREV, PHI, gamma_old, l, workspace, params, dt);
+    HardModelGradient hardgradient(D_PREV, M, G, L_PREV, PHI, gamma_old, l, ldot, workspace, params, dt);
 
     // Solver
     auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
@@ -162,12 +168,10 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     particle_manager.moveLocalParticlesFromSolution({.dC = workspace.dC, .f = workspace.df, .u = workspace.du}, dt);
 
     // Grow
-    particle_manager.growLocalParticlesFromSolution({.dL = workspace.ldot_curr_workspace, .impedance = workspace.impedance_curr_workspace, .stress = workspace.stress_curr_workspace}, dt);
+    particle_manager.setGrowParamsFromSolution({.dL = workspace.ldot_curr_workspace, .impedance = workspace.impedance_curr_workspace, .stress = workspace.stress_curr_workspace});
 
     // update phi_prev
     hardgradient.gradient(GAMMA, PHI);
-
-    std::swap(workspace.ldot_curr_workspace, workspace.ldot_prev);
 
     // Update constraints with current solution values
     updateConstraintsFromSolution(all_constraints_set, GAMMA, PHI);
@@ -183,6 +187,8 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4ld | Memory: %4.2f MB",
                 constraint_iterations, globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(new_constraints.size(), MPI_SUM), logged_overlap, res, bbpgd_result_recursive.bbpgd_iterations, memory_usage / 1024 / 1024);
   }
+
+  particle_manager.grow(dt);
 
   if (constraint_iterations == params.solver_config.max_recursive_iterations) {
     PetscPrintf(PETSC_COMM_WORLD, "\n  Warning: Maximum number of constraint iterations reached (%ld). Solution may not be fully converged.\n", params.solver_config.max_recursive_iterations);
