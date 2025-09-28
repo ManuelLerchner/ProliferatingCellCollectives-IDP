@@ -36,6 +36,24 @@ VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
   return l;
 }
 
+VecWrapper getLdotVector(const std::vector<Particle>& local_particles) {
+  // l is a (global_num_particles, 1) vector
+  VecWrapper l;
+  VecCreate(PETSC_COMM_WORLD, l.get_ref());
+  VecSetSizes(l, local_particles.size(), PETSC_DETERMINE);
+  VecSetFromOptions(l);
+
+  // Set values using global indices
+  for (int i = 0; i < local_particles.size(); i++) {
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLdot(), INSERT_VALUES));
+  }
+
+  VecAssemblyBegin(l);
+  VecAssemblyEnd(l);
+
+  return l;
+}
+
 void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations, PhysicsConfig physics_config) {
   PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(U_ext));
 
