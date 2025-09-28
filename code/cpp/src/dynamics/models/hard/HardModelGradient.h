@@ -22,6 +22,8 @@ class HardModelGradient : public Gradient {
   VecWrapper& gradient(const VecWrapper& gamma_curr) override;
   double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) override;
 
+  std::tuple<double, double, double, double> energy(const VecWrapper& gamma);
+
   const MatWrapper& D_PREV_;
   const MatWrapper& M_;
   const MatWrapper& L_PREV_;
