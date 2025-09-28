@@ -4,7 +4,7 @@
 
 class Workspace {
  public:
-  Workspace(const MatWrapper& D_PREV, const MatWrapper& M, const MatWrapper& G, const MatWrapper& L_PREV, const VecWrapper& GAMMA_PREV, const VecWrapper& PHI_PREV, const VecWrapper& l);
+  Workspace(const MatWrapper& D_PREV, const MatWrapper& M, const MatWrapper& L_PREV, const VecWrapper& GAMMA_PREV, const VecWrapper& PHI_PREV, const VecWrapper& l);
 
   VecWrapper gamma_diff_workspace;
   VecWrapper phi_dot_movement_workspace;
@@ -16,7 +16,6 @@ class Workspace {
   VecWrapper ldot_diff_workspace;
   VecWrapper impedance_curr_workspace;
   VecWrapper stress_curr_workspace;
-  VecWrapper U_ext;
   VecWrapper F_ext_workspace;
-  VecWrapper df, du, dC;
+  VecWrapper phi_next_out;
 };
