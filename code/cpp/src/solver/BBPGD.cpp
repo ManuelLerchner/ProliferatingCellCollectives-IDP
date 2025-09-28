@@ -31,7 +31,7 @@ void NormAdotAB(const VecWrapper& a, const VecWrapper& b, double& a_norm, double
 
 BBPGDResult BBPGD(
     Gradient& G,
-    VecWrapper& gamma,  // in-out parameter
+    VecWrapper& g0,  // in-out parameter
     double allowed_residual,
     size_t max_bbpgd_iterations,
     size_t iter) {
@@ -41,74 +41,59 @@ BBPGDResult BBPGD(
     bbpgd_logger = vtk::BBPGDLogger("logs", "bbpgdtrace", true);
   }
 
-  auto phi_curr = VecWrapper::Like(gamma);
+  auto& gamma_prev = g0;
+  auto gamma_i = VecWrapper::Like(gamma_prev);
+
+  auto g_prev = VecWrapper::Like(gamma_prev);
+  auto g_i = VecWrapper::Like(gamma_prev);
+
+  auto delta_gamma = VecWrapper::Like(gamma_prev);
+  auto delta_phi = VecWrapper::Like(gamma_prev);
+
+  auto zero_vec = VecWrapper::Like(gamma_prev);
 
   // Compute initial gradient and residual
+  VecCopy(G.gradient(gamma_prev), g_prev);
 
-  G.gradient(gamma, phi_curr);
-  double res = G.residual(phi_curr, gamma);
-
-  if (res <= allowed_residual) {
-    return {.bbpgd_iterations = 1, .residual = res};
-  }
-
-  // Initial step size
+  double res = G.residual(g_prev, gamma_prev);
   double alpha = 1.0 / res;
 
-  // Storage for next gradient
-  auto g_next = VecWrapper::Like(phi_curr);
+  size_t iteration = 1;
+  for (; iteration < max_bbpgd_iterations; iteration++) {
+    // Step 6: γ_next := max(γ_curr − α*g_prev, 0)
+    VecWAXPY(gamma_i, -alpha, g_prev, gamma_prev);
+    VecPointwiseMax(gamma_i, gamma_i, zero_vec);
 
-  auto delta_gamma = VecWrapper::Like(gamma);
-  auto delta_phi = VecWrapper::Like(phi_curr);
-
-  // Constant zero vector for projection (reused in loop)
-  auto zero_vec = VecWrapper::Like(gamma);
-  VecZeroEntries(zero_vec);
-
-  size_t iteration = 2;
-
-  for (iteration = 2; iteration < max_bbpgd_iterations; iteration++) {
-    // We compute the next gamma into a temporary, then swap.
-    auto gamma_next = VecWrapper::Like(gamma);
-
-    // Step 6: γ_next := max(γ_curr − α*phi_curr, 0)
-    VecWAXPY(gamma_next, -alpha, phi_curr, gamma);
-    VecPointwiseMax(gamma_next, gamma_next, zero_vec);
-
-    // Step 7: g_next := g(γ_next)
-
-    G.gradient(gamma_next, g_next);
+    // Step 7: g_i := g(γ_next)
+    auto& g_i = G.gradient(gamma_i);
 
     // Step 8: res_next := res(γ_next)
-
-    if (bbpgd_logger) {
-      double grad_norm, dummy;
-      NormAdotAB(g_next, g_next, grad_norm, dummy);
-      double gamma_norm, dummy2;
-      NormAdotAB(gamma_next, gamma_next, gamma_norm, dummy2);
-
-      bbpgd_logger->collect({.iteration = iteration,
-                             .residual = res,
-                             .step_size = alpha,
-                             .grad_norm = std::sqrt(grad_norm),
-                             .gamma_norm = std::sqrt(gamma_norm)});
-      bbpgd_logger->log();
-    }
 
     // Step 9-11: Check convergence every 10 iterations
     // We do not check every iteration to save computation time
     if (iteration % 10 == 0) {
-      res = G.residual(g_next, gamma_next);
+      res = G.residual(g_i, gamma_i);
+
+      if (bbpgd_logger) {
+        double grad_norm, dot;
+        NormAdotAB(g_i, gamma_i, grad_norm, dot);
+
+        bbpgd_logger->collect({.iteration = iteration,
+                               .residual = res,
+                               .step_size = alpha,
+                               .grad_norm = std::sqrt(grad_norm),
+                               .gamma_norm = dot});
+        bbpgd_logger->log();
+      }
 
       if (res <= allowed_residual) {
-        gamma = std::move(gamma_next);
         break;
       }
     }
 
     // Step 12: Compute new step size
-    VecWAXPY(delta_gamma, -1.0, gamma, gamma_next);
-    VecWAXPY(delta_phi, -1.0, phi_curr, g_next);
+    VecWAXPY(delta_gamma, -1.0, gamma_prev, gamma_i);
+    VecWAXPY(delta_phi, -1.0, g_prev, g_i);
 
     double numerator_val;
     double denominator_val;
@@ -134,13 +119,16 @@ BBPGDResult BBPGD(
     }
 
     // Prepare for next iteration by swapping buffers
-    gamma = std::move(gamma_next);
-    std::swap(phi_curr, g_next);
+    std::swap(gamma_prev, gamma_i);
+    std::swap(g_prev, g_i);
   }
 
   if (iteration == max_bbpgd_iterations) {
     PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %ld iterations. Residual: %f", iteration, res);
   }
+
+  // Return the result in the input parameter
+  g0 = std::move(gamma_prev);
 
   return {.bbpgd_iterations = iteration, .residual = res};
 }

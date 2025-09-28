@@ -75,9 +75,8 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   VecAssemblyEnd(gamma);
 
   // Move particles
-  VecWrapper F_ext = VecWrapper::FromMat(M);
   VecWrapper U_ext = VecWrapper::FromMat(M);
-  calculate_external_velocities(U_ext, F_ext, particle_manager.local_particles, M, dt, 0, params.physics_config);
+  calculate_external_velocities(U_ext, particle_manager.local_particles, M, dt, 0, params.physics_config);
 
   VecWrapper U = VecWrapper::FromMat(M);
   VecWrapper deltaC = VecWrapper::FromMat(G);

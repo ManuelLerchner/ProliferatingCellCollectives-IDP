@@ -19,8 +19,6 @@ auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleMana
   MatWrapper D_PREV = MatWrapper::CreateAIJ(global_max_constraints, 6 * particle_manager.local_particles.size());
   MatWrapper L_PREV = MatWrapper::CreateAIJ(global_max_constraints, particle_manager.local_particles.size());
 
-  Workspace workspace(D_PREV, M, G, L_PREV, GAMMA, PHI, l);
-
   PetscInt ownership_start, ownership_end;
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(D_PREV, &ownership_start, &ownership_end));
 
@@ -45,8 +43,7 @@ auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleMana
       std::move(GAMMA),
       std::move(PHI),
       std::move(D_PREV),
-      std::move(L_PREV),
-      std::move(workspace));
+      std::move(L_PREV));
 }
 
 void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
@@ -140,16 +137,19 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
       break;
     }
 
-    auto [M, G, l, ldot, GAMMA, PHI, D_PREV, L_PREV, workspace] = createMatrices(all_constraints_set, particle_manager, params);
+    auto [M, G, l, ldot, GAMMA, PHI, D_PREV, L_PREV] = createMatrices(all_constraints_set, particle_manager, params);
 
     // Calculate external velocities
-    calculate_external_velocities(workspace.U_ext, workspace.F_ext_workspace, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
+
+    VecWrapper U_ext = VecWrapper::Create(6 * particle_manager.local_particles.size());
+
+    calculate_external_velocities(U_ext, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
 
     VecWrapper gamma_old = VecWrapper::Like(GAMMA);
     VecCopy(GAMMA, gamma_old);
 
     // Create gradient object
-    HardModelGradient hardgradient(D_PREV, M, G, L_PREV, PHI, gamma_old, l, ldot, workspace, params, dt);
+    HardModelGradient hardgradient(D_PREV, M, L_PREV, U_ext, PHI, gamma_old, l, ldot, params, dt);
 
     // Solver
     auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, iter);
@@ -157,24 +157,19 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     res = bbpgd_result_recursive.residual;
     total_bbpgd_iterations += bbpgd_result_recursive.bbpgd_iterations;
 
-    // Update
-    PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(workspace.gamma_diff_workspace, -1.0, gamma_old, GAMMA));
+    auto& workspace = hardgradient.workspaces_;
 
-    calculate_forces(workspace.df, workspace.du, workspace.dC, D_PREV, M, G, workspace.U_ext, workspace.gamma_diff_workspace);
-
-    calculate_ldot_inplace(L_PREV, l, GAMMA, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, workspace.ldot_curr_workspace, workspace.stress_curr_workspace, workspace.impedance_curr_workspace);
+    VecWrapper dC = VecWrapper::FromMat(G);
+    MatMult(G, workspace.U_total_workspace, dC);
 
     // Move
-    particle_manager.moveLocalParticlesFromSolution({.dC = workspace.dC, .f = workspace.df, .u = workspace.du}, dt);
+    particle_manager.moveLocalParticlesFromSolution({.dC = dC, .f = workspace.F_g_workspace, .u = workspace.U_total_workspace}, dt);
 
     // Grow
     particle_manager.setGrowParamsFromSolution({.dL = workspace.ldot_curr_workspace, .impedance = workspace.impedance_curr_workspace, .stress = workspace.stress_curr_workspace});
 
-    // update phi_prev
-    hardgradient.gradient(GAMMA, PHI);
-
     // Update constraints with current solution values
-    updateConstraintsFromSolution(all_constraints_set, GAMMA, PHI);
+    updateConstraintsFromSolution(all_constraints_set, GAMMA, workspace.phi_next_out);
 
     constraint_iterations++;
 

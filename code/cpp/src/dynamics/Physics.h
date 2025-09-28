@@ -14,7 +14,7 @@ VecWrapper getLdotVector(const std::vector<Particle>& local_particles);
 
 void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecWrapper& gamma, double lambda, double tau, VecWrapper& ldot_curr_out, VecWrapper& stress_curr_out, VecWrapper& impedance_curr_out);
 
-void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations, PhysicsConfig physics_config);
+void calculate_external_velocities(VecWrapper& U_ext,  const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations, PhysicsConfig physics_config);
 
 void calculate_jacobian_local(
     MatWrapper& D,
