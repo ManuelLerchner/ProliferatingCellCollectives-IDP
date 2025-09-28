@@ -20,6 +20,7 @@ class Gradient {
  public:
   virtual VecWrapper& gradient(const VecWrapper& gamma_curr) = 0;
   virtual double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) = 0;
+  virtual std::tuple<double, double, double, double> energy(const VecWrapper& gamma) = 0;
 };
 
 BBPGDResult BBPGD(
@@ -27,4 +28,4 @@ BBPGDResult BBPGD(
     VecWrapper& gamma,  // in-out parameter
     double allowed_residual,
     size_t max_bbpgd_iterations,
-    size_t iter);
+    bool log_bbpdg);
