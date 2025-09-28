@@ -54,7 +54,7 @@ VecWrapper getLdotVector(const std::vector<Particle>& local_particles) {
   return l;
 }
 
-void calculate_external_velocities(VecWrapper& U_ext, VecWrapper& F_ext_workspace, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations, PhysicsConfig physics_config) {
+void calculate_external_velocities(VecWrapper& U_ext, const std::vector<Particle>& local_particles, const MatWrapper& M, double dt, int constraint_iterations, PhysicsConfig physics_config) {
   PetscCallAbort(PETSC_COMM_WORLD, VecZeroEntries(U_ext));
 
   // Create a vector for external forces

@@ -66,28 +66,27 @@ void calculate_ldot_inplace(const MatWrapper& L, const VecWrapper& l, const VecW
 HardModelGradient::HardModelGradient(
     const MatWrapper& D_PREV,
     const MatWrapper& M,
-    const MatWrapper& G,
     const MatWrapper& L_PREV,
+    const VecWrapper& U_ext,
     const VecWrapper& PHI,
     const VecWrapper& gamma_old,
     const VecWrapper& l,
     const VecWrapper& ldot_prev,
-    Workspace& workspace,
     const SimulationParameters& params,
     double dt)
     : D_PREV_(D_PREV),
       M_(M),
-      G_(G),
       L_PREV_(L_PREV),
+      U_ext_(U_ext),
       PHI_(PHI),
       gamma_old_(gamma_old),
       l_(l),
       ldot_prev_(ldot_prev),
-      workspaces_(workspace),
+      workspaces_(Workspace(D_PREV, M, L_PREV, gamma_old, PHI, l)),
       params_(params),
       dt_(dt) {}
 
-void HardModelGradient::gradient(const VecWrapper& gamma_curr, VecWrapper& phi_next_out) {
+  VecWrapper& HardModelGradient::gradient(const VecWrapper& gamma_curr) {
 #pragma omp sections
   {
 #pragma omp section
@@ -98,7 +97,7 @@ void HardModelGradient::gradient(const VecWrapper& gamma_curr, VecWrapper& phi_n
 
       // phi_dot_movement = D * M * D^T * gamma_diff
       estimate_phi_dot_movement_inplace(
-          D_PREV_, M_, workspaces_.U_ext, workspaces_.gamma_diff_workspace,
+          D_PREV_, M_, U_ext_, workspaces_.gamma_diff_workspace,
           workspaces_.F_g_workspace, workspaces_.U_c_workspace,
           workspaces_.U_total_workspace, workspaces_.phi_dot_movement_workspace);
     }
@@ -121,11 +120,13 @@ void HardModelGradient::gradient(const VecWrapper& gamma_curr, VecWrapper& phi_n
   }
 
   // Start with the base violation: phi_next_out = phi
-  PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_, phi_next_out));
+  PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_, workspaces_.phi_next_out));
 
   Vec vecs_to_add[] = {workspaces_.phi_dot_movement_workspace, workspaces_.phi_dot_growth_result};
   PetscScalar scales[] = {dt_, -dt_};
-  PetscCallAbort(PETSC_COMM_WORLD, VecMAXPY(phi_next_out, 2, scales, vecs_to_add));
+  PetscCallAbort(PETSC_COMM_WORLD, VecMAXPY(workspaces_.phi_next_out, 2, scales, vecs_to_add));
+
+  return workspaces_.phi_next_out;
 }
 
 double HardModelGradient::residual(const VecWrapper& gradient_val, const VecWrapper& gamma) {
