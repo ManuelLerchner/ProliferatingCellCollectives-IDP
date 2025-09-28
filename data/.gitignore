@@ -4,3 +4,4 @@
 !.gitignore
 !scp.sh
 !template.latex
+!rename.py

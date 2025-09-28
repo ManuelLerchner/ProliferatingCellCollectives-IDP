@@ -2,8 +2,8 @@
 
 Bacteria Growth using Hard Model             |  Bacteria Growth using Soft Model
 :-------------------------:|:-------------------------:
-![Hard Model](latex/figures/growth_comparison_lambda_1e-2/hard_1e-2.1100.jpeg) | ![Soft Model](latex/figures/growth_comparison_lambda_1e-2/soft_1e-2.1100.jpeg)
-$\lambda = 10^{-2}$, $R_{end} = 50$ | $\lambda = 10^{-2}$, $R_{end} = 50$
+![Hard Model](latex/figures/growth_comparisons/hard_e-3_0087.jpeg) | ![Soft Model](latex/figures/growth_comparisons/soft_e-3_0127.jpeg)
+$\lambda = 10^{-3}$, $R_{end} = 100$ | $\lambda = 10^{-3}$, $R_{end} = 100$
 
 ## Abstract
 
