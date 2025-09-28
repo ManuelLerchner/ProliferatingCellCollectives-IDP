@@ -454,7 +454,7 @@ Substituting the approximation of $\mathbf{\Phi}^{k+1}$ from \autoref{eq:phi_exp
 
 \subsubsection{Energy Minimization Solution}
 
-To solve this NCP efficiently, we reformulate it as an optimization problem. We construct an energy function $E(\boldsymbol{\gamma})$ such that $\nabla_{\boldsymbol{\gamma}} E = \boldsymbol{\Phi}^{k+1}$ by integrating each term in the linearized constraint condition:
+To solve this contact problem efficiently, we reframe it as an optimization problem. Therefore we design a special function $E(\boldsymbol{\gamma})$ whose minimization resolves the contact forces. Physically, $E$ represents the work done by the contact forces and the system's internal energy.
 
 \begin{equation}
     \small
@@ -467,7 +467,7 @@ To solve this NCP efficiently, we reformulate it as an optimization problem. We 
     \end{aligned}
 \end{equation}
 
-By construction, the gradient of this energy equals the linearized prediction:
+By construction, the gradient (slope) of this energy equals the linearized prediction:
 
 \begin{equation}
     \begin{split}
@@ -476,19 +476,26 @@ By construction, the gradient of this energy equals the linearized prediction:
     \end{split}
 \end{equation}
 
-Because $E(\boldsymbol{\gamma})$ is convex, the KKT conditions are both necessary and sufficient for optimality. These conditions map directly onto the physical constraints of the NCP:
+Because $E(\boldsymbol{\gamma}) $ is convex, it has a single, global minimum. We compute this minimum using a projected gradient method, which iteratively takes steps in the direction of the negative gradient and projects the result onto the feasible set $\boldsymbol{\gamma} \ge 0$ to enforce repulsive forces.
+
+At the solution, the Karush-Kuhn-Tucker (KKT) conditions for this constrained minimum are exactly equivalent to our physical constraints:
 
 \begin{itemize}
-    \item \textbf{Primal feasibility} ($\boldsymbol{\gamma}^* \ge 0$): Forces are repulsive.
-    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) = \boldsymbol{\Phi}^{k+1} \ge 0$): No overlaps in predicted state.
-    \item \textbf{Complementary slackness} ($\boldsymbol{\gamma}^{*\top} \boldsymbol{\Phi}^{k+1} = 0$): Forces are zero for separated contacts.
+    \item \textbf{Primal feasibility} ($ \boldsymbol{\gamma}^* \ge 0 $): This holds because we explicitly enforce it through a projection or a \texttt{max} operator during minimization, which prevents forces from becoming attractive.
+
+    \item \textbf{Dual feasibility} ($ \nabla E(\boldsymbol{\gamma}^*) \ge 0 $): This must be true at the minimum. If the gradient pointed downhill ($ \nabla E < 0 $) at the solution, it would mean we could lower the energy further by increasing $ \boldsymbol{\gamma} $, which contradicts that we are at a minimum. The only way to be at a minimum with the $ \boldsymbol{\gamma} \ge 0 $ constraint is if the gradient is zero (pointing nowhere) or positive (pointing uphill away from the boundary), meaning $ \boldsymbol{\Phi}^{k+1} \ge 0 $.
+
+    \item \textbf{Complementary Slackness}  ($ \boldsymbol{\gamma}^{*\top} \boldsymbol{\Phi}^{k+1} = 0 $): This condition holds for a similar reason. If a contact force is active ($ \gamma_\alpha > 0$), it means the system is free to adjust this force to find the minimum. At the true minimum, there can be no direction left to lower the energy. Therefore, for a non-zero force to be part of the final, optimal solution, the gradient (which equals $\Phi^{k+1}_\alpha = 0$) must be zero at that point. Conversely, if $ \gamma_\alpha = 0 $, the gradient can be positive ($ \Phi^{k+1}_\alpha > 0 $) because we cannot go to lower energies by making $ \gamma_i $ more negative (as it is forbidden). Thus, the product $ \gamma_\alpha \Phi^{k+1}_\alpha = 0 $ for each contact $\alpha$, leading to the overall complementary slackness condition.
+
 \end{itemize}
 
-Thus, the unique global minimizer $\boldsymbol{\gamma}^*$ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence is a standard result in optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Tasora2008, Yan2019, Li2021, Weady2024,Rudge2012,Macklin2014,Ferguson2021}.
+Thus, the unique global minimizer $ \boldsymbol{\gamma}^* $ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence between the KKT conditions and the physical constraints is a standard result in optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Tasora2008, Yan2019, Li2021, Weady2024,Rudge2012,Macklin2014,Ferguson2021}.
+
+
 
 \subsubsection{Numerical Solution via Projected Gradient Descent}
 
-This constrained minimization problem is solved using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, also implemented in~\cite{Weady2024}, which iteratively refines $\boldsymbol{\gamma}$ with adaptive gradient steps while enforcing non-negativity via projection. The algorithm continues until a convergence criterion is met, and the final solution $\boldsymbol{\gamma}^*$ is used to compute the generalized forces $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$. The colony state can then be updated using \autoref{eq:colony_update}. This process is repeated at each simulation timestep to ensure that all collisions are resolved while maintaining the physical integrity of the cell collective.
+This constrained minimization problem is solved using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, also implemented in~\cite{Weady2024,Yan2019}. The algorithm continues until a convergence criterion is met, and the final solution $\boldsymbol{\gamma}^*$ is used to compute the forces $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$. The colony state can then be updated using \autoref{eq:colony_update}. This process is repeated at each simulation timestep to ensure that all collisions are resolved while maintaining the physical integrity of the cell collective.
 
 \subsubsection{Limitations of the Linearization}
 
