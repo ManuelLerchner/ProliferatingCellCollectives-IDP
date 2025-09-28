@@ -112,7 +112,8 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   calculate_ldot_inplace(L, length, gamma, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, ldot, stress, impedance);
 
   // Grow particles
-  particle_manager.growLocalParticlesFromSolution({.dL = ldot, .impedance = impedance, .stress = stress}, dt);
+  particle_manager.setGrowParamsFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
+  particle_manager.grow(dt);
 
   return {.constraints = new_constraints, .constraint_iterations = 1, .bbpgd_iterations = 0, .residual = 0, .max_overlap = max_overlap};
 }

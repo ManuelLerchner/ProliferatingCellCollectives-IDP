@@ -71,6 +71,7 @@ HardModelGradient::HardModelGradient(
     const VecWrapper& PHI,
     const VecWrapper& gamma_old,
     const VecWrapper& l,
+    const VecWrapper& ldot_prev,
     Workspace& workspace,
     const SimulationParameters& params,
     double dt)
@@ -81,6 +82,7 @@ HardModelGradient::HardModelGradient(
       PHI_(PHI),
       gamma_old_(gamma_old),
       l_(l),
+      ldot_prev_(ldot_prev),
       workspaces_(workspace),
       params_(params),
       dt_(dt) {}
@@ -111,7 +113,7 @@ void HardModelGradient::gradient(const VecWrapper& gamma_curr, VecWrapper& phi_n
           workspaces_.stress_curr_workspace, workspaces_.impedance_curr_workspace);
 
       // ldot_diff = ldot_curr - ldot_prev
-      VecWAXPY(workspaces_.ldot_diff_workspace, -1.0, workspaces_.ldot_prev, workspaces_.ldot_curr_workspace);
+      VecWAXPY(workspaces_.ldot_diff_workspace, -1.0, ldot_prev_, workspaces_.ldot_curr_workspace);
 
       // phi_dot_growth = -L^T * ldot_diff
       estimate_phi_dot_growth_inplace(L_PREV_, workspaces_.ldot_diff_workspace, workspaces_.phi_dot_growth_result);

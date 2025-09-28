@@ -68,6 +68,14 @@ class Particle {
     return data_.length;
   }
 
+  double getLdot() const {
+    return data_.ldot;
+  }
+
+  void setLdot(double ldot) {
+    data_.ldot = ldot;
+  }
+
   double getDiameter() const {
     return data_.diameter;
   }
@@ -141,6 +149,7 @@ class Particle {
 
   void reset() {
     num_constraints_ = 0;
+    data_.ldot = 0.0;
   }
 
   std::array<double, 3> calculateGravitationalForce(const std::array<double, 3>& gravity) const;

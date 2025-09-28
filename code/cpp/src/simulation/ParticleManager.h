@@ -43,7 +43,8 @@ class ParticleManager {
   void commitNewParticles();
 
   void moveLocalParticlesFromSolution(const MovementSolution& solution, double dt);
-  void growLocalParticlesFromSolution(const GrowthSolution& solution, double dt);
+  void setGrowParamsFromSolution(const GrowthSolution& solution);
+  void grow(double dt);
 
   std::vector<Particle> divideParticles();
   SolverSolution step(int i, std::function<void()> exchangeGhostParticles);

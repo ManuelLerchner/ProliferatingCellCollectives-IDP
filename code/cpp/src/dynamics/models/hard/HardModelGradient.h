@@ -15,6 +15,7 @@ class HardModelGradient : public Gradient {
       const VecWrapper& PHI,
       const VecWrapper& gamma_old,
       const VecWrapper& l,
+      const VecWrapper& ldot_prev,
       Workspace& workspace,
       const SimulationParameters& params,
       double dt);
@@ -30,6 +31,7 @@ class HardModelGradient : public Gradient {
   const VecWrapper& PHI_;
   const VecWrapper& gamma_old_;
   const VecWrapper& l_;
+  const VecWrapper& ldot_prev_;
   Workspace& workspaces_;
   const SimulationParameters& params_;
   double dt_;

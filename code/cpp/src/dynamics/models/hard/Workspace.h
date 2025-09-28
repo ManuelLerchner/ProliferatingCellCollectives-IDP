@@ -14,7 +14,6 @@ class Workspace {
   VecWrapper U_total_workspace;
   VecWrapper ldot_curr_workspace;
   VecWrapper ldot_diff_workspace;
-  VecWrapper ldot_prev;
   VecWrapper impedance_curr_workspace;
   VecWrapper stress_curr_workspace;
   VecWrapper U_ext;

@@ -11,15 +11,16 @@ struct ParticleData {
   std::array<double, 4> quaternion;
   double length;
   double l0;
+  double ldot;
   double diameter;
   int age;
 };
 
 inline void createParticleMPIType(MPI_Datatype* particle_type) {
-  const int count = 7;
-  int blocklengths[] = {1, 3, 4, 1, 1, 1, 1};
+  const int count = 8;
+  int blocklengths[] = {1, 3, 4, 1, 1, 1, 1, 1};
   MPI_Aint displacements[count];
-  MPI_Datatype types[] = {MPIU_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT};
+  MPI_Datatype types[] = {MPIU_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT};
 
   // Get addresses of each member
   ParticleData pd;
@@ -30,8 +31,9 @@ inline void createParticleMPIType(MPI_Datatype* particle_type) {
   MPI_Get_address(&pd.quaternion, &displacements[2]);
   MPI_Get_address(&pd.length, &displacements[3]);
   MPI_Get_address(&pd.l0, &displacements[4]);
-  MPI_Get_address(&pd.diameter, &displacements[5]);
-  MPI_Get_address(&pd.age, &displacements[6]);
+  MPI_Get_address(&pd.ldot, &displacements[5]);
+  MPI_Get_address(&pd.diameter, &displacements[6]);
+  MPI_Get_address(&pd.age, &displacements[7]);
 
   // Make displacements relative to the start of the struct
   for (int i = 0; i < count; ++i) {
