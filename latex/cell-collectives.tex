@@ -70,16 +70,16 @@
 \newcommand{\growthcomparisonrow}[6]{%
     #1 &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#3.jpeg}
+        \includegraphics[width=\textwidth]{figures/comparisons_new/#1_#2_#3.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#4.jpeg}
+        \includegraphics[width=\textwidth]{figures/comparisons_new/#1_#2_#4.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#5.jpeg}
+        \includegraphics[width=\textwidth]{figures/comparisons_new/#1_#2_#5.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparison_lambda_#2/#1_#2.#6.jpeg}
+        \includegraphics[width=\textwidth]{figures/comparisons_new/#1_#2_#6.jpeg}
     \end{subfigure}  \\
 }
 
@@ -489,7 +489,9 @@ At the solution, the Karush-Kuhn-Tucker (KKT) conditions for this constrained mi
 
 \end{itemize}
 
-Thus, the unique global minimizer $ \boldsymbol{\gamma}^* $ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence between the KKT conditions and the physical constraints is a standard result in optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Tasora2008, Yan2019, Li2021, Weady2024,Rudge2012,Macklin2014,Ferguson2021}.
+Thus, the unique global minimizer $ \boldsymbol{\gamma}^* $ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence between the KKT conditions
+of some convex optimization problem and a complementarity problem is a well-known result in
+optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Tasora2008, Yan2019, Li2021, Weady2024,Rudge2012,Macklin2014,Ferguson2021}.
 
 
 
@@ -626,23 +628,23 @@ To provide a more quantitative assessment, we analyze three key metrics: the rad
 \begin{figure*}[p]
     \centering
 
-    % Lambda = 10^-1 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-1}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-1}{0400}{0800}{1200}{1800}
-            \growthcomparisonrow{Soft}{1e-1}{0400}{0800}{1200}{1800}
-        \end{tabular}
-    \end{subfigure}
+    % % Lambda = 10^-1 comparison
+    % \begin{subfigure}[b]{\textwidth}
+    %     \centering
+    %     \caption{Growth Comparison $\lambda=10^{-1}$}
+    %     \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+    %         \growthcomparisonrow{Hard}{e-1}{0090}{0100}{0110}{0120}
+    %         \growthcomparisonrow{Soft}{e-1}{0140}{0170}{0240}{0310}
+    %     \end{tabular}
+    % \end{subfigure}
 
     % % Lambda = 10^-2 comparison
     \begin{subfigure}[b]{\textwidth}
         \centering
         \caption{Growth Comparison $\lambda=10^{-2}$}
         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-2}{0400}{0700}{0900}{1100}
-            \growthcomparisonrow{Soft}{1e-2}{0400}{0700}{0900}{1100}
+            \growthcomparisonrow{Hard}{e-2}{0070}{0080}{0090}{0099}
+            \growthcomparisonrow{Soft}{e-2}{0080}{0090}{0110}{0160}
         \end{tabular}
     \end{subfigure}
 
@@ -651,13 +653,23 @@ To provide a more quantitative assessment, we analyze three key metrics: the rad
         \centering
         \caption{Growth Comparison $\lambda=10^{-3}$}
         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{1e-3}{0400}{0600}{0800}{1000}
-            \growthcomparisonrow{Soft}{1e-3}{0400}{0600}{0800}{1000}
+            \growthcomparisonrow{Hard}{e-3}{0070}{0083}{0084}{0087}
+            \growthcomparisonrow{Soft}{e-3}{0080}{0100}{0110}{0127}
+        \end{tabular}
+    \end{subfigure}
+
+    % Lambda = 10^-4 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \caption{Growth Comparison $\lambda=10^{-4}$}
+        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
+            \growthcomparisonrow{Hard}{e-4}{0070}{0080}{0084}{0087}
+            \growthcomparisonrow{Soft}{e-4}{0070}{0091}{0100}{0120}
         \end{tabular}
     \end{subfigure}
 
 
-    \caption{Pattern formation under stress-sensitive growth at equally spaced time points. Each row shows the evolution for a different value of $\lambda$ for both hard and soft collision models up to a maximum colony radius of 50. The color indicates the length of the cells ranging from 1 (dark green) to 2 (light green). Clear concentric ring pattern are visible for $\lambda \in \{10^{-2}, 10^{-3}\}$.}
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from \cite{Weady2024}.}
     \label{fig:pattern_formation}
 \end{figure*}
 
