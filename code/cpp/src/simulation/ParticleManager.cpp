@@ -21,7 +21,7 @@
 #include "dynamics/models/Soft.h"
 #include "logger/ParticleLogger.h"
 
-ParticleManager::ParticleManager(SimulationParameters params, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode)
+ParticleManager::ParticleManager(SimulationParameters& params, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode)
     : params_(params), particle_logger_(particle_logger), constraint_logger_(constraint_logger), mode_(mode), collision_detector_(CollisionDetector(params.solver_config.tolerance, params.solver_config.linked_cell_size)) {
 }
 

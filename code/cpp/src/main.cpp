@@ -11,7 +11,7 @@
 #include "spatial/Domain.h"
 #include "util/CLIParser.h"
 
-std::optional<Domain> createDomain(const SimulationParameters& params) {
+std::optional<Domain> createDomain(SimulationParameters& params) {
   if (params.starter_vtk.empty()) {
     // Create a new domain
     Domain domain(params, false, 0, params.mode);

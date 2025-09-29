@@ -9,7 +9,8 @@ struct Vec3d {
 struct SimulationConfig {
   double dt_s;
   double end_radius;
-  double log_frequency_seconds = 0;
+  double log_every_sim_time_delta = 0;
+  double log_every_colony_radius_delta = 0;
   Vec3d min_box_size;
 };
 

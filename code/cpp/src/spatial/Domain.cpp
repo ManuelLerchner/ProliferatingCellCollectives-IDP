@@ -15,7 +15,7 @@
 #include "util/ArrayMath.h"
 #include "util/MetricsUtil.h"
 
-Domain::Domain(const SimulationParameters params, bool preserve_existing, size_t iter, const std::string& mode)
+Domain::Domain(SimulationParameters& params, bool preserve_existing, size_t iter, const std::string& mode)
     : params_(params),
       iter(iter) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank_);
@@ -59,6 +59,31 @@ void Domain::commitNewParticles() {
   this->global_particle_count += globalReduce(num_added_local, MPI_SUM);
 }
 
+// Domain.cpp (new function)
+void Domain::adaptDt() {
+  double max_velocity = 0.0;
+  for (const auto& p : particle_manager_->local_particles) {
+    auto particle_velocity = utils::ArrayMath::magnitude(p.getVelocityLinear());
+    auto particle_growth_rate = p.getLdot();
+    max_velocity = std::max(max_velocity, particle_velocity + particle_growth_rate);
+  }
+
+  double optional_cfl_cap_dt_local = std::numeric_limits<double>::infinity();
+  if (max_velocity > 1e-12) {
+    // CFL condition: Particle should not move more than a fraction of its length in one time step
+    double cfl = 0.5 * params_.solver_config.tolerance;
+    optional_cfl_cap_dt_local = cfl / max_velocity;
+  }
+
+  double optional_cfl_cap_dt = globalReduce(optional_cfl_cap_dt_local, MPI_MIN);
+
+  // Smooth change to avoid oscillations (exponential smoothing toward suggested)
+  double new_local_dt = params_.sim_config.dt_s * (1.0 - adaptive_dt_smoothing_alpha_) +
+                        adaptive_dt_smoothing_alpha_ * optional_cfl_cap_dt;
+
+  params_.sim_config.dt_s = new_local_dt;
+}
+
 void Domain::run() {
   using namespace utils::ArrayMath;
 
@@ -81,9 +106,11 @@ void Domain::run() {
     double mpi_start_time = MPI_Wtime();
     auto solver_solution = particle_manager_->step(iter, update_ghosts_fn);
     double mpi_end_time = MPI_Wtime();
-    double mpi_comm_time = mpi_end_time - mpi_start_time;
+    double solver_wall_time = mpi_end_time - mpi_start_time;  // wall time for this step (local)
 
     simulation_time_seconds_ += params_.sim_config.dt_s;
+
+    adaptDt();
 
     // Determine colony radius
     colony_radius = globalReduce(
@@ -105,7 +132,7 @@ void Domain::run() {
 
     vtk::SimulationStep step_data{
         .simulation_time_s = simulation_time_seconds_,
-        .step_duration_s = MPI_Wtime() - step_start_time_,
+        .time_since_last_log_s = MPI_Wtime() - time_last_log_,
         .step = iter,
 
         .num_particles = global_particle_count,
@@ -123,18 +150,21 @@ void Domain::run() {
         .memory_usage_mb = memory_usage_mb,
         .peak_memory_mb = peak_memory_mb,
         .cpu_time_s = cpu_time_s,
-        .mpi_comm_time_s = mpi_comm_time,
+        .mpi_comm_time_s = solver_wall_time,
         .load_imbalance = load_imbalance};
 
-    if (simulation_time_seconds_ - time_last_log_ > params_.sim_config.log_frequency_seconds) {
-      step_start_time_ = MPI_Wtime();
+    bool log_due_to_colony_radius = params_.sim_config.log_every_colony_radius_delta && (colony_radius - colony_radius_last_log_ > params_.sim_config.log_every_colony_radius_delta);
+    bool log_due_to_sim_time = params_.sim_config.log_every_sim_time_delta && (simulation_time_seconds_ - simulation_time_last_log_ > params_.sim_config.log_every_sim_time_delta);
+
+    if (log_due_to_colony_radius || log_due_to_sim_time || iter == 0 || colony_radius >= params_.sim_config.end_radius) {
       particle_logger_->log(particle_manager_->local_particles);
       constraint_logger_->log(solver_solution.constraints);
       domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
-      time_last_log_ = simulation_time_seconds_;
-
-      // Log simulation data
       simulation_logger_->log(step_data);
+
+      colony_radius_last_log_ = colony_radius;
+      simulation_time_last_log_ = simulation_time_seconds_;
+      time_last_log_ = MPI_Wtime();
     }
 
     printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count(), step_data);
@@ -189,6 +219,7 @@ void Domain::resizeDomain() {
   double slice_width = (global_max_bounds_[0] - global_min_bounds_[0]) / size_;
 
   min_bounds_[0] = global_min_bounds_[0] + rank_ * slice_width;
+  double buffer = params_.physics_config.l0 * 0.5;
   max_bounds_[0] = global_min_bounds_[0] + (rank_ + 1) * slice_width;
   min_bounds_[1] = global_min_bounds_[1];
   max_bounds_[1] = global_max_bounds_[1];
@@ -469,7 +500,7 @@ void Domain::assignGlobalIDsToNewParticles() {
   }
 }
 
-Domain Domain::initializeFromVTK(const SimulationParameters& params, const std::string& vtk_path, const std::string& mode) {
+Domain Domain::initializeFromVTK(SimulationParameters& params, const std::string& vtk_path, const std::string& mode) {
   std::filesystem::path path(vtk_path);
   std::string vtk_dir;
 

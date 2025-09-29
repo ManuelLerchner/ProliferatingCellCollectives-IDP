@@ -18,8 +18,12 @@ void printHelp(const SimulationParameters& params) {
               params.sim_config.dt_s);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-end_radius", "Final radius to simulate",
               params.sim_config.end_radius);
-  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-log_frequency",
-              "How often to log simulation state in seconds", params.sim_config.log_frequency_seconds);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-log_every_colony_radius_delta",
+              "Log once colony radius increases by this amount (0 to disable)",
+              params.sim_config.log_every_colony_radius_delta);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-log_every_sim_time_delta",
+              "Log every this many seconds of simulation time (0 to disable)",
+              params.sim_config.log_every_colony_radius_delta);
 
   // Physics Configuration
   PetscPrintf(PETSC_COMM_WORLD, "\nPhysics Configuration:\n");
@@ -106,7 +110,8 @@ void dumpParameters(const SimulationParameters& params) {
   PetscPrintf(PETSC_COMM_WORLD, "\n=== SIMULATION CONFIGURATION ===\n");
   printParam("Time step (dt)", params.sim_config.dt_s);
   printParam("End radius", params.sim_config.end_radius);
-  printParam("Log frequency", params.sim_config.log_frequency_seconds);
+  printParam("Log every colony radius delta", params.sim_config.log_every_colony_radius_delta);
+  printParam("Log every sim time delta", params.sim_config.log_every_colony_radius_delta);
   PetscPrintf(PETSC_COMM_WORLD, "Min box size             : [%.3f, %.3f, %.3f]\n",
               params.sim_config.min_box_size.x,
               params.sim_config.min_box_size.y,
@@ -154,7 +159,8 @@ SimulationParameters parseCommandLineOrDefaults() {
   params.sim_config = {
       .dt_s = 0.5 * 1e-4,
       .end_radius = 50,
-      .log_frequency_seconds = 0.1,
+      .log_every_sim_time_delta = 100000,
+      .log_every_colony_radius_delta = 0.5,
       .min_box_size = {2.0, 2.0, 0},
   };
 
@@ -189,7 +195,8 @@ SimulationParameters parseCommandLineOrDefaults() {
   // Parse overrides
   getOption("-dt", params.sim_config.dt_s);
   getOption("-end_radius", params.sim_config.end_radius);
-  getOption("-log_frequency", params.sim_config.log_frequency_seconds);
+  getOption("-log_every_colony_radius_delta", params.sim_config.log_every_colony_radius_delta);
+  getOption("-log_every_sim_time_delta", params.sim_config.log_every_sim_time_delta);
 
   getOption("-xi", params.physics_config.xi);
   getOption("-tau", params.physics_config.TAU);
