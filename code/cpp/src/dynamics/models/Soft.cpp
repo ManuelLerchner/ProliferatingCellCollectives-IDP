@@ -114,5 +114,5 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   particle_manager.setGrowParamsFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
   particle_manager.grow(dt);
 
-  return {.constraints = new_constraints, .constraint_iterations = 1, .bbpgd_iterations = 0, .residual = 0, .max_overlap = max_overlap};
+  return {.constraints = new_constraints, .constraint_iterations = 1, .bbpgd_iterations = 0, .residual = max_overlap, .max_overlap = max_overlap};
 }
