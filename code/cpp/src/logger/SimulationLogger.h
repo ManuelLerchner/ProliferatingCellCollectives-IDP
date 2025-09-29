@@ -6,7 +6,7 @@ namespace vtk {
 
 struct SimulationStep {
   double simulation_time_s;
-  double step_duration_s;
+  double time_since_last_log_s;
   size_t step;
 
   // Particle metrics

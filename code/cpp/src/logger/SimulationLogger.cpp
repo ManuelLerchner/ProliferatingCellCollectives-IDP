@@ -12,7 +12,7 @@ void SimulationLogger::log(const SimulationStep& step) {
 
   // Add all metrics as field data
   logger_.addFieldData("simulation_time_s", step.simulation_time_s);
-  logger_.addFieldData("step_duration_s", step.step_duration_s);
+  logger_.addFieldData("time_since_last_log_s", step.time_since_last_log_s);
   logger_.addFieldData("step", step.step);
 
   logger_.addFieldData("num_particles", step.num_particles);

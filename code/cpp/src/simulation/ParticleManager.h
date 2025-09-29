@@ -37,7 +37,7 @@ class ParticleManager {
     double max_overlap;
   };
 
-  ParticleManager(SimulationParameters params, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode);
+  ParticleManager(SimulationParameters& params, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger, const std::string& mode);
 
   void queueNewParticles(Particle p);
   void commitNewParticles();
@@ -56,7 +56,7 @@ class ParticleManager {
   std::vector<Particle> ghost_particles;
   PetscInt global_particle_count = 0;
 
-  SimulationParameters params_;
+  SimulationParameters& params_;
   CollisionDetector collision_detector_;
 
  private:
