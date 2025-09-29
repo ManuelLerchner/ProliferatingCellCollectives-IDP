@@ -42,7 +42,7 @@ def draw_particles(data, ax=None, show=True):
     for _, row in data.iterrows():
         x, y = row['x'], row['y']
         angle = row['orientation_angle'] * 180 / np.pi
-        length = row['lengths_x']
+        length = row['length']
 
         fill_color = cmap(norm(length))
 
@@ -94,7 +94,7 @@ def draw_particles_cluster(data, colors):
         x = data.iloc[i]['x']
         y = data.iloc[i]['y']
         angle = data.iloc[i]['orientation_angle'] * 180 / np.pi
-        length = data.iloc[i]['lengths_x']
+        length = data.iloc[i]['length']
 
         fill_color = tuple(colors[i])
 
