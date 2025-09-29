@@ -210,7 +210,7 @@ std::optional<Particle> Particle::divide(PetscInt new_gID) {
   //   random number between 0.7 and 1.3
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(l0 * 0.98,l0 * 1.02);
+  std::uniform_real_distribution<> dis(l0 * 0.98, l0 * 1.02);
 
   double l1 = dis(gen);
   double l2 = data_.length - l1;
@@ -253,7 +253,7 @@ std::array<double, 3> Particle::calculateGravitationalForce(const std::array<dou
 
 std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, bool monolayer, double xi, double dt,
                                                           std::mt19937& gen) const {
-  std::normal_distribution<double> dist(0.0, 1.0);
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
 
   double mobility = dist(gen);
 
@@ -264,7 +264,7 @@ std::array<double, 6> Particle::calculateBrownianVelocity(double temperature, bo
       0,
       0,
       0,
-      monolayer ? 0.0 : rot_coeff * dist(gen) * impedance_,
-      monolayer ? 0.0 : rot_coeff * dist(gen) * impedance_,
-      rot_coeff * dist(gen) * impedance_};
+      monolayer ? 0.0 : rot_coeff * dist(gen) * impedance_*impedance_*impedance_,
+      monolayer ? 0.0 : rot_coeff * dist(gen) * impedance_*impedance_*impedance_,
+      rot_coeff * dist(gen) * impedance_*impedance_*impedance_};
 }

@@ -59,27 +59,43 @@ void Domain::commitNewParticles() {
   this->global_particle_count += globalReduce(num_added_local, MPI_SUM);
 }
 
-// Domain.cpp (new function)
 void Domain::adaptDt() {
-  double max_velocity = 0.0;
+  std::vector<double> local_velocities;
+
+  // Collect velocities
   for (const auto& p : particle_manager_->local_particles) {
-    auto particle_velocity = utils::ArrayMath::magnitude(p.getVelocityLinear());
-    auto particle_growth_rate = p.getLdot();
-    max_velocity = std::max(max_velocity, particle_velocity + particle_growth_rate);
+    double particle_velocity = utils::ArrayMath::magnitude(p.getVelocityLinear());
+    double particle_growth_rate = p.getLdot();
+    local_velocities.push_back(particle_velocity + particle_growth_rate);
   }
 
-  double optional_cfl_cap_dt_local = std::numeric_limits<double>::infinity();
-  if (max_velocity > 1e-12) {
-    // CFL condition: Particle should not move more than a fraction of its length in one time step
-    double cfl = 0.5 * params_.solver_config.tolerance;
-    optional_cfl_cap_dt_local = cfl / max_velocity;
+  // Compute median locally
+  double local_median_velocity = 0.0;
+  if (!local_velocities.empty()) {
+    std::nth_element(local_velocities.begin(),
+                     local_velocities.begin() + local_velocities.size() / 2,
+                     local_velocities.end());
+    local_median_velocity = local_velocities[local_velocities.size() / 2];
+
+    // For even-sized vector, average the two middle values
+    if (local_velocities.size() % 2 == 0) {
+      auto max_it = std::max_element(local_velocities.begin(),
+                                     local_velocities.begin() + local_velocities.size() / 2);
+      local_median_velocity = 0.5 * (*max_it + local_median_velocity);
+    }
   }
 
-  double optional_cfl_cap_dt = globalReduce(optional_cfl_cap_dt_local, MPI_MIN);
+  // Global reduction (median across all MPI ranks is tricky; approximate with average of medians)
 
-  // Smooth change to avoid oscillations (exponential smoothing toward suggested)
+  double global_median_velocity = globalReduce(local_median_velocity, MPI_SUM) / size_;
+
+  // CFL condition
+  double cfl = 0.5 * params_.solver_config.tolerance;
+  double optional_cfl_cap_dt_local = cfl / global_median_velocity;
+
+  // Smooth change to avoid oscillations
   double new_local_dt = params_.sim_config.dt_s * (1.0 - adaptive_dt_smoothing_alpha_) +
-                        adaptive_dt_smoothing_alpha_ * optional_cfl_cap_dt;
+                        adaptive_dt_smoothing_alpha_ * optional_cfl_cap_dt_local;
 
   params_.sim_config.dt_s = new_local_dt;
 }
