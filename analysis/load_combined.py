@@ -20,7 +20,7 @@ def clean_label(sim_dir):
         m = int(re.search(r"e([+-]?\d+)", sim_dir).group(1))
         return (mode, m, mode + " ($\lambda = 10^{" + str(m) + "}$)")
     except AttributeError:
-        return (mode, -7, sim_dir + "assumed $\lambda = 10^{-7}$")
+        return (mode, -3, sim_dir + "assumed $\lambda = 10^{-3}$")
 
 
 def load_combined(sim_dirs, base_path=""):

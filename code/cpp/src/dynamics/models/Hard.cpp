@@ -7,7 +7,7 @@
 #include "util/ArrayMath.h"
 #include "util/PetscRaii.h"
 
-auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleManager& particle_manager, const SimulationParameters& params) {
+auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleManager& particle_manager, SimulationParameters& params) {
   auto global_max_constraints = globalReduce<size_t>(all_constraints.size(), MPI_MAX);
 
   MatWrapper M = calculate_MobilityMatrix(particle_manager.local_particles, params.physics_config.xi);
@@ -102,7 +102,7 @@ void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const V
   cleanupScatteredResources(phi_local, phi_scatter, phi_is);
 }
 
-ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager, CollisionDetector& collision_detector, SimulationParameters params, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
+ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager, CollisionDetector& collision_detector, SimulationParameters& params, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   int constraint_iterations = 0;
   size_t total_bbpgd_iterations = 0;
 

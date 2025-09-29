@@ -205,10 +205,12 @@ std::optional<Particle> Particle::divide(PetscInt new_gID) {
     return std::nullopt;
   }
 
+  auto l0 = data_.length / 2;
+
   //   random number between 0.7 and 1.3
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(data_.l0 * 0.98, data_.l0 * 1.02);
+  std::uniform_real_distribution<> dis(l0 * 0.98,l0 * 1.02);
 
   double l1 = dis(gen);
   double l2 = data_.length - l1;

@@ -20,6 +20,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
 
   std::vector<int> gids(particles.size());
   std::vector<double> impedances(particles.size());
+  std::vector<double> ldots(particles.size());
   std::vector<double> stresses(particles.size());
   std::vector<int> number_of_constraints(particles.size());
   std::vector<int> ages(particles.size());
@@ -44,6 +45,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
 
     gids[i] = particles[i].getGID();
     impedances[i] = particles[i].getImpedance();
+    ldots[i] = particles[i].getLdot();
     stresses[i] = particles[i].getStress();
     number_of_constraints[i] = particles[i].getNumConstraints();
     ages[i] = particles[i].getAge();
@@ -62,6 +64,7 @@ void ParticleLogger::log(const std::vector<Particle>& particles) {
   logger_.addPointData("orientation_angle", orientation_angle);
   logger_.addPointData("lengths", lengths);
   logger_.addPointData("impedance", impedances);
+  logger_.addPointData("ldot", ldots);
   logger_.addPointData("stress", stresses);
   logger_.addPointData("number_of_constraints", number_of_constraints);
   logger_.addPointData("age", ages);

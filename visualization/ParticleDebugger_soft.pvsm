@@ -15852,6 +15852,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -16011,6 +16012,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -16138,6 +16140,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -16443,6 +16446,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -16488,6 +16492,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -16658,6 +16663,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="rank"/>
           <String text="stress"/>
           <String text="velocity_angular"/>
@@ -16839,6 +16845,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -19465,6 +19472,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -19624,6 +19632,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -19751,6 +19760,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -20055,6 +20065,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -20100,6 +20111,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -20127,6 +20139,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -20319,6 +20332,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="rank"/>
           <String text="stress"/>
           <String text="velocity_angular"/>
@@ -20500,6 +20514,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="quaternion"/>
           <String text="rank"/>
           <String text="stress"/>
@@ -23126,7 +23141,7 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
       <Property name="ColorByLODIndex" id="15390.ColorByLODIndex" number_of_elements="1">
@@ -23257,7 +23272,7 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
       <Property name="GlyphType" id="15390.GlyphType" number_of_elements="1">
@@ -23609,7 +23624,7 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
       <Property name="OpacityByArray" id="15390.OpacityByArray" number_of_elements="1">
@@ -24099,7 +24114,7 @@
       <Property name="LastPresetName" id="15517.LastPresetName" number_of_elements="1">
         <Element index="0" value="Spectrum"/>
       </Property>
-      <Property name="SeriesColor" id="15517.SeriesColor" number_of_elements="68">
+      <Property name="SeriesColor" id="15517.SeriesColor" number_of_elements="72">
         <Element index="0" value="bbpgd_iterations"/>
         <Element index="1" value="0"/>
         <Element index="2" value="0"/>
@@ -24168,6 +24183,10 @@
         <Element index="65" value="0.220004577706569"/>
         <Element index="66" value="0.4899977111467155"/>
         <Element index="67" value="0.7199969481956207"/>
+        <Element index="68" value="time_since_last_log_s"/>
+        <Element index="69" value="0"/>
+        <Element index="70" value="0"/>
+        <Element index="71" value="0"/>
         <Domain name="array_list" id="15517.SeriesColor.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24184,11 +24203,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesLabel" id="15517.SeriesLabel" number_of_elements="34">
+      <Property name="SeriesLabel" id="15517.SeriesLabel" number_of_elements="36">
         <Element index="0" value="bbpgd_iterations"/>
         <Element index="1" value="bbpgd_iterations"/>
         <Element index="2" value="colony_radius"/>
@@ -24223,6 +24242,8 @@
         <Element index="31" value="step_duration_s"/>
         <Element index="32" value="Time"/>
         <Element index="33" value="Time"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="time_since_last_log_s"/>
         <Domain name="array_list" id="15517.SeriesLabel.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24239,14 +24260,14 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
       <Property name="SeriesLabelPrefix" id="15517.SeriesLabelPrefix" number_of_elements="1">
         <Element index="0" value=""/>
       </Property>
-      <Property name="SeriesLineStyle" id="15517.SeriesLineStyle" number_of_elements="34">
+      <Property name="SeriesLineStyle" id="15517.SeriesLineStyle" number_of_elements="36">
         <Element index="0" value="Time"/>
         <Element index="1" value="1"/>
         <Element index="2" value="bbpgd_iterations"/>
@@ -24281,6 +24302,8 @@
         <Element index="31" value="1"/>
         <Element index="32" value="step_duration_s"/>
         <Element index="33" value="1"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="1"/>
         <Domain name="array_list" id="15517.SeriesLineStyle.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24297,11 +24320,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesLineThickness" id="15517.SeriesLineThickness" number_of_elements="34">
+      <Property name="SeriesLineThickness" id="15517.SeriesLineThickness" number_of_elements="36">
         <Element index="0" value="Time"/>
         <Element index="1" value="2"/>
         <Element index="2" value="bbpgd_iterations"/>
@@ -24336,6 +24359,8 @@
         <Element index="31" value="2"/>
         <Element index="32" value="step_duration_s"/>
         <Element index="33" value="2"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="2"/>
         <Domain name="array_list" id="15517.SeriesLineThickness.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24352,11 +24377,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesMarkerSize" id="15517.SeriesMarkerSize" number_of_elements="34">
+      <Property name="SeriesMarkerSize" id="15517.SeriesMarkerSize" number_of_elements="36">
         <Element index="0" value="Time"/>
         <Element index="1" value="4"/>
         <Element index="2" value="bbpgd_iterations"/>
@@ -24391,6 +24416,8 @@
         <Element index="31" value="4"/>
         <Element index="32" value="step_duration_s"/>
         <Element index="33" value="4"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="4"/>
         <Domain name="array_list" id="15517.SeriesMarkerSize.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24407,11 +24434,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesMarkerStyle" id="15517.SeriesMarkerStyle" number_of_elements="34">
+      <Property name="SeriesMarkerStyle" id="15517.SeriesMarkerStyle" number_of_elements="36">
         <Element index="0" value="Time"/>
         <Element index="1" value="0"/>
         <Element index="2" value="bbpgd_iterations"/>
@@ -24446,6 +24473,8 @@
         <Element index="31" value="0"/>
         <Element index="32" value="step_duration_s"/>
         <Element index="33" value="0"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="0"/>
         <Domain name="array_list" id="15517.SeriesMarkerStyle.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24462,11 +24491,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesOpacity" id="15517.SeriesOpacity" number_of_elements="34">
+      <Property name="SeriesOpacity" id="15517.SeriesOpacity" number_of_elements="36">
         <Element index="0" value="bbpgd_iterations"/>
         <Element index="1" value="1"/>
         <Element index="2" value="colony_radius"/>
@@ -24501,6 +24530,8 @@
         <Element index="31" value="1"/>
         <Element index="32" value="Time"/>
         <Element index="33" value="1"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="1"/>
         <Domain name="array_list" id="15517.SeriesOpacity.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24517,11 +24548,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesPlotCorner" id="15517.SeriesPlotCorner" number_of_elements="34">
+      <Property name="SeriesPlotCorner" id="15517.SeriesPlotCorner" number_of_elements="36">
         <Element index="0" value="Time"/>
         <Element index="1" value="0"/>
         <Element index="2" value="bbpgd_iterations"/>
@@ -24556,6 +24587,8 @@
         <Element index="31" value="0"/>
         <Element index="32" value="step_duration_s"/>
         <Element index="33" value="0"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="0"/>
         <Domain name="array_list" id="15517.SeriesPlotCorner.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24572,11 +24605,11 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
-      <Property name="SeriesVisibility" id="15517.SeriesVisibility" number_of_elements="34">
+      <Property name="SeriesVisibility" id="15517.SeriesVisibility" number_of_elements="36">
         <Element index="0" value="bbpgd_iterations"/>
         <Element index="1" value="0"/>
         <Element index="2" value="colony_radius"/>
@@ -24604,13 +24637,15 @@
         <Element index="24" value="residual"/>
         <Element index="25" value="0"/>
         <Element index="26" value="simulation_time_s"/>
-        <Element index="27" value="0"/>
+        <Element index="27" value="1"/>
         <Element index="28" value="step"/>
         <Element index="29" value="0"/>
         <Element index="30" value="step_duration_s"/>
         <Element index="31" value="0"/>
         <Element index="32" value="Time"/>
         <Element index="33" value="0"/>
+        <Element index="34" value="time_since_last_log_s"/>
+        <Element index="35" value="1"/>
         <Domain name="array_list" id="15517.SeriesVisibility.array_list">
           <String text="bbpgd_iterations"/>
           <String text="colony_radius"/>
@@ -24627,8 +24662,8 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
       <Property name="UseIndexForXAxis" id="15517.UseIndexForXAxis" number_of_elements="1">
@@ -24657,8 +24692,8 @@
           <String text="residual"/>
           <String text="simulation_time_s"/>
           <String text="step"/>
-          <String text="step_duration_s"/>
           <String text="Time"/>
+          <String text="time_since_last_log_s"/>
         </Domain>
       </Property>
     </Proxy>
@@ -26641,10 +26676,10 @@
         <Element index="0" value="%-#6.1e"/>
       </Property>
       <Property name="DataRangeMax" id="13508.DataRangeMax" number_of_elements="1">
-        <Element index="0" value="1.7487825200693197"/>
+        <Element index="0" value="2.0924481887253505"/>
       </Property>
       <Property name="DataRangeMin" id="13508.DataRangeMin" number_of_elements="1">
-        <Element index="0" value="1.7274887263307974"/>
+        <Element index="0" value="1.8957504908610732"/>
       </Property>
       <Property name="DrawAnnotations" id="13508.DrawAnnotations" number_of_elements="1">
         <Element index="0" value="1"/>
@@ -27740,7 +27775,7 @@
         <Element index="0" value="%-#6.1e"/>
       </Property>
       <Property name="DataRangeMax" id="15159.DataRangeMax" number_of_elements="1">
-        <Element index="0" value="0"/>
+        <Element index="0" value="15"/>
       </Property>
       <Property name="DataRangeMin" id="15159.DataRangeMin" number_of_elements="1">
         <Element index="0" value="0"/>
@@ -28819,6 +28854,7 @@
           <String text="lengths"/>
           <String text="number_of_constraints"/>
           <String text="orientation"/>
+          <String text="orientation_angle"/>
           <String text="rank"/>
           <String text="stress"/>
           <String text="velocity_angular"/>
@@ -28974,7 +29010,7 @@
         <Domain name="files" id="13185.FileName.files"/>
       </Property>
       <Property name="FileNameInfo" id="13185.FileNameInfo" number_of_elements="1">
-        <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\demo\cpp\hard\build\src\vtk_output_soft\constraints_0000000.pvtu"/>
+        <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\demo\cpp\hard\build\src\vtk_output_soft\constraints_0000089.pvtu"/>
       </Property>
       <Property name="TimestepValues" id="13185.TimestepValues" number_of_elements="90">
         <Element index="0" value="0"/>
@@ -29127,119 +29163,25 @@
       <Property name="TimeArrayInfo" id="13185.TimeArrayInfo"/>
     </Proxy>
     <Proxy group="sources" type="XMLPUnstructuredGridReader" id="14604" servers="1">
-      <Property name="FileName" id="14604.FileName" number_of_elements="53">
+      <Property name="FileName" id="14604.FileName" number_of_elements="6">
         <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000000.pvtu"/>
         <Element index="1" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000001.pvtu"/>
         <Element index="2" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000002.pvtu"/>
         <Element index="3" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000003.pvtu"/>
         <Element index="4" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000004.pvtu"/>
         <Element index="5" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000005.pvtu"/>
-        <Element index="6" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000006.pvtu"/>
-        <Element index="7" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000007.pvtu"/>
-        <Element index="8" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000008.pvtu"/>
-        <Element index="9" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000009.pvtu"/>
-        <Element index="10" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000010.pvtu"/>
-        <Element index="11" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000011.pvtu"/>
-        <Element index="12" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000012.pvtu"/>
-        <Element index="13" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000013.pvtu"/>
-        <Element index="14" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000014.pvtu"/>
-        <Element index="15" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000015.pvtu"/>
-        <Element index="16" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000016.pvtu"/>
-        <Element index="17" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000017.pvtu"/>
-        <Element index="18" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000018.pvtu"/>
-        <Element index="19" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000019.pvtu"/>
-        <Element index="20" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000020.pvtu"/>
-        <Element index="21" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000021.pvtu"/>
-        <Element index="22" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000022.pvtu"/>
-        <Element index="23" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000023.pvtu"/>
-        <Element index="24" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000024.pvtu"/>
-        <Element index="25" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000025.pvtu"/>
-        <Element index="26" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000026.pvtu"/>
-        <Element index="27" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000027.pvtu"/>
-        <Element index="28" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000028.pvtu"/>
-        <Element index="29" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000029.pvtu"/>
-        <Element index="30" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000030.pvtu"/>
-        <Element index="31" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000031.pvtu"/>
-        <Element index="32" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000032.pvtu"/>
-        <Element index="33" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000033.pvtu"/>
-        <Element index="34" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000034.pvtu"/>
-        <Element index="35" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000035.pvtu"/>
-        <Element index="36" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000036.pvtu"/>
-        <Element index="37" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000037.pvtu"/>
-        <Element index="38" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000038.pvtu"/>
-        <Element index="39" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000039.pvtu"/>
-        <Element index="40" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000040.pvtu"/>
-        <Element index="41" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000041.pvtu"/>
-        <Element index="42" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000042.pvtu"/>
-        <Element index="43" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000043.pvtu"/>
-        <Element index="44" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000044.pvtu"/>
-        <Element index="45" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000045.pvtu"/>
-        <Element index="46" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000046.pvtu"/>
-        <Element index="47" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000047.pvtu"/>
-        <Element index="48" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000048.pvtu"/>
-        <Element index="49" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000049.pvtu"/>
-        <Element index="50" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000050.pvtu"/>
-        <Element index="51" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000051.pvtu"/>
-        <Element index="52" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000052.pvtu"/>
         <Domain name="files" id="14604.FileName.files"/>
       </Property>
       <Property name="FileNameInfo" id="14604.FileNameInfo" number_of_elements="1">
         <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\domain_0000000.pvtu"/>
       </Property>
-      <Property name="TimestepValues" id="14604.TimestepValues" number_of_elements="53">
+      <Property name="TimestepValues" id="14604.TimestepValues" number_of_elements="6">
         <Element index="0" value="0"/>
         <Element index="1" value="1"/>
         <Element index="2" value="2"/>
         <Element index="3" value="3"/>
         <Element index="4" value="4"/>
         <Element index="5" value="5"/>
-        <Element index="6" value="6"/>
-        <Element index="7" value="7"/>
-        <Element index="8" value="8"/>
-        <Element index="9" value="9"/>
-        <Element index="10" value="10"/>
-        <Element index="11" value="11"/>
-        <Element index="12" value="12"/>
-        <Element index="13" value="13"/>
-        <Element index="14" value="14"/>
-        <Element index="15" value="15"/>
-        <Element index="16" value="16"/>
-        <Element index="17" value="17"/>
-        <Element index="18" value="18"/>
-        <Element index="19" value="19"/>
-        <Element index="20" value="20"/>
-        <Element index="21" value="21"/>
-        <Element index="22" value="22"/>
-        <Element index="23" value="23"/>
-        <Element index="24" value="24"/>
-        <Element index="25" value="25"/>
-        <Element index="26" value="26"/>
-        <Element index="27" value="27"/>
-        <Element index="28" value="28"/>
-        <Element index="29" value="29"/>
-        <Element index="30" value="30"/>
-        <Element index="31" value="31"/>
-        <Element index="32" value="32"/>
-        <Element index="33" value="33"/>
-        <Element index="34" value="34"/>
-        <Element index="35" value="35"/>
-        <Element index="36" value="36"/>
-        <Element index="37" value="37"/>
-        <Element index="38" value="38"/>
-        <Element index="39" value="39"/>
-        <Element index="40" value="40"/>
-        <Element index="41" value="41"/>
-        <Element index="42" value="42"/>
-        <Element index="43" value="43"/>
-        <Element index="44" value="44"/>
-        <Element index="45" value="45"/>
-        <Element index="46" value="46"/>
-        <Element index="47" value="47"/>
-        <Element index="48" value="48"/>
-        <Element index="49" value="49"/>
-        <Element index="50" value="50"/>
-        <Element index="51" value="51"/>
-        <Element index="52" value="52"/>
       </Property>
       <Property name="CellArrayInfo" id="14604.CellArrayInfo"/>
       <Property name="CellArrayStatus" id="14604.CellArrayStatus">
@@ -29270,7 +29212,7 @@
       <Property name="TimeArrayInfo" id="14604.TimeArrayInfo"/>
     </Proxy>
     <Proxy group="sources" type="XMLPUnstructuredGridReader" id="14105" servers="1">
-      <Property name="FileName" id="14105.FileName" number_of_elements="53">
+      <Property name="FileName" id="14105.FileName" number_of_elements="16">
         <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000000.pvtu"/>
         <Element index="1" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000001.pvtu"/>
         <Element index="2" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000002.pvtu"/>
@@ -29287,49 +29229,12 @@
         <Element index="13" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000013.pvtu"/>
         <Element index="14" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000014.pvtu"/>
         <Element index="15" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000015.pvtu"/>
-        <Element index="16" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000016.pvtu"/>
-        <Element index="17" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000017.pvtu"/>
-        <Element index="18" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000018.pvtu"/>
-        <Element index="19" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000019.pvtu"/>
-        <Element index="20" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000020.pvtu"/>
-        <Element index="21" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000021.pvtu"/>
-        <Element index="22" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000022.pvtu"/>
-        <Element index="23" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000023.pvtu"/>
-        <Element index="24" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000024.pvtu"/>
-        <Element index="25" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000025.pvtu"/>
-        <Element index="26" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000026.pvtu"/>
-        <Element index="27" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000027.pvtu"/>
-        <Element index="28" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000028.pvtu"/>
-        <Element index="29" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000029.pvtu"/>
-        <Element index="30" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000030.pvtu"/>
-        <Element index="31" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000031.pvtu"/>
-        <Element index="32" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000032.pvtu"/>
-        <Element index="33" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000033.pvtu"/>
-        <Element index="34" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000034.pvtu"/>
-        <Element index="35" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000035.pvtu"/>
-        <Element index="36" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000036.pvtu"/>
-        <Element index="37" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000037.pvtu"/>
-        <Element index="38" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000038.pvtu"/>
-        <Element index="39" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000039.pvtu"/>
-        <Element index="40" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000040.pvtu"/>
-        <Element index="41" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000041.pvtu"/>
-        <Element index="42" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000042.pvtu"/>
-        <Element index="43" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000043.pvtu"/>
-        <Element index="44" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000044.pvtu"/>
-        <Element index="45" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000045.pvtu"/>
-        <Element index="46" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000046.pvtu"/>
-        <Element index="47" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000047.pvtu"/>
-        <Element index="48" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000048.pvtu"/>
-        <Element index="49" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000049.pvtu"/>
-        <Element index="50" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000050.pvtu"/>
-        <Element index="51" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000051.pvtu"/>
-        <Element index="52" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000052.pvtu"/>
         <Domain name="files" id="14105.FileName.files"/>
       </Property>
       <Property name="FileNameInfo" id="14105.FileNameInfo" number_of_elements="1">
-        <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000000.pvtu"/>
+        <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\particles_0000015.pvtu"/>
       </Property>
-      <Property name="TimestepValues" id="14105.TimestepValues" number_of_elements="53">
+      <Property name="TimestepValues" id="14105.TimestepValues" number_of_elements="16">
         <Element index="0" value="0"/>
         <Element index="1" value="1"/>
         <Element index="2" value="2"/>
@@ -29346,49 +29251,12 @@
         <Element index="13" value="13"/>
         <Element index="14" value="14"/>
         <Element index="15" value="15"/>
-        <Element index="16" value="16"/>
-        <Element index="17" value="17"/>
-        <Element index="18" value="18"/>
-        <Element index="19" value="19"/>
-        <Element index="20" value="20"/>
-        <Element index="21" value="21"/>
-        <Element index="22" value="22"/>
-        <Element index="23" value="23"/>
-        <Element index="24" value="24"/>
-        <Element index="25" value="25"/>
-        <Element index="26" value="26"/>
-        <Element index="27" value="27"/>
-        <Element index="28" value="28"/>
-        <Element index="29" value="29"/>
-        <Element index="30" value="30"/>
-        <Element index="31" value="31"/>
-        <Element index="32" value="32"/>
-        <Element index="33" value="33"/>
-        <Element index="34" value="34"/>
-        <Element index="35" value="35"/>
-        <Element index="36" value="36"/>
-        <Element index="37" value="37"/>
-        <Element index="38" value="38"/>
-        <Element index="39" value="39"/>
-        <Element index="40" value="40"/>
-        <Element index="41" value="41"/>
-        <Element index="42" value="42"/>
-        <Element index="43" value="43"/>
-        <Element index="44" value="44"/>
-        <Element index="45" value="45"/>
-        <Element index="46" value="46"/>
-        <Element index="47" value="47"/>
-        <Element index="48" value="48"/>
-        <Element index="49" value="49"/>
-        <Element index="50" value="50"/>
-        <Element index="51" value="51"/>
-        <Element index="52" value="52"/>
       </Property>
       <Property name="CellArrayInfo" id="14105.CellArrayInfo"/>
       <Property name="CellArrayStatus" id="14105.CellArrayStatus">
         <Domain name="array_list" id="14105.CellArrayStatus.array_list"/>
       </Property>
-      <Property name="PointArrayInfo" id="14105.PointArrayInfo" number_of_elements="24">
+      <Property name="PointArrayInfo" id="14105.PointArrayInfo" number_of_elements="26">
         <Element index="0" value="gid"/>
         <Element index="1" value="1"/>
         <Element index="2" value="quaternion"/>
@@ -29413,6 +29281,8 @@
         <Element index="21" value="1"/>
         <Element index="22" value="velocity_angular"/>
         <Element index="23" value="1"/>
+        <Element index="24" value="orientation_angle"/>
+        <Element index="25" value="1"/>
       </Property>
       <Property name="PointArrayStatus" id="14105.PointArrayStatus" number_of_elements="24">
         <Element index="0" value="gid"/>
@@ -29452,6 +29322,7 @@
           <String text="rank"/>
           <String text="stress"/>
           <String text="velocity_angular"/>
+          <String text="orientation_angle"/>
         </Domain>
       </Property>
       <Property name="TimeArray" id="14105.TimeArray" number_of_elements="1">
@@ -29463,7 +29334,7 @@
       <Property name="TimeArrayInfo" id="14105.TimeArrayInfo"/>
     </Proxy>
     <Proxy group="sources" type="XMLPUnstructuredGridReader" id="13208" servers="1">
-      <Property name="FileName" id="13208.FileName" number_of_elements="53">
+      <Property name="FileName" id="13208.FileName" number_of_elements="15">
         <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000000.pvtu"/>
         <Element index="1" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000001.pvtu"/>
         <Element index="2" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000002.pvtu"/>
@@ -29479,50 +29350,12 @@
         <Element index="12" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000012.pvtu"/>
         <Element index="13" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000013.pvtu"/>
         <Element index="14" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000014.pvtu"/>
-        <Element index="15" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000015.pvtu"/>
-        <Element index="16" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000016.pvtu"/>
-        <Element index="17" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000017.pvtu"/>
-        <Element index="18" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000018.pvtu"/>
-        <Element index="19" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000019.pvtu"/>
-        <Element index="20" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000020.pvtu"/>
-        <Element index="21" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000021.pvtu"/>
-        <Element index="22" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000022.pvtu"/>
-        <Element index="23" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000023.pvtu"/>
-        <Element index="24" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000024.pvtu"/>
-        <Element index="25" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000025.pvtu"/>
-        <Element index="26" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000026.pvtu"/>
-        <Element index="27" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000027.pvtu"/>
-        <Element index="28" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000028.pvtu"/>
-        <Element index="29" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000029.pvtu"/>
-        <Element index="30" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000030.pvtu"/>
-        <Element index="31" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000031.pvtu"/>
-        <Element index="32" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000032.pvtu"/>
-        <Element index="33" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000033.pvtu"/>
-        <Element index="34" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000034.pvtu"/>
-        <Element index="35" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000035.pvtu"/>
-        <Element index="36" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000036.pvtu"/>
-        <Element index="37" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000037.pvtu"/>
-        <Element index="38" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000038.pvtu"/>
-        <Element index="39" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000039.pvtu"/>
-        <Element index="40" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000040.pvtu"/>
-        <Element index="41" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000041.pvtu"/>
-        <Element index="42" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000042.pvtu"/>
-        <Element index="43" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000043.pvtu"/>
-        <Element index="44" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000044.pvtu"/>
-        <Element index="45" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000045.pvtu"/>
-        <Element index="46" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000046.pvtu"/>
-        <Element index="47" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000047.pvtu"/>
-        <Element index="48" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000048.pvtu"/>
-        <Element index="49" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000049.pvtu"/>
-        <Element index="50" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000050.pvtu"/>
-        <Element index="51" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000051.pvtu"/>
-        <Element index="52" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000052.pvtu"/>
         <Domain name="files" id="13208.FileName.files"/>
       </Property>
       <Property name="FileNameInfo" id="13208.FileNameInfo" number_of_elements="1">
-        <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000000.pvtu"/>
+        <Element index="0" value="\\wsl.localhost\Ubuntu-22.04\home\manuel\MicrobeGrowthSim-IDP\code\cpp\build\src\vtk_output_soft\simulation_0000014.pvtu"/>
       </Property>
-      <Property name="TimestepValues" id="13208.TimestepValues" number_of_elements="53">
+      <Property name="TimestepValues" id="13208.TimestepValues" number_of_elements="15">
         <Element index="0" value="0"/>
         <Element index="1" value="1"/>
         <Element index="2" value="2"/>
@@ -29538,44 +29371,6 @@
         <Element index="12" value="12"/>
         <Element index="13" value="13"/>
         <Element index="14" value="14"/>
-        <Element index="15" value="15"/>
-        <Element index="16" value="16"/>
-        <Element index="17" value="17"/>
-        <Element index="18" value="18"/>
-        <Element index="19" value="19"/>
-        <Element index="20" value="20"/>
-        <Element index="21" value="21"/>
-        <Element index="22" value="22"/>
-        <Element index="23" value="23"/>
-        <Element index="24" value="24"/>
-        <Element index="25" value="25"/>
-        <Element index="26" value="26"/>
-        <Element index="27" value="27"/>
-        <Element index="28" value="28"/>
-        <Element index="29" value="29"/>
-        <Element index="30" value="30"/>
-        <Element index="31" value="31"/>
-        <Element index="32" value="32"/>
-        <Element index="33" value="33"/>
-        <Element index="34" value="34"/>
-        <Element index="35" value="35"/>
-        <Element index="36" value="36"/>
-        <Element index="37" value="37"/>
-        <Element index="38" value="38"/>
-        <Element index="39" value="39"/>
-        <Element index="40" value="40"/>
-        <Element index="41" value="41"/>
-        <Element index="42" value="42"/>
-        <Element index="43" value="43"/>
-        <Element index="44" value="44"/>
-        <Element index="45" value="45"/>
-        <Element index="46" value="46"/>
-        <Element index="47" value="47"/>
-        <Element index="48" value="48"/>
-        <Element index="49" value="49"/>
-        <Element index="50" value="50"/>
-        <Element index="51" value="51"/>
-        <Element index="52" value="52"/>
       </Property>
       <Property name="CellArrayInfo" id="13208.CellArrayInfo"/>
       <Property name="CellArrayStatus" id="13208.CellArrayStatus">
@@ -30174,7 +29969,7 @@
         <Domain name="bool" id="15529.BottomAxisLogScale.bool"/>
       </Property>
       <Property name="BottomAxisRangeMaximum" id="15529.BottomAxisRangeMaximum" number_of_elements="1">
-        <Element index="0" value="55"/>
+        <Element index="0" value="14"/>
       </Property>
       <Property name="BottomAxisRangeMinimum" id="15529.BottomAxisRangeMinimum" number_of_elements="1">
         <Element index="0" value="0"/>
@@ -30326,7 +30121,7 @@
         <Domain name="bool" id="15529.LeftAxisLogScale.bool"/>
       </Property>
       <Property name="LeftAxisRangeMaximum" id="15529.LeftAxisRangeMaximum" number_of_elements="1">
-        <Element index="0" value="9.5"/>
+        <Element index="0" value="9"/>
       </Property>
       <Property name="LeftAxisRangeMinimum" id="15529.LeftAxisRangeMinimum" number_of_elements="1">
         <Element index="0" value="0"/>
@@ -30409,8 +30204,8 @@
         </Domain>
       </Property>
       <Property name="LegendPosition" id="15529.LegendPosition" number_of_elements="2">
-        <Element index="0" value="719"/>
-        <Element index="1" value="1199"/>
+        <Element index="0" value="390"/>
+        <Element index="1" value="1147"/>
       </Property>
       <Property name="LegendSymbolWidth" id="15529.LegendSymbolWidth" number_of_elements="1">
         <Element index="0" value="25"/>
@@ -30689,8 +30484,8 @@
         <Domain name="bool" id="15529.UseCache.bool"/>
       </Property>
       <Property name="ViewSize" id="15529.ViewSize" number_of_elements="2">
-        <Element index="0" value="906"/>
-        <Element index="1" value="1252"/>
+        <Element index="0" value="690"/>
+        <Element index="1" value="1228"/>
       </Property>
       <Property name="ViewTime" id="15529.ViewTime" number_of_elements="1">
         <Element index="0" value="220"/>
@@ -30863,8 +30658,8 @@
         <Domain name="bool" id="15494.CenterAxesVisibility.bool"/>
       </Property>
       <Property name="CenterOfRotation" id="15494.CenterOfRotation" number_of_elements="3">
-        <Element index="0" value="-0.0768284797668457"/>
-        <Element index="1" value="-0.013485908508300781"/>
+        <Element index="0" value="-0.0025005340576171875"/>
+        <Element index="1" value="0"/>
         <Element index="2" value="0"/>
       </Property>
       <Property name="CollectGeometryThreshold" id="15494.CollectGeometryThreshold" number_of_elements="1">
@@ -31300,8 +31095,8 @@
         <Domain name="bool" id="15494.UseToneMapping.bool"/>
       </Property>
       <Property name="ViewSize" id="15494.ViewSize" number_of_elements="2">
-        <Element index="0" value="908"/>
-        <Element index="1" value="1252"/>
+        <Element index="0" value="692"/>
+        <Element index="1" value="1228"/>
       </Property>
       <Property name="ViewTime" id="15494.ViewTime" number_of_elements="1">
         <Element index="0" value="220"/>
@@ -31326,30 +31121,30 @@
         <Element index="0" value="0"/>
       </Property>
       <Property name="CameraFocalPoint" id="15494.CameraFocalPoint" number_of_elements="3">
-        <Element index="0" value="3.743567895185474"/>
-        <Element index="1" value="-11.254470234151261"/>
-        <Element index="2" value="279.1878189454969"/>
+        <Element index="0" value="-1.1572722425639361"/>
+        <Element index="1" value="-0.7639934497342192"/>
+        <Element index="2" value="-105.94010890922661"/>
       </Property>
       <Property name="CameraFocalPointInfo" id="15494.CameraFocalPointInfo" number_of_elements="3">
-        <Element index="0" value="3.743567895185474"/>
-        <Element index="1" value="-11.254470234151261"/>
-        <Element index="2" value="279.1878189454969"/>
+        <Element index="0" value="-1.1572722425639361"/>
+        <Element index="1" value="-0.7639934497342192"/>
+        <Element index="2" value="-105.94010890922661"/>
       </Property>
       <Property name="CameraParallelScale" id="15494.CameraParallelScale" number_of_elements="1">
-        <Element index="0" value="5.691629955947136"/>
+        <Element index="0" value="45.17526598080968"/>
       </Property>
       <Property name="CameraParallelScaleInfo" id="15494.CameraParallelScaleInfo" number_of_elements="1">
-        <Element index="0" value="5.691629955947136"/>
+        <Element index="0" value="45.17526598080968"/>
       </Property>
       <Property name="CameraPosition" id="15494.CameraPosition" number_of_elements="3">
-        <Element index="0" value="3.743567895185435"/>
-        <Element index="1" value="-11.254470234151233"/>
-        <Element index="2" value="300.8502701096208"/>
+        <Element index="0" value="-1.157272242563936"/>
+        <Element index="1" value="-0.7639934497342193"/>
+        <Element index="2" value="64.56738215244417"/>
       </Property>
       <Property name="CameraPositionInfo" id="15494.CameraPositionInfo" number_of_elements="3">
-        <Element index="0" value="3.743567895185435"/>
-        <Element index="1" value="-11.254470234151233"/>
-        <Element index="2" value="300.8502701096208"/>
+        <Element index="0" value="-1.157272242563936"/>
+        <Element index="1" value="-0.7639934497342193"/>
+        <Element index="2" value="64.56738215244417"/>
       </Property>
       <Property name="CameraViewAngle" id="15494.CameraViewAngle" number_of_elements="1">
         <Element index="0" value="30"/>

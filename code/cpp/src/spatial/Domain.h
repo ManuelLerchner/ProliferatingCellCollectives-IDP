@@ -13,14 +13,14 @@
 
 class Domain {
  public:
-  Domain(const SimulationParameters params, bool preserve_existing = false, size_t step = 0, const std::string& output_dir = "./vtk_output");
+  Domain(SimulationParameters& params, bool preserve_existing = false, size_t step = 0, const std::string& output_dir = "./vtk_output");
 
   void queueNewParticles(std::vector<Particle> particles);
   void commitNewParticles();
   void run();
 
   // Initialize simulation state from VTK file/directory
-  static Domain initializeFromVTK(const SimulationParameters& params, const std::string& vtk_path, const std::string& output_dir);
+  static Domain initializeFromVTK(SimulationParameters& params, const std::string& vtk_path, const std::string& output_dir);
 
  private:
   void rebalance();
@@ -45,7 +45,7 @@ class Domain {
 
   void adjustDt(const ParticleManager::SolverSolution& solver_solution);
 
-  SimulationParameters params_;
+  SimulationParameters& params_;
 
   std::unique_ptr<ParticleManager> particle_manager_;
   std::unique_ptr<vtk::ParticleLogger> particle_logger_;
@@ -63,6 +63,8 @@ class Domain {
   int global_particle_count = 0;
 
   double simulation_time_seconds_ = 0.0;
+  double simulation_time_last_log_ = 0.0;
+  double colony_radius_last_log_ = 0.0;
   double time_last_log_ = 0.0;
 
   double start_time_ = 0;
@@ -78,4 +80,7 @@ class Domain {
   std::array<double, 3> max_bounds_ = {0, 0, 0};
   std::array<double, 3> global_min_bounds_ = {0, 0, 0};
   std::array<double, 3> global_max_bounds_ = {0, 0, 0};
+
+  const double adaptive_dt_smoothing_alpha_ = 0.1;
+  void adaptDt();
 };
