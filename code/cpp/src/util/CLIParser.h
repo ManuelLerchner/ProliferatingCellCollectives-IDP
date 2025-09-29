@@ -169,7 +169,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .TAU = 1,
       .l0 = 1.0,
       .LAMBDA = 1e-2,
-      .temperature = 1e-14,
+      .temperature = 1e-28,
       .kcc = 20000,
       .monolayer = PETSC_TRUE,
   };
