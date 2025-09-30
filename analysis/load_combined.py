@@ -13,14 +13,16 @@ def clean_label(sim_dir):
 
     if "hard" in sim_dir:
         mode = "Hard"
-    else:
+    elif "soft" in sim_dir:
         mode = "Soft"
+    else:
+        mode = "Unknown"
 
     try:
         m = int(re.search(r"e([+-]?\d+)", sim_dir).group(1))
         return (mode, m, mode + " ($\lambda = 10^{" + str(m) + "}$)")
     except AttributeError:
-        return (mode, -3, sim_dir + "assumed $\lambda = 10^{-3}$")
+        return (mode, -2, sim_dir + "assumed $\lambda = 10^{-2}$")
 
 
 def load_combined(sim_dirs, base_path=""):
