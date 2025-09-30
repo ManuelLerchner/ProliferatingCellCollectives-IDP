@@ -14,8 +14,8 @@ def load_files(folder):
             parts = file[:-4].split("_")  # Remove ".vtu" before splitting
             log_type = parts[0]           # "domain"
             iteration = int(parts[1])     # 122
-            rank = parts[3].strip("0")
-            rank = int(rank) if rank else 0
+            rank = parts[3].lstrip("0")
+            rank = int(rank) if rank is not "" else 0
 
             # Initialize log_type entry if not exists
             if log_type not in all_files:
