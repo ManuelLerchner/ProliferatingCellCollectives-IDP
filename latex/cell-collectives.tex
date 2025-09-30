@@ -713,10 +713,7 @@ The soft model consistently outperforms the hard model, with a speedup factor of
 
 % 5. Communication vs. Computation Breakdown
 
-% Fraction of time spent in:
-% Force evaluation (soft model)
-% Solver iterations (hard model)
-% Communication (MPI)
+ 
 
 \subsection{Performance}
 \cite{Yan2019}
@@ -727,6 +724,8 @@ The soft model consistently outperforms the hard model, with a speedup factor of
 While the soft collision model is cheaper per interaction, it typically requires smaller integration time steps
 to maintain numerical stability. This constraint can offset some of its per-step performance advantage
 in long simulations, depending on the stiffness of the system.
+
+TODO: mention benefints of adaptive timestep compared to hardcoded value of 1e-5
 
 \subsection{Solver Behavior in the Hard Model}
 
