@@ -143,7 +143,9 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     VecWrapper U_ext = VecWrapper::Create(6 * particle_manager.local_particles.size());
 
-    calculate_external_velocities(U_ext, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
+    if (constraint_iterations == 0){
+      calculate_external_velocities(U_ext, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
+    }
 
     VecWrapper gamma_old = VecWrapper::Like(GAMMA);
     VecCopy(GAMMA, gamma_old);
