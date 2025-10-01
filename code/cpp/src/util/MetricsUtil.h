@@ -9,30 +9,23 @@
 #include <cstdio>
 #include <vector>
 
+#include "petscsys.h"
 namespace utils {
 
 // Get current memory usage in MB
 inline double getCurrentMemoryUsageMB() {
-  FILE* file = fopen("/proc/self/status", "r");
-  if (file == nullptr) return 0.0;
+  PetscLogDouble t;
+  PetscMemoryGetCurrentUsage(&t);
 
-  char line[128];
-  int vmSize = 0;
-  while (fgets(line, 128, file) != nullptr) {
-    if (strncmp(line, "VmRSS:", 6) == 0) {
-      sscanf(line, "VmRSS: %d", &vmSize);
-      break;
-    }
-  }
-  fclose(file);
-  return vmSize / 1024.0;  // Convert KB to MB
+  return t / (1024.0 * 1024.0);  // Convert bytes to MB
 }
 
 // Get peak memory usage in MB
 inline double getPeakMemoryUsageMB() {
-  struct rusage rusage;
-  getrusage(RUSAGE_SELF, &rusage);
-  return rusage.ru_maxrss / 1024.0;  // Convert KB to MB
+  PetscLogDouble t;
+  PetscMemoryGetMaximumUsage(&t);
+
+  return t / (1024.0 * 1024.0);  // Convert bytes to MB
 }
 
 // Get CPU time in seconds
