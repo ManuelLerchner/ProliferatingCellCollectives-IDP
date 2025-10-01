@@ -151,7 +151,7 @@ void Domain::run() {
     // Get performance metrics
     double memory_usage_mb = utils::getCurrentMemoryUsageMB();
     double peak_memory_mb = utils::getPeakMemoryUsageMB();
-    double cpu_time_s = utils::getCPUTimeSeconds();
+    double wall_time = MPI_Wtime() - start_time_;
     double load_imbalance = utils::calculateLoadImbalance(particle_manager_->local_particles.size());
 
     size_t total_constraints = globalReduce(solver_solution.constraints.size(), MPI_SUM);
@@ -175,7 +175,7 @@ void Domain::run() {
         // Add performance metrics
         .memory_usage_mb = memory_usage_mb,
         .peak_memory_mb = peak_memory_mb,
-        .cpu_time_s = cpu_time_s,
+        .cpu_time_s = wall_time,
         .mpi_comm_time_s = solver_wall_time,
         .load_imbalance = load_imbalance};
 
