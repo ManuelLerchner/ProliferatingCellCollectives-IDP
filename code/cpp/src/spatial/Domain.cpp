@@ -71,6 +71,7 @@ void Domain::adaptDt() {
 
   // Compute median locally
   double local_median_velocity = 0.0;
+  int valid = 0;
   if (!local_velocities.empty()) {
     std::nth_element(local_velocities.begin(),
                      local_velocities.begin() + local_velocities.size() / 2,
@@ -83,11 +84,19 @@ void Domain::adaptDt() {
                                      local_velocities.begin() + local_velocities.size() / 2);
       local_median_velocity = 0.5 * (*max_it + local_median_velocity);
     }
+    valid = 1;
   }
 
   // Global reduction (median across all MPI ranks is tricky; approximate with average of medians)
 
-  double global_median_velocity = globalReduce(local_median_velocity, MPI_SUM) / size_;
+  double sum_velocities = globalReduce(local_median_velocity, MPI_SUM);
+  int num_valid = globalReduce(valid, MPI_SUM);
+  double global_median_velocity = (num_valid > 0) ? (sum_velocities / num_valid) : 0.0;
+
+  if (global_median_velocity == 0.0) {
+    // No movement; keep current dt
+    return;
+  }
 
   // CFL condition
   double cfl = 0.25 * params_.solver_config.tolerance;
