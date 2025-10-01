@@ -9,13 +9,13 @@
 #include <cstdio>
 #include <vector>
 
-#include "petscsys.h"
+#include "PetscRaii.h"
 namespace utils {
 
 // Get current memory usage in MB
 inline double getCurrentMemoryUsageMB() {
   PetscLogDouble t;
-  PetscMemoryGetCurrentUsage(&t);
+  PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&t));
 
   return t / (1024.0 * 1024.0);  // Convert bytes to MB
 }
@@ -23,7 +23,7 @@ inline double getCurrentMemoryUsageMB() {
 // Get peak memory usage in MB
 inline double getPeakMemoryUsageMB() {
   PetscLogDouble t;
-  PetscMemoryGetMaximumUsage(&t);
+  PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetMaximumUsage(&t));
 
   return t / (1024.0 * 1024.0);  // Convert bytes to MB
 }
