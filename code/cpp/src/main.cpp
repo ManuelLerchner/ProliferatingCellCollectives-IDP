@@ -38,7 +38,8 @@ std::optional<Domain> createDomain(SimulationParameters& params) {
 int main(int argc, char** argv) {
   PetscInitialize(&argc, &argv, 0, 0);
   {
-    PetscLogDefaultBegin();
+    PetscLogDefaultBegin(); 
+    PetscMemorySetGetMaximumUsage(); 
 
     int total_ranks;
     MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
