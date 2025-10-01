@@ -81,6 +81,6 @@ class Domain {
   std::array<double, 3> global_min_bounds_ = {0, 0, 0};
   std::array<double, 3> global_max_bounds_ = {0, 0, 0};
 
-  const double adaptive_dt_smoothing_alpha_ = 0.1;
+  const double adaptive_dt_smoothing_alpha_ = 0.01;
   void adaptDt();
 };

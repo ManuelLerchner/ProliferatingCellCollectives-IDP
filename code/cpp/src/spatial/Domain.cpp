@@ -90,12 +90,13 @@ void Domain::adaptDt() {
   double global_median_velocity = globalReduce(local_median_velocity, MPI_SUM) / size_;
 
   // CFL condition
-  double cfl = 0.5 * params_.solver_config.tolerance;
+  double cfl = 0.25 * params_.solver_config.tolerance;
   double optional_cfl_cap_dt_local = cfl / global_median_velocity;
 
   // Smooth change to avoid oscillations
   double new_local_dt = params_.sim_config.dt_s * (1.0 - adaptive_dt_smoothing_alpha_) +
                         adaptive_dt_smoothing_alpha_ * optional_cfl_cap_dt_local;
+  new_local_dt = std::clamp(new_local_dt, 0.9 * params_.sim_config.dt_s, 1.1 * params_.sim_config.dt_s);
 
   params_.sim_config.dt_s = new_local_dt;
 }
@@ -174,7 +175,7 @@ void Domain::run() {
 
     if (log_due_to_colony_radius || log_due_to_sim_time || iter == 0 || colony_radius >= params_.sim_config.end_radius) {
       particle_logger_->log(particle_manager_->local_particles);
-      constraint_logger_->log(solver_solution.constraints);
+      // constraint_logger_->log(solver_solution.constraints);
       domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
       simulation_logger_->log(step_data);
 
