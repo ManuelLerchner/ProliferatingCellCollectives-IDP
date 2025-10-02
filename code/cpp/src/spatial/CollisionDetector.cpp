@@ -165,7 +165,7 @@ void CollisionDetector::checkParticlePairs(
   }
 
   for (const auto& pair : collision_pairs) {
-    Particle& p1 = *local_particle_map[pair.gidJ];
+    Particle& p1 = *local_particle_map[pair.gidI];
     Particle& p2 = *local_particle_map[pair.gidJ];
 
     auto constraint = tryCreateConstraint(
