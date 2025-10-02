@@ -74,7 +74,6 @@ class Domain {
   double last_wall_per_sim_seconds_ = 0.0;
   double last_eta_check_radius_ = 0.0;
   double last_growth_rate_wall_ = 0.0;
-  std::chrono::steady_clock::time_point sim_start_time_;
 
   std::array<double, 3> min_bounds_ = {0, 0, 0};
   std::array<double, 3> max_bounds_ = {0, 0, 0};
