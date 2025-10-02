@@ -33,7 +33,7 @@ Domain::Domain(SimulationParameters& params, bool preserve_existing, size_t iter
 
   particle_manager_ = std::make_unique<ParticleManager>(params, *particle_logger_, *constraint_logger_, mode);
   step_start_time_ = MPI_Wtime();
-  sim_start_time_ = std::chrono::steady_clock::now();
+  time_last_log_ = MPI_Wtime();
 
   if (rank_ == 0) {
     vtk::ParameterLogger parameter_logger(output_dir, "parameters", true, iter);
@@ -99,7 +99,7 @@ void Domain::adaptDt() {
   }
 
   // CFL condition
-  double cfl = 0.25 * params_.solver_config.tolerance;
+  double cfl = 0.5 * params_.solver_config.tolerance;
   double optional_cfl_cap_dt_local = cfl / global_median_velocity;
 
   // Smooth change to avoid oscillations
@@ -193,7 +193,7 @@ void Domain::run() {
       time_last_log_ = MPI_Wtime();
     }
 
-    printProgress(iter + 1, colony_radius, std::chrono::duration<double>(std::chrono::steady_clock::now() - sim_start_time_).count(), step_data);
+    printProgress(iter + 1, colony_radius, wall_time, step_data);
     // PetscPrintf(PETSC_COMM_WORLD, "\n");
     iter++;
   }
