@@ -154,13 +154,12 @@ void CollisionDetector::checkParticlePairs(
 
   auto collision_pairs = spatial_grid_.findPotentialCollisions(particle_manager.local_particles, particle_manager.ghost_particles);
 
-
   // std map from gid to Particle reference
   std::unordered_map<int, Particle*> local_particle_map;
   for (auto& p : particle_manager.local_particles) {
     local_particle_map[p.getGID()] = &p;
   }
-  for( auto& p : particle_manager.ghost_particles) {
+  for (auto& p : particle_manager.ghost_particles) {
     local_particle_map[p.getGID()] = &p;
   }
 
@@ -207,24 +206,30 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
     ParticleManager& particle_manager,
     const CollisionPair& pair) {
   using namespace utils::ArrayMath;
+  //  do a rough check first. If the bounding spheres don't overlap, Particles can have a max length of 2
+  double rough_distance = distance(p1.getPosition(), p2.getPosition());
+  if (rough_distance > (p1.getLength() + p2.getLength()) / 2.0 + collision_tolerance) {
+    return std::nullopt;
+  }
+
   // Get the line segments (cylindrical cores) of both particles
   auto [p1_start, p1_end] = getParticleEndpoints(p1);
   auto [p2_start, p2_end] = getParticleEndpoints(p2);
 
   // Use DCPQuery for accurate segment-segment distance calculation
   std::array<double, 3> closest_p1, closest_p2;
-  double distance;
+  double dist;
   auto result = distance_query(p1_start, p1_end, p2_start, p2_end);
   closest_p1 = result.closest[0];
   closest_p2 = result.closest[1];
-  distance = result.distance;
+  dist = result.distance;
 
   // Calculate radii and overlap
   double r1 = p1.getDiameter();
   double r2 = p2.getDiameter();
   double sum_radii = (r1 + r2) / 2.0;  // Average of diameters = sum of radii
 
-  double signed_distance = distance - sum_radii;
+  double signed_distance = dist - sum_radii;
 
   if (signed_distance > collision_tolerance) {
     return std::nullopt;
@@ -234,11 +239,6 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   std::array<double, 3> contact_point = 0.5 * (closest_p1 + closest_p2);
 
   // After first iteration, only accept new contact points
-  if (constraint_iterations > 0) {
-    if (!isNewContactPoint(p1.getGID(), p2.getGID(), contact_point)) {
-      return std::nullopt;
-    }
-  }
 
   p1.incrementNumConstraints();
   p2.incrementNumConstraints();
