@@ -46,20 +46,6 @@ auto createMatrices(const std::vector<Constraint>& all_constraints, ParticleMana
       std::move(L_PREV));
 }
 
-void calculate_forces(VecWrapper& F, VecWrapper& U, VecWrapper& deltaC, const MatWrapper& D, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, const VecWrapper& gamma) {
-  // f = D @ gamma
-  PetscCallAbort(PETSC_COMM_WORLD, MatMultTranspose(D, gamma, F));
-
-  // U = M @ f
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F, U));
-
-  // U = U + U_ext
-  PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(U, 1.0, U_ext));
-
-  // deltaC = G @ U
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U, deltaC));
-}
-
 void updateConstraintsFromSolution(std::vector<Constraint>& constraints, const VecWrapper& gamma, const VecWrapper& phi) {
   std::vector<PetscInt> indices;
 

@@ -5,6 +5,7 @@
 #include "util/Config.h"
 #include "util/PetscRaii.h"
 
+void calculate_growth_rate_vector(const VecWrapper& l, VecWrapper& sigma_and_impedance_out, double lambda, double tau, VecWrapper& growth_rates_out);
 class HardModelGradient : public Gradient {
  public:
   HardModelGradient(
