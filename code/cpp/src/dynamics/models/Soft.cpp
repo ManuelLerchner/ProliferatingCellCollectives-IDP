@@ -2,7 +2,21 @@
 #include "Soft.h"
 
 #include "dynamics/Physics.h"
+#include "dynamics/models/hard/HardModelGradient.h"
 #include "util/ArrayMath.h"
+
+void calculate_forces(VecWrapper& F, const MatWrapper& M, const MatWrapper& G, const VecWrapper& U_ext, VecWrapper& U_total, VecWrapper& deltaC) {
+  VecWrapper U_c = VecWrapper::FromMat(M);
+
+  // U = M @ f
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F, U_c));
+
+  // U = U + U_ext
+  PetscCallAbort(PETSC_COMM_WORLD, VecWAXPY(U_total, 1.0, U_ext, U_c));
+
+  // deltaC = G @ U
+  PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U_total, deltaC));
+}
 
 ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_manager, CollisionDetector& collision_detector, SimulationParameters& params, double dt, int iter, std::function<void()> exchangeGhostParticles, vtk::ParticleLogger& particle_logger, vtk::ConstraintLogger& constraint_logger) {
   using namespace utils::ArrayMath;
@@ -26,11 +40,8 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
                                                     }),
                                     MPI_MAX);
 
-  VecWrapper F = VecWrapper::FromMat(M);
-  VecZeroEntries(F);
-
-  VecWrapper gamma = VecWrapper::Create(new_constraints.size());
-  VecZeroEntries(gamma);
+  VecWrapper F = VecWrapper::Create(6 * particle_manager.local_particles.size());
+  VecWrapper stress = VecWrapper::Create(particle_manager.local_particles.size());
 
   for (const auto& constraint : new_constraints) {
     double overlap = -constraint.signed_distance;
@@ -47,8 +58,7 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
     // Calculate overlap and force
     double F_elastic = R_eff * params.physics_config.kcc * std::pow(overlap, 1.5);
 
-    VecSetValue(gamma, constraint.gid, F_elastic, INSERT_VALUES);
-
+    // Accumulate force
     const auto f_i = constraint.normI * F_elastic;
     const auto f_j = -f_i;
     const auto r_i = constraint.rPosI;
@@ -66,29 +76,25 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
     PetscInt rows_j[6] = {constraint.gidJ * 6 + 0, constraint.gidJ * 6 + 1, constraint.gidJ * 6 + 2,
                           constraint.gidJ * 6 + 3, constraint.gidJ * 6 + 4, constraint.gidJ * 6 + 5};
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValues(F, 6, rows_j, F_j, ADD_VALUES));
+
+    // Accumulate stress
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(stress, constraint.gidI, constraint.stressI * F_elastic, ADD_VALUES));
+    PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(stress, constraint.gidJ, constraint.stressJ * F_elastic, ADD_VALUES));
   }
 
   VecAssemblyBegin(F);
   VecAssemblyEnd(F);
-
-  VecAssemblyBegin(gamma);
-  VecAssemblyEnd(gamma);
+  VecAssemblyBegin(stress);
+  VecAssemblyEnd(stress);
 
   // Move particles
-  VecWrapper U_ext = VecWrapper::FromMat(M);
+  VecWrapper U_ext = VecWrapper::Create(6 * particle_manager.local_particles.size());
+  VecWrapper U = VecWrapper::Like(U_ext);
+
   calculate_external_velocities(U_ext, particle_manager.local_particles, M, dt, 0, params.physics_config);
 
-  VecWrapper U = VecWrapper::FromMat(M);
   VecWrapper deltaC = VecWrapper::FromMat(G);
-
-  // U = M @ f
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(M, F, U));
-
-  // U = U + U_ext
-  PetscCallAbort(PETSC_COMM_WORLD, VecAXPY(U, 1.0, U_ext));
-
-  // deltaC = G @ U
-  PetscCallAbort(PETSC_COMM_WORLD, MatMult(G, U, deltaC));
+  calculate_forces(F, M, G, U_ext, U, deltaC);
 
   particle_manager.moveLocalParticlesFromSolution({.dC = deltaC, .f = F, .u = U}, dt);
 
@@ -96,19 +102,9 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   VecWrapper length = getLengthVector(particle_manager.local_particles);
   VecWrapper ldot = VecWrapper::Like(length);
   VecWrapper impedance = VecWrapper::Like(length);
-  VecWrapper stress = VecWrapper::Like(length);
+  VecCopy(stress, impedance);
 
-  // Calculate growth rates using elastic forces
-  MatWrapper L = MatWrapper::CreateAIJ(new_constraints.size(), particle_manager.local_particles.size());
-
-  PetscInt ownership_start, ownership_end;
-  PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(L, &ownership_start, &ownership_end));
-
-  calculate_stress_matrix_local(L, new_constraints, ownership_start);
-  MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
-
-  calculate_ldot_inplace(L, length, gamma, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, ldot, stress, impedance);
+  calculate_growth_rate_vector(length, impedance, params.physics_config.getLambdaDimensionless(), params.physics_config.TAU, ldot);
 
   // Grow particles
   particle_manager.setGrowParamsFromSolution({.dL = ldot, .impedance = impedance, .stress = stress});
