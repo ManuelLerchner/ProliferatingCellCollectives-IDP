@@ -736,6 +736,32 @@ TODO: mention benefints of adaptive timestep compared to hardcoded value of 1e-5
 
 TODO
 
+strong scaling1: How fast can we reach a colony radius of 100 with increasing number of processors?
+
+strong scaling2: Disable division. initialize with a box of fully dense particles. Run for a fixed number of time steps (e.g. 1000). Measure wall-clock time T(P) to complete the simulation with P processors. Parallel efficiency E(P) = T(1) / (P * T(P)) if you also run a 1-core baseline for same total N.
+
+
+
+weak scaling: How many updates per second per core can we achieve when increasing both the number of particles and processors proportionally?
+% Turn off cell division (or immediately cap total particles so no birth happens).
+
+% Initialize each processor with exactly N_local particles in its subdomain (same distribution they would normally have).
+
+% Run for a fixed number of particle-updates per core (e.g. U = 1e7 updates/core).
+
+% Measure:
+
+% wall-clock time T(P) to complete U updates on each core,
+
+% updates/sec/core = U / T(P),
+
+% parallel efficiency E(P) = (T(1) / (P * T(P))) if you also run a 1-core baseline for same N_local.
+
+% Expectation: updates/sec/core ~ constant and E(P) ≈ 1 if weak scaling is ideal.
+
+% Pro: Clear, repeatable.
+Con: Not representative of physics when division matters.
+
 \subsection{Insights into BBPGD Iterations}
 
 TODO

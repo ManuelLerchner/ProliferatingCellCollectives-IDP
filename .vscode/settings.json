@@ -1,4 +1,9 @@
 {
+  "search.exclude": {
+    "**/data/**": true,
+    "**/build/**": true,
+  },
+
   "files.associations": {
     "type_traits": "cpp",
     "cctype": "cpp",
@@ -75,5 +80,5 @@
     "span": "cpp",
     "typeindex": "cpp"
   },
-  "cmake.sourceDirectory": "/home/manuel/MicrobeGrowthSim-IDP/demo/cpp/hard"
+  "cmake.sourceDirectory": "/home/manuel/MicrobeGrowthSim-IDP/code/cpp"
 }
