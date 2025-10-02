@@ -18,7 +18,7 @@ ParticleManager::SolverSolution solveSoftPotential(ParticleManager& particle_man
   // Use a larger tolerance for initial collision detection
   double tolerance = 0.1;
 
-  auto new_constraints = collision_detector.detectCollisions(particle_manager, 0, tolerance);
+  auto new_constraints = collision_detector.detectCollisions(particle_manager, 0, 0);
 
   double max_overlap = globalReduce(std::accumulate(new_constraints.begin(), new_constraints.end(), 0.0,
                                                     [](double acc, const Constraint& c) {
