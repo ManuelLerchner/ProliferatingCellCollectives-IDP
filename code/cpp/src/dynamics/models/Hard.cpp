@@ -122,7 +122,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     // Use a larger tolerance for initial collision detection
     exchangeGhostParticles();
 
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 0.2);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 0.05);
 
     all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
 
@@ -143,7 +143,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     VecWrapper U_ext = VecWrapper::Create(6 * particle_manager.local_particles.size());
 
-    if (constraint_iterations == 0){
+    if (constraint_iterations == 0) {
       calculate_external_velocities(U_ext, particle_manager.local_particles, M, dt, constraint_iterations, params.physics_config);
     }
 
