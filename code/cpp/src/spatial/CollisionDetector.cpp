@@ -154,9 +154,19 @@ void CollisionDetector::checkParticlePairs(
 
   auto collision_pairs = spatial_grid_.findPotentialCollisions(particle_manager.local_particles, particle_manager.ghost_particles);
 
+
+  // std map from gid to Particle reference
+  std::unordered_map<int, Particle*> local_particle_map;
+  for (auto& p : particle_manager.local_particles) {
+    local_particle_map[p.getGID()] = &p;
+  }
+  for( auto& p : particle_manager.ghost_particles) {
+    local_particle_map[p.getGID()] = &p;
+  }
+
   for (const auto& pair : collision_pairs) {
-    Particle& p1 = getParticle(pair.gidI, particle_manager);
-    Particle& p2 = getParticle(pair.gidJ, particle_manager);
+    Particle& p1 = *local_particle_map[pair.gidJ];
+    Particle& p2 = *local_particle_map[pair.gidJ];
 
     auto constraint = tryCreateConstraint(
         p1, p2,
