@@ -118,11 +118,6 @@ BBPGDResult BBPGD(
 
     alpha = numerator_val / denominator_val;
 
-    // if alpha is nan or inf or negative, reset it
-    if (std::isnan(alpha) || std::isinf(alpha) || alpha <= 0) {
-      alpha = 1.0 / res;
-    }
-
     // Prepare for next iteration by swapping buffers
     std::swap(gamma_prev, gamma_i);
     std::swap(g_prev, g_i);
