@@ -31,31 +31,23 @@ def load_files(folder):
     return all_files
 
 
-def find_latest_vtu_files(folder):
-    all_files = load_files(folder)
-    latest_files = {}  # Format: {log_type: {rank: filename}}
+def find_latest_particles(folder, offset=0):
+    particles = load_files(folder)["particles"]
 
-    latest_iteration_global = None
-    for log_type, iterations in all_files.items():
-        latest_iteration = max(iterations.keys())
+    if not particles:
+        raise ValueError(f"No particle files found in folder: {folder}")
 
-        if latest_iteration_global is None:
-            latest_iteration_global = latest_iteration
-        else:
-            if latest_iteration != latest_iteration_global:
-                # print(
-                #     f"Latest iteration {latest_iteration} is not the same as the global latest iteration {latest_iteration_global}"
-                # )
-                pass
+    latest_iteration = max(particles.keys()) + offset
+    if latest_iteration not in particles:
+        raise ValueError(
+            f"No particle files found for iteration {latest_iteration} in folder: {folder}")
 
-        latest_files[log_type] = iterations[latest_iteration]
-
-    return latest_files
+    return {"particles": particles[latest_iteration]}
 
 
-def load_latest_iteration(folder):
+def load_latest_iteration(folder, offset=0):
 
-    latest_files = find_latest_vtu_files(folder)
+    latest_files = find_latest_particles(folder, offset)
 
     data = dict()
     for log_type in latest_files:
