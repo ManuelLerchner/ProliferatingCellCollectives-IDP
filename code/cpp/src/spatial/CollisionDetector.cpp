@@ -256,7 +256,7 @@ std::optional<Constraint> CollisionDetector::tryCreateConstraint(
   std::array<double, 3> contact_normal = normalize(closest_p1 - closest_p2);
 
   auto stress1 = 0.5 * abs(dot(contact_normal, orientation1));
-  auto stress2 = 0.5 * abs(dot(contact_normal, orientation2));
+  auto stress2 = 0.5 * abs(dot(-contact_normal, orientation2));
 
   bool owned_by_me;
   if (p1_local && p2_local) {
