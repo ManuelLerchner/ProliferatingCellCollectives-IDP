@@ -36,8 +36,8 @@ def run_simulation(config, mode, LAMBDA):
                     f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}/")
 
 
-for mode in ["soft"]:
-    for LAMBDA in [1e-2]:
+for mode in ["hard","soft"]:
+    for LAMBDA in [1e-2,1e-3,1e-4]:
         config = base_physics_config.copy()
         config["LAMBDA"] = LAMBDA
         run_simulation(config, mode, LAMBDA)

@@ -6,14 +6,14 @@ from time import sleep
 
 
 SCRIPT_TEMPLATE = """#!/bin/bash
-#SBATCH -J HardScaling_{{MODE}}_{{NUM_RANKS}}ranks
+#SBATCH -J huge_{{MODE}}
 #SBATCH -o ./slurm-%x.%j.out
 #SBATCH -D {{BIN_FOLDER}}
 #SBATCH --get-user-env
 #SBATCH --clusters={{CLUSTER}}
 #SBATCH --partition={{PARTITION}}
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node={{NUM_RANKS}}
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16000mb
 #SBATCH --time=24:00:00
@@ -27,21 +27,25 @@ module load slurm_setup
 module load intel
 module load intel-mpi
 
-OUTPUT_DIR="hard_scaling/output_{{MODE}}/{{NUM_RANKS}}ranks"
+
+OUTPUT_DIR="huge/{{TIME}}/output_{{MODE}}/{{NUM_RANKS}}ranks"
 mkdir -p $OUTPUT_DIR
 cd $OUTPUT_DIR
 
 make -j
 
-mpirun -n {{NUM_RANKS}} ../../cellcollectives -mode {{MODE}} -end_radius {{END_RADIUS}} -LAMBDA {{LAMBDA}} -log_frequency_seconds 10
+mpirun -n {{NUM_RANKS}} ../../../../cellcollectives -mode {{MODE}} -end_radius {{END_RADIUS}} -LAMBDA {{LAMBDA}} -log_every_colony_radius_delta 5
 """
 
 BIN_FOLDER = "../code/cpp/build/src"
-END_RADIUS = 100
+END_RADIUS = 1000
 
-LAMBDAS = [1e-2,1e-3,1e-4]  # adjust if you want multiple lambdas
+LAMBDAS = [1e-3]  # adjust if you want multiple lambdas
 MPI_RANKS = [112]
 MODES = ["hard", "soft"]
+
+import datetime
+time = datetime.datetime.now().timestamp() * 1000
 
 
 def launch_job(mode, num_ranks, cluster, partition, lambda_val):
@@ -53,6 +57,7 @@ def launch_job(mode, num_ranks, cluster, partition, lambda_val):
     script = script.replace("{{PARTITION}}", partition)
     script = script.replace("{{END_RADIUS}}", str(END_RADIUS))
     script = script.replace("{{LAMBDA}}", f"{lambda_val:.1e}")
+    script = script.replace("{{TIME}}", str(time))
 
     filename = f"job_{mode}_{num_ranks}ranks_{lambda_val:.0e}.sh"
     with open(filename, "w") as f:
