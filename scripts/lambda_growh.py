@@ -5,17 +5,18 @@ import os
 from time import sleep
 
 
+
 SCRIPT_TEMPLATE = """#!/bin/bash
-#SBATCH -J HardScaling_{{MODE}}_{{NUM_RANKS}}ranks
+#SBATCH -J {{LAMBDA}}_{{MODE}}
 #SBATCH -o ./slurm-%x.%j.out
 #SBATCH -D {{BIN_FOLDER}}
 #SBATCH --get-user-env
 #SBATCH --clusters={{CLUSTER}}
 #SBATCH --partition={{PARTITION}}
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node={{NUM_RANKS}}
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16000mb
+#SBATCH --mem=24000mb
 #SBATCH --time=24:00:00
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=manuel.lerchner@tum.de
@@ -23,25 +24,30 @@ SCRIPT_TEMPLATE = """#!/bin/bash
 
 # create unique output dir and move into it
 module load slurm_setup
-  
+
 module load intel
 module load intel-mpi
 
-OUTPUT_DIR="hard_scaling/output_{{MODE}}/{{NUM_RANKS}}ranks"
+OUTPUT_DIR="lambda_grow/{{TIME}}/output_{{MODE}}/{{LAMBDA}}"
 mkdir -p $OUTPUT_DIR
 cd $OUTPUT_DIR
 
 make -j
 
-mpirun -n {{NUM_RANKS}} ../../cellcollectives -mode {{MODE}} -end_radius {{END_RADIUS}} -LAMBDA {{LAMBDA}} -log_frequency_seconds 10
+mpirun -n {{NUM_RANKS}} ../../../../cellcollectives -mode {{MODE}} -end_radius {{END_RADIUS}} -LAMBDA {{LAMBDA}} -log_every_colony_radius_delta 0.5
 """
 
 BIN_FOLDER = "../code/cpp/build/src"
 END_RADIUS = 100
 
-LAMBDAS = [1e-2,1e-3,1e-4]  # adjust if you want multiple lambdas
-MPI_RANKS = [112]
+LAMBDAS = [1e-2, 1e-3, 1e-4]  # adjust if you want multiple lambdas
+MPI_RANKS = [64]
 MODES = ["hard", "soft"]
+
+
+import datetime
+
+time =datetime.datetime.now().timestamp() * 1000
 
 
 def launch_job(mode, num_ranks, cluster, partition, lambda_val):
@@ -53,6 +59,7 @@ def launch_job(mode, num_ranks, cluster, partition, lambda_val):
     script = script.replace("{{PARTITION}}", partition)
     script = script.replace("{{END_RADIUS}}", str(END_RADIUS))
     script = script.replace("{{LAMBDA}}", f"{lambda_val:.1e}")
+    script = script.replace("{{TIME}}", str(time))
 
     filename = f"job_{mode}_{num_ranks}ranks_{lambda_val:.0e}.sh"
     with open(filename, "w") as f:
@@ -63,7 +70,6 @@ def launch_job(mode, num_ranks, cluster, partition, lambda_val):
     subprocess.call(["sbatch", filename])
     os.remove(filename)
     sleep(2)
-
 
 if __name__ == "__main__":
     for mode in MODES:
