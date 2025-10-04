@@ -13,9 +13,9 @@ def clean_label(sim_dir):
     """
 
     if "hard" in sim_dir:
-        mode = "Hard"
+        mode = "hard"
     elif "soft" in sim_dir:
-        mode = "Soft"
+        mode = "soft"
     else:
         mode = "Unknown"
 
@@ -58,8 +58,8 @@ def load_combined(sim_dirs, base_path="", offset=0):
                 if drop_col in particles:
                     particles.drop(drop_col, axis=1, inplace=True)
 
-            particles["mode"] = label[0]
-            particles["sensitivity"] = label[1]
+            particles["Mode"] = label[0]
+            particles["Sensitivity"] = label[1]
             particles["sim_dir"] = source
             particles["offset"] = off
             particles_list.append(particles)
@@ -69,12 +69,12 @@ def load_combined(sim_dirs, base_path="", offset=0):
         params_all = load_all_files(os.path.join(
             base_path, sim_dir, "data"), "parameters")
 
-        sim_all["mode"] = label[0]
-        sim_all["sensitivity"] = label[1]
+        sim_all["Mode"] = label[0]
+        sim_all["Sensitivity"] = label[1]
         sim_all["sim_dir"] = source
 
-        params_all["mode"] = label[0]
-        params_all["sensitivity"] = label[1]
+        params_all["Mode"] = label[0]
+        params_all["Sensitivity"] = label[1]
         params_all["sim_dir"] = source
 
         sim_list.append(sim_all)
