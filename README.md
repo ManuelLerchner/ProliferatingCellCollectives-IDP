@@ -2,9 +2,9 @@
 
 🦠 | Bacteria Growth using Hard Model             |  Bacteria Growth using Soft Model
 :-------------------------:|:-------------------------:|:-------------------------:
-$\;$|$\lambda = 10^{-3}$, $R_{end} = 100$ | $\lambda = 10^{-3}$, $R_{end} = 100$
+&nbsp;| $R_{end} = 100$ | $R_{end} = 100$
 Bacteria Lengths (dark=short, bright=long)|![Hard Model](latex/figures/growth_comparisons/hard_e-3_0087.jpeg) | ![Soft Model](latex/figures/growth_comparisons/soft_e-3_0127.jpeg)
-Bacteria Orientation (color=angle)|![Hard Model](latex/figures/orientation_comparisons/hard_e-3_orient.jpeg) | ![Soft Model](latex/figures/orientation_comparisons/soft_e-3_orient.jpeg)
+Bacteria Orientation (color=angle)|![Hard Model](latex/figures/orientation_comparisons/hard_e-2_orient.jpeg) | ![Soft Model](latex/figures/orientation_comparisons/soft_e-2_orient.jpeg)
 
 ## Abstract
 
