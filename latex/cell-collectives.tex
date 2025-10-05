@@ -560,6 +560,37 @@ Importantly, the soft model reproduces the expected concentric rings while emplo
 
 ~\cite{You2018}
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/orientation_comparisons/hard_e-2_orient.jpeg}
+    \caption{ }
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/orientation_comparisons/hard_e-3_orient.jpeg}
+    \caption{ }
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/orientation_comparisons/hard_e-4_orient.jpeg}
+    \caption{ }
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/orientation_comparisons/soft_e-2_orient.jpeg}
+    \caption{ }
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/orientation_comparisons/soft_e-3_orient.jpeg}
+    \caption{ }
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/orientation_comparisons/soft_e-4_orient.jpeg}
+    \caption{ }
+\end{figure}
+
 
 \subsection{Alignment}
 
@@ -578,19 +609,28 @@ TODO: check \cite{Warren2019}
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparisons/packing_hard.jpeg}
+        \includegraphics[width=\linewidth]{figures/comparison_plots/density_hard.jpeg}
         \caption{Close-up of particle packing for the hard model.}
         \label{fig:packing_hard}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparisons/packing_soft.jpeg}
+        \includegraphics[width=\linewidth]{figures/comparison_plots/density_soft.jpeg}
         \caption{Close-up of particle packing for the soft model.}
         \label{fig:packing_soft}
     \end{subfigure}
     \caption{Close-up comparison of particle packing. The soft model exhibits denser packing with slight particle overlap, while the hard model maintains strict non-overlap. See \autoref{fig:radial_distribution_packing_fraction} for a quantitative comparison of packing fractions.}
     \label{fig:dense_packing_comparison}
 \end{figure}
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_length_shared.png}
+
+    \caption{ }
+\end{figure}
+
 
 
 
@@ -600,7 +640,7 @@ TODO: check \cite{Warren2019}
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparisons/radial_distribution_stress.png}
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
         \caption{Comparison of radial stress distributions for the hard and soft collision models. Both models roughly reproduce the analytically derived stress profiles~\cite{Weady2024}.}
         \label{fig:radial_distribution_stress}
     \end{subfigure}
@@ -609,7 +649,7 @@ TODO: check \cite{Warren2019}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparisons/radial_distribution_packing_fraction.png}
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
         \caption{Radial packing fraction. The soft model reaches $\approx1.2$ at the center due to overlap, while the hard model stays below 1. The packing fraction is defined as the total area occupied by particles within a radial shell divided by the shell area.}
         \label{fig:radial_distribution_packing_fraction}
     \end{subfigure}
@@ -618,7 +658,7 @@ TODO: check \cite{Warren2019}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparisons/max_overlap_simulation.png}
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
         \caption{Maximum particle overlap. Overlap grows over time in the soft model, while the hard model is kept near a constant value set by the tolerance hyperparameter.}
         \label{fig:max_overlap_simulation}
     \end{subfigure}
@@ -713,7 +753,7 @@ The soft model consistently outperforms the hard model, with a speedup factor of
 
 % 5. Communication vs. Computation Breakdown
 
- 
+
 
 \subsection{Performance}
 \cite{Yan2019}
@@ -762,28 +802,74 @@ weak scaling: How many updates per second per core can we achieve when increasin
 % Pro: Clear, repeatable.
 Con: Not representative of physics when division matters.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_efficiency_hard_soft.png}
+    \caption{ }
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_efficiency_hard_soft_logx.png}
+    \caption{ }
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_hard_soft.png}
+    \caption{ }
+\end{figure}
+
+
+
 \subsection{Insights into BBPGD Iterations}
 
-TODO
 
-
-
-\subsection{Insights into BBPGD Iterations}
 
 Which time step results in fastest colonry radius in a fixed amout of wall time?
 
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_constraints_vs_num_particles_with_fit.png}
+    \caption{ }
+\end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparisons/wall_time_simulation.png}
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_particles_vs_wall_time_per_particle_with_fit.png}
+    \caption{ }
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_colony_radius.png}
+    \caption{ }
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_dt.png}
+    \caption{ }
+\end{figure}
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_residual.png}
     \caption{Total simulation time for the hard and soft collision models as a function of particle number. The soft model is generally faster by a factor of 1.8.} \label{fig:wall_time_simulation}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparisons/bbpgd_iterations_simulation.png}
+    \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_total_energy.png}
     \caption{ReLCP solver iterations in the hard collision model. To enforce particle separation, the model must iteratively solve an LCP at each time step, with the required number of iterations increasing with particle count.} \label{fig:bbpgd_iterations_simulation}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_bbpgd_iterations_per_step_vs_num_particles_with_fit.png}
+    \caption{ }
 \end{figure}
 
 \newpage
