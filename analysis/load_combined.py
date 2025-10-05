@@ -72,10 +72,14 @@ def load_combined(sim_dirs, base_path="", offset=0):
         sim_all["Mode"] = label[0]
         sim_all["Sensitivity"] = label[1]
         sim_all["sim_dir"] = source
+        sim_all["offset"] = 0
 
         params_all["Mode"] = label[0]
         params_all["Sensitivity"] = label[1]
         params_all["sim_dir"] = source
+        params_all["offset"] = 0
+
+        
 
         sim_list.append(sim_all)
         params_list.append(params_all)
