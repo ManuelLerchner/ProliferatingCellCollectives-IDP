@@ -70,16 +70,16 @@
 \newcommand{\growthcomparisonrow}[6]{%
     #1 &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparisons/#1_#2_#3.jpeg}
+        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#3.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparisons/#1_#2_#4.jpeg}
+        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#4.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparisons/#1_#2_#5.jpeg}
+        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#5.jpeg}
     \end{subfigure} &
     \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth_comparisons/#1_#2_#6.jpeg}
+        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#6.jpeg}
     \end{subfigure}  \\
 }
 
@@ -736,8 +736,8 @@ TODO: check \cite{Warren2019}
         \centering
         \caption{Growth Comparison $\lambda=10^{-2}$}
         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{e-2}{0070}{0080}{0090}{0099}
-            \growthcomparisonrow{Soft}{e-2}{0080}{0090}{0110}{0160}
+            \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
+            \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
         \end{tabular}
     \end{subfigure}
 
@@ -746,8 +746,8 @@ TODO: check \cite{Warren2019}
         \centering
         \caption{Growth Comparison $\lambda=10^{-3}$}
         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{e-3}{0070}{0083}{0084}{0087}
-            \growthcomparisonrow{Soft}{e-3}{0080}{0100}{0110}{0127}
+            \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
+            \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
         \end{tabular}
     \end{subfigure}
 
@@ -756,8 +756,8 @@ TODO: check \cite{Warren2019}
         \centering
         \caption{Growth Comparison $\lambda=10^{-4}$}
         \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{Hard}{e-4}{0070}{0080}{0084}{0087}
-            \growthcomparisonrow{Soft}{e-4}{0070}{0091}{0100}{0120}
+            \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
+            \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
         \end{tabular}
     \end{subfigure}
 
