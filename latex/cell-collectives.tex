@@ -34,7 +34,8 @@
 \usepackage{varwidth}
 \usepackage{balance}
 \usepackage{todonotes}
- 
+\usepackage{flushend} 
+
 \usepackage[ngerman,main=english]{babel}
  
 % TikZ for diagrams
@@ -63,24 +64,26 @@
 \DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
 
 % Macro for growth comparison row
-\newlength{\subfigwidth}
-\setlength{\subfigwidth}{0.2\textwidth}
 \newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
 
 \newcommand{\growthcomparisonrow}[6]{%
     #1 &
-    \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#3.jpeg}
-    \end{subfigure} &
-    \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#4.jpeg}
-    \end{subfigure} &
-    \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#5.jpeg}
-    \end{subfigure} &
-    \begin{subfigure}[b]{\subfigwidth}
-        \includegraphics[width=\textwidth]{figures/growth/#1_#2/#1_#2.#6.jpeg}
-    \end{subfigure}  \\
+        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#3.jpeg}
+    &
+        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#4.jpeg}
+    &
+        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#5.jpeg}
+    &
+        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#6.jpeg}
+    \\
+}
+
+\newcommand{\orientationcomparisonrow}[2]{%
+    #1 &
+        \includegraphics[width=0.37\textwidth]{figures/orientation_comparisons/hard_e#2_orient.jpeg}
+    &   
+        \includegraphics[width=0.37\textwidth]{figures/orientation_comparisons/soft_e#2_orient.jpeg}
+    \\
 }
 
 \newcommand{\algorithmautorefname}{Algorithm}
@@ -605,38 +608,38 @@ Importantly, the soft model reproduces the expected concentric rings while emplo
 
 \subsection{Microdommain formation}
 
-~\cite{You2018}
+Similar to You et al.~\cite{You2018}, we observe the formation of microdomains of aligned cells within the colony. These domains emerge from mechanical interactions and growth dynamics, creating local regions where cells share similar orientations. \autoref{fig:orientation_comparison} shows the final orientation patterns for both hard and soft collision models across varying values of the stress sensitivity parameter $\lambda$. In the hard model, distinct and spatially confined patches of aligned cells are apparent for all values of $\lambda$. In contrast, the soft model tends to produce elongated bundles of aligned cells, particularly at lower stress sensitivity.
 
-\begin{figure}[h]
+The hard model's strict non-overlapping constraints promote more localized alignment, whereas the soft model's allowance for slight overlaps facilitates the formation of extended bundles of aligned cells, as cells growing in the center of the colony cannot separate as easily due tothe high packing fraction. For $\lambda=10^{-4}$, very few distinct patches are visible for the soft model, as most cells are being highly compressed in different bundles.  \autoref{fig:orientation_closeup} provides a close-up comparison of the orientation patterns for $\lambda=10^{-4}$, highlighting the differences in microdomain structures between the two models.
+
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{figures/orientation_comparisons/hard_e-2_orient.jpeg}
-    \caption{ }
+    \begin{subfigure}[b]{0.49\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/orientation_hard_close.jpeg}
+        \caption{Close-up of orientation patterns for the hard model.}
+
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/orientation_soft_close.jpeg}
+        \caption{Close-up of orientation patterns for the soft model.}
+
+    \end{subfigure}
+    \caption{Close-up comparison of orientation patterns for $\lambda=10^{-4}$ at the outer edge of the colony. The hard model (a) maintains distinct patches of aligned cells at every location, while the soft model (b) tends to form long bundles of aligned cells, especially in the dense center of the colony.}
+    \label{fig:orientation_closeup}
+
 \end{figure}
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/orientation_comparisons/hard_e-3_orient.jpeg}
-    \caption{ }
-\end{figure}
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/orientation_comparisons/hard_e-4_orient.jpeg}
-    \caption{ }
-\end{figure}
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/orientation_comparisons/soft_e-2_orient.jpeg}
-    \caption{ }
-\end{figure}
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/orientation_comparisons/soft_e-3_orient.jpeg}
-    \caption{ }
-\end{figure}
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/orientation_comparisons/soft_e-4_orient.jpeg}
-    \caption{ }
-\end{figure}
+
+
+
+
+
+
+\clearpage
+\newpage
+
 
 
 \subsection{Alignment}
@@ -718,59 +721,16 @@ TODO: check \cite{Warren2019}
     \label{fig:comparison_all}
 \end{figure}
 
-\begin{figure*}[p]
-    \centering
-
-    % % Lambda = 10^-1 comparison
-    % \begin{subfigure}[b]{\textwidth}
-    %     \centering
-    %     \caption{Growth Comparison $\lambda=10^{-1}$}
-    %     \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-    %         \growthcomparisonrow{Hard}{e-1}{0090}{0100}{0110}{0120}
-    %         \growthcomparisonrow{Soft}{e-1}{0140}{0170}{0240}{0310}
-    %     \end{tabular}
-    % \end{subfigure}
-
-    % % Lambda = 10^-2 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-2}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
-            \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
-        \end{tabular}
-    \end{subfigure}
-
-    % Lambda = 10^-3 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-3}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
-            \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
-        \end{tabular}
-    \end{subfigure}
-
-    % Lambda = 10^-4 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-4}$}
-        \begin{tabular}{r M{\subfigwidth} M{\subfigwidth} M{\subfigwidth} M{\subfigwidth}}
-            \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
-            \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
-        \end{tabular}
-    \end{subfigure}
 
 
-    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from \cite{Weady2024}.}
-    \label{fig:pattern_formation}
-\end{figure*}
 
 
 
 
 \clearpage
 \newpage
+
+
 
 \section{Computational Performance}
 
@@ -963,8 +923,75 @@ Integrating such a framework could automatically accelerate the computation of r
 \balance
 \bibliographystyle{IEEEtran}
 \bibliography{literature}
+\newpage
+\nobalance
+
+
+
+\onecolumn
+
+\appendix
+
+\begin{figure}[H]
+    \centering
+
+    % Lambda = 10^-2 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \begin{tabular}{r M{0.37\textwidth} M{0.37\textwidth}}
+             & \caption{Hard Model} & \caption{Soft Model} \\
+            \vspace{-1.0cm}                                \\
+            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
+            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
+            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
+        \end{tabular}
+    \end{subfigure}
+
+    \caption{Comparison of final orientation patterns at different stress sensitivity parameters $\lambda$. The color of each cell indicates its orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells, whereas the soft model tends to produce long bundles of aligned cells.}
+    \label{fig:orientation_comparison}
+\end{figure}
 
 \newpage
+
+\begin{figure}[p]
+    \centering
+
+    % % Lambda = 10^-2 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \caption{Growth Comparison $\lambda=10^{-2}$}
+        \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+            \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
+            \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
+        \end{tabular}
+    \end{subfigure}
+    % Lambda = 10^-3 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \caption{Growth Comparison $\lambda=10^{-3}$}
+        \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+            \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
+            \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
+        \end{tabular}
+    \end{subfigure}
+
+    % Lambda = 10^-4 comparison
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \caption{Growth Comparison $\lambda=10^{-4}$}
+        \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+            \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
+            \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
+        \end{tabular}
+    \end{subfigure}
+
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from \cite{Weady2024}.}
+    \label{fig:pattern_formation}
+\end{figure}
+
+\clearpage
+\newpage
+\twocolumn
 \tableofcontents
 
 \end{document}
