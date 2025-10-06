@@ -68,25 +68,26 @@
 
 \newcommand{\growthcomparisonrow}[6]{%
     #1 &
-        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#3.jpeg}
+        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#3.jpeg}
     &
-        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#4.jpeg}
+        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#4.jpeg}
     &
-        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#5.jpeg}
+        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#5.jpeg}
     &
-        \includegraphics[width=0.2\textwidth]{figures/growth/#1_#2/#1_#2.#6.jpeg}
+        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#6.jpeg}
     \\
 }
 
 \newcommand{\orientationcomparisonrow}[2]{%
     #1 &
-        \includegraphics[width=0.37\textwidth]{figures/orientation_comparisons/hard_e#2_orient.jpeg}
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
     &   
-        \includegraphics[width=0.37\textwidth]{figures/orientation_comparisons/soft_e#2_orient.jpeg}
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
     \\
 }
-
+ 
 \newcommand{\algorithmautorefname}{Algorithm}
+
 
 \begin{document}
 
@@ -137,19 +138,19 @@ A critical computational challenge in agent-based models (ABMs) is the resolutio
 
 \begin{description}[style=nextline]
     \item[Potential-Based (Soft) Collision Models]
-        These models manage interactions by employing repulsive forces, defined by potentials like Hertzian or Lennard-Jones, when agents overlap. Their primary advantage is computational tractability, as they rely on local force calculations that are highly amenable to parallelization. This has enabled large-scale simulations, such as the work by \cite{Warren2019}, who modeled millions of cells in 3D. However, a well-known limitation is numerical stiffness, which forces the use of small integration timesteps to maintain stability. Furthermore, as noted by \cite{Yan2019}, the finite range of repulsive forces causes particles to behave as soft and deformable, leading to an "effective" diameter smaller than the intended geometric size.
+        These models manage interactions by employing repulsive forces, defined by potentials like Hertzian or Lennard-Jones, when agents overlap. Their primary advantage is computational tractability, as they rely on local force calculations that are highly amenable to parallelization. This has enabled large-scale simulations, such as the work by~\cite{Warren2019}, who modeled millions of cells in 3D. However, a well-known limitation is numerical stiffness, which forces the use of small integration timesteps to maintain stability. Furthermore, as noted by~\cite{Yan2019}, the finite range of repulsive forces causes particles to behave as soft and deformable, leading to an "effective" diameter smaller than the intended geometric size.
 
     \item[Constraint-Based (Hard) Collision Models]
-        These models enforce strict non-overlapping geometric constraints, ensuring high physical fidelity by treating agents as truly impenetrable. A notable application is the work of \cite{Rudge2012}, who simulated growing bacterial colonies using a constraint-based method. They highlighted its computational intensity, as resolving constraints often requires iterative, global solutions to large systems of equations, creating a potential bottleneck. However, modern implementations like that of \cite{Yan2019} specifically address the drawbacks of soft models: they eliminate numerical stiffness—allowing timesteps to be increased by 10–100 times—and guarantee particles maintain their precise geometric dimensions. The trade-off is a higher computational cost per timestep due to the constraint-solving process.
+        These models enforce strict non-overlapping geometric constraints, ensuring high physical fidelity by treating agents as truly impenetrable. A notable application is the work of~\cite{Rudge2012}, who simulated growing bacterial colonies using a constraint-based method. They highlighted its computational intensity, as resolving constraints often requires iterative, global solutions to large systems of equations, creating a potential bottleneck. However, modern implementations like that of~\cite{Yan2019} specifically address the drawbacks of soft models: they eliminate numerical stiffness—allowing timesteps to be increased by 10–100 times—and guarantee particles maintain their precise geometric dimensions. The trade-off is a higher computational cost per timestep due to the constraint-solving process.
 \end{description}
 
 \subsection{The Benchmarking Gap}
 
-The reviewed literature presents two distinct computational philosophies. Soft models offer computational simplicity and have been scaled to high agent counts, but at the cost of numerical stiffness and compromised physical fidelity. Hard models, particularly modern implementations like that of \cite{Yan2019}, offer a solution to these limitations, promising greater timesteps and rigorous geometry.
+The reviewed literature presents two distinct computational philosophies. Soft models offer computational simplicity and have been scaled to high agent counts, but at the cost of numerical stiffness and compromised physical fidelity. Hard models, particularly modern implementations like that of~\cite{Yan2019}, offer a solution to these limitations, promising greater timesteps and rigorous geometry.
 
 However, this presents a critical, unquantified trade-off: does the hard model's ability to take larger timesteps outweigh its inherently higher computational cost per timestep? This question is especially pertinent in simulations of proliferating cell collectives, where exponentially increasing density dramatically alters the computational load of the collision resolution algorithm.
 
-A systematic benchmarking focusing on this computational trade-off between the models is largely absent. Existing studies~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024} typically validate their models by comparing simulation results to experimental data (e.g., microscopy images of bacterial colonies)~\cite{Rudge2012,Khan_2024, Rudge2013,Langeslay_2023, Ghosh2015}, prioritizing biological insights over a rigorous HPC analysis of runtime, scalability, and numerical stability under proliferation. Consequently, there is no clear guidance for modelers on which paradigm is more efficient for a given problem scale. This work aims to fill this gap by implementing both models within a unified ABM framework to provide a direct, quantitative comparison of their computational performance.
+A systematic benchmarking focusing on this computational trade-off between the models is largely absent. Existing studies~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021} typically validate their models by comparing simulation results to experimental data (e.g., microscopy images of bacterial colonies)~\cite{Rudge2012,Khan_2024, Rudge2013,Langeslay_2023, Ghosh2015}, prioritizing biological insights over a rigorous HPC analysis of runtime, scalability, and numerical stability under proliferation. Consequently, there is no clear guidance for modelers on which paradigm is more efficient for a given problem scale. This work aims to fill this gap by implementing both models within a unified ABM framework to provide a direct, quantitative comparison of their computational performance.
 
 \section{Cell Mechanics}
 
@@ -310,7 +311,7 @@ Combined with a mapping function $\mathbfcal{G}$, which converts Cartesian trans
     \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{M} \mathbfcal{F}
 \end{equation}
 
-The mapping function $\mathbfcal{G}$ is required because the colony state is represented using quaternions, whereas the dynamics are expressed in terms of angular velocities that specify an instantaneous axis of rotation and rotation rate; $\mathbfcal{G}$ converts these into quaternion derivatives, enabling consistent integration using an Euler step\cite{Weady2024SM, Tasora2008}.
+The mapping function $\mathbfcal{G}$ is required because the colony state is represented using quaternions, whereas the dynamics are expressed in terms of angular velocities that specify an instantaneous axis of rotation and rotation rate; $\mathbfcal{G}$ converts these into quaternion derivatives, enabling consistent integration using an Euler step~\cite{Weady2024SM, Tasora2008}.
 
 
 The specific implementations of the hard and soft collision models are defined by how the generalized force vector $\mathbfcal{F}$ is computed in each case.
@@ -344,10 +345,7 @@ These forces and torques are assembled into the global generalized force vector 
 
 The elastic constant $k_{cc} = \frac{Y}{\zeta}$ is a crucial parameter that determines the effective stiffness of the cells. Following~\cite{You2018}, we define it as the ratio of the cell's Young's modulus $Y$ to the fluid drag coefficient $\zeta$:
 
-Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{You2018, Blanchard2015} and $\zeta \approx 200$ Pa$\cdot$h~\cite{You2018}), we set $k_{cc} = 20000$ h$^{-1}$.
-
-
-This value ensures that the repulsive forces are sufficiently strong to prevent significant overlap but, due to its stiffness, it also poses severe limits on the stability of the numerical integration\cite{Yan2022}. Therefore an extremely small timestep ($\mathcal{O}(10^{-5})$ h~\cite{Khan_2024, You2018, Blanchard2015}) is required to maintain stability (See \autoref{fig:simulation_time_vs_dt}).
+Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{You2018, Blanchard2015} and $\zeta \approx 200$ Pa$\cdot$h~\cite{You2018}), we set $k_{cc} = 20000$ h$^{-1}$. This value ensures that the repulsive forces are sufficiently strong to prevent significant overlap but, due to its stiffness, it also poses severe limits on the stability of the numerical integration~\cite{Yan2022}. Therefore an extremely small timestep ($\mathcal{O}(10^{-5})$ h~\cite{Khan_2024, You2018, Blanchard2015}) is required to maintain stability (See \autoref{fig:simulation_time_vs_dt}).
 
 \begin{figure}[H]
     \centering
@@ -386,7 +384,7 @@ To ensure that solving for the multipliers $\boldsymbol{\gamma}$ leads to physic
 \begin{enumerate}
     \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq \mathbf{0}$. This ensures that the forces are repulsive, preventing cells from attracting each other.
     \item \textbf{Non-Overlap:} $\mathbf{\Phi}^{k+1} \geq \mathbf{0}$ where $\mathbf{\Phi}^k = [\dots, \Phi_\alpha^k, \dots]^\top$ is the vector of signed separation distances between the pairs of cells associated with each constraint $\alpha$ at timestep $k$.
-          $\Phi_\alpha$ is computed as the minimum separation distance between the associated cells. We use the robust geometric algorithm described by \cite{Yan2019, GeometricTools} to compute these distances efficiently.
+          $\Phi_\alpha$ is computed as the minimum separation distance between the associated cells. We use the robust geometric algorithm described by~\cite{Yan2019, GeometricTools} to compute these distances efficiently.
           A positive value $\Phi_\alpha^k$ indicates that the cells are separated, while a negative value indicates overlap.
           This condition ensures that in the updated configuration at timestep $k+1$, no cells overlap.
     \item   \textbf{Complementarity:} $\boldsymbol{\gamma}^\top \mathbf{\Phi}^{k+1} = \mathbf{0}$ (alternatively written as $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$). This condition enforces that if two cells are in contact (i.e., $\Phi_\alpha^{k+1} = 0$), then a non-negative repulsive force may act ($\gamma_\alpha \geq 0$) to prevent overlap.
@@ -436,7 +434,7 @@ Combining these two effects, leads to the following approximation for $\mathbf{\
 \end{equation}
 
 
-Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = \mathbfcal{G}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while $\mathbfcal{G}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See \cite{Weady2024SM, Tasora2008} for details).
+Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = \mathbfcal{G}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while $\mathbfcal{G}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See~\cite{Weady2024SM, Tasora2008} for details).
 
 It can be shown that $\mathbfcal{L}^\top = \nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k \in \mathbb{R}^{C \times N}$ is the Jacobian that maps changes in cell lengths $\boldsymbol{\ell}$ to changes in the signed distance functions $\mathbf{\Phi}$~\cite{Weady2024SM}, simplifying the growth term in the last line of \autoref{eq:phi_expanded}.
 
@@ -510,7 +508,7 @@ This constrained minimization problem is solved using the Barzilai-Borwein proje
 
 \subsubsection{Limitations of the Linearization}
 
-One of the impacts of the linearization is that orthogonal motions (rotations about the contact points and translations within the half-space defined by the contact plane and the negative surface normal) will not be constrained. Consequently, there is a risk that cells may still overlap after the update step, even if the BBPGD algorithm has fully converged. To address this, Weady et al.~\cite{Weady2024SM} developed the \textit{recursively generated linear complementarity problem} (ReLCP) method, which iteratively identifies and solves new constraints to the system until all overlaps are resolved to a desired tolerance (See \cite{Weady2024SM} for details).
+One of the impacts of the linearization is that orthogonal motions (rotations about the contact points and translations within the half-space defined by the contact plane and the negative surface normal) will not be constrained. Consequently, there is a risk that cells may still overlap after the update step, even if the BBPGD algorithm has fully converged. To address this, Weady et al.~\cite{Weady2024SM} developed the \textit{recursively generated linear complementarity problem} (ReLCP) method, which iteratively identifies and solves new constraints to the system until all overlaps are resolved to a desired tolerance (See~\cite{Weady2024SM} for details).
 
 Nontheless, this method also requires a small timestep $\mathcal{O}(5\cdot 10^{-4}) h$ (See \autoref{fig:simulation_time_vs_dt}) to ensure that cells do not move too far in a single step~\cite{Yan2022}. Should the timestep be too large, new overlaps can be generated that are not captured by the linearization, leading to failure of the ReLCP solver or the BBPGD method to converge.
 
@@ -520,7 +518,7 @@ Nontheless, this method also requires a small timestep $\mathcal{O}(5\cdot 10^{-
 
 \section{Implementation}
 
-All simulations in this paper were performed with a custom C++ framework developed for large-scale simulations of proliferating cell collectives. The framework is designed for distributed-memory parallel computing and leverages standard HPC libraries to ensure scalability and efficiency and is able to scale to hundreds of thousands of cells using hundreds of CPU cores. It combines ideas from the original implementation by Weady et al.~\cite{Weady2024SM} aswell as similar frameworks such as \cite{Tasora2008,Yan2019}. Its core components are:
+All simulations in this paper were performed with a custom C++ framework developed for large-scale simulations of proliferating cell collectives. The framework is designed for distributed-memory parallel computing and leverages standard HPC libraries to ensure scalability and efficiency and is able to scale to hundreds of thousands of cells using hundreds of CPU cores. It combines ideas from the original implementation by Weady et al.~\cite{Weady2024SM} aswell as similar frameworks such as~\cite{Tasora2008,Yan2019}. Its core components are:
 The colony update rule
 \subsection{Distributed Computing Architecture}
 
@@ -605,55 +603,13 @@ We begin by validating our implementations through the reproduction of concentri
 Importantly, the soft model reproduces the expected concentric rings while employing a substantially simplified approach to collision resolution. This further supports its suitability as an alternative to the more complex hard collision model when the goal is to replicate such emergent patterns.
 
 
-
-\subsection{Microdommain formation}
-
-Similar to You et al.~\cite{You2018}, we observe the formation of microdomains of aligned cells within the colony. These domains emerge from mechanical interactions and growth dynamics, creating local regions where cells share similar orientations. \autoref{fig:orientation_comparison} shows the final orientation patterns for both hard and soft collision models across varying values of the stress sensitivity parameter $\lambda$. In the hard model, distinct and spatially confined patches of aligned cells are apparent for all values of $\lambda$. In contrast, the soft model tends to produce elongated bundles of aligned cells, particularly at lower stress sensitivity.
-
-The hard model's strict non-overlapping constraints promote more localized alignment, whereas the soft model's allowance for slight overlaps facilitates the formation of extended bundles of aligned cells, as cells growing in the center of the colony cannot separate as easily due tothe high packing fraction. For $\lambda=10^{-4}$, very few distinct patches are visible for the soft model, as most cells are being highly compressed in different bundles.  \autoref{fig:orientation_closeup} provides a close-up comparison of the orientation patterns for $\lambda=10^{-4}$, highlighting the differences in microdomain structures between the two models.
-
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{0.49\columnwidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/orientation_hard_close.jpeg}
-        \caption{Close-up of orientation patterns for the hard model.}
-
-    \end{subfigure}
-    \begin{subfigure}[b]{0.49\columnwidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/orientation_soft_close.jpeg}
-        \caption{Close-up of orientation patterns for the soft model.}
-
-    \end{subfigure}
-    \caption{Close-up comparison of orientation patterns for $\lambda=10^{-4}$ at the outer edge of the colony. The hard model (a) maintains distinct patches of aligned cells at every location, while the soft model (b) tends to form long bundles of aligned cells, especially in the dense center of the colony.}
-    \label{fig:orientation_closeup}
-
-\end{figure}
-
-
-
-
-
-
-\clearpage
-\newpage
-
-
-
-\subsection{Alignment}
-
-~\cite{You_2021}
-
-
 \subsection{Quantitative Comparison}
 
 To provide a more quantitative assessment, we analyze three key metrics: the radial distribution of stress, the radial distribution of packing fraction, and the maximum particle overlap over time. These metrics offer insights into the mechanical state of the colony and how it evolves under different collision models.
 
 \autoref{fig:dense_packing_comparison} and \autoref{fig:radial_distribution_stress}--\autoref{fig:max_overlap_simulation} illustrate these results in detail While certain quantities, such as the packing fraction and the corresponding maximum overlap, differ between the two models, the overall macroscopic behavior remains similar, consistent with the pattern formation observed in \autoref{fig:pattern_formation}.
 
-TODO: check \cite{Warren2019}
+TODO: check~\cite{Warren2019}
 
 \begin{figure}[H]
     \centering
@@ -685,6 +641,12 @@ TODO: check \cite{Warren2019}
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_colony_radius.png}
+    \caption{ }
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_num_particles.png}
     \caption{ }
 \end{figure}
 
@@ -723,7 +685,34 @@ TODO: check \cite{Warren2019}
 
 
 
+\subsection{Microdommain formation}
 
+
+Similar to You et al.~\cite{You2018,You_2021}, we can also observe the formation of microdomains of aligned cells within the colony. These domains emerge from mechanical interactions and growth dynamics, creating local regions where cells share similar orientations. As shown in \autoref{fig:orientation_comparison_small}, both hard and soft collision models capture this phenomenon for small colonies ($R \approx 50$) and are able to produce macroscopic patterns closely resembling the experimental observations of real \textit{E. coli} colonies as presented in~\cite{You2018}.
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[b]{0.49\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/r50_soft_e-2.jpeg}
+        \caption{Orientation pattern for the soft model at $R \approx 50$.}
+        \label{fig:packing_hard}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/r50_hard_e-2.jpeg}
+        \caption{Orientation pattern for the hard model at $R \approx 50$.}
+        \label{fig:packing_soft}
+    \end{subfigure}
+    \caption{Comparison of orientation patterns for small colonies ($R \approx 50$) using the soft and hard collision models. Both models produce similar microdomain structures, closely matching experimental observations~\cite{You2018}.}
+    \label{fig:orientation_comparison_small}
+\end{figure}
+
+However the differences between the two models become more pronounced as the colony grows larger or the stress sensitivity parameter $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model tends to produce distinct and similar patches of aligned cells for all values of $\lambda$, whereas the soft model often results in elongated, unrealistic, bundles of aligned, densely packed cells. This artefact, is directly caused by the soft model not being able to prevent overlaps completely, causing the interior of the colony to become unrealistically dense.
+
+Therfore, the soft model is not suitable for studying microdomain formation in large colonies or at low stress sensitivities, but is a viable and easier-to-implement alternative studying macroscopic pattern formation in smaller colonies of up to radius $R \approx 50$, such as those presented in~\cite{You2018}.
+
+The hard model's strict non-overlapping constraints prevent cells from clustering too closely, leading to a highly realistic structure at all colony sizes, clearly resembling experimental observations.
 
 
 
@@ -740,14 +729,14 @@ Both models reproduce the observed patterns, but their computational requirement
 
 The soft collision model is cheaper per interaction but typically requires smaller integration time steps to maintain numerical stability due to the stiffness of the repulsive forces. In contrast, the hard collision model can often operate with larger time steps since it enforces non-overlap constraints directly, although its per-step cost is significantly higher because of the global optimization problem.
 
-\autoref{fig:simulation_time_vs_dt} shows the maximum stable time step $\Delta t$ for both models during a simulation. The optimal time is determined by \autoref{alg:adaptive_dt}, which adjusts $\Delta t$ based on the median particle velocity to ensure stability. The hard collision model stabilizes around ${\Delta t}_{hard} \approx 3 \cdot 10^{-4} h$, while the soft model steadily decreases, reaching ${\Delta t}_{soft} \approx 1 \cdot 10^{-5} h$ at the end. The ratio ${\Delta t}_{hard}/{\Delta t}_{soft} \approx 30$ indicates that the hard model can take roughly 30 times larger steps than the soft model in dense colonies, requiring fewer total steps to reach the same physical time.
+\autoref{fig:simulation_time_vs_dt} shows the maximum stable time step $\Delta t$ for both models during a simulation. The optimal time is determined by \autoref{alg:adaptive_dt}, which adjusts $\Delta t$ based on the median particle velocity to ensure stability. The hard collision model stabilizes around ${\Delta t}_{\text{hard}} \approx 3 \cdot 10^{-4} h$, while the soft model steadily decreases, reaching ${\Delta t}_{\text{soft}} \approx 1 \cdot 10^{-5} h$ at the end. The ratio ${\Delta t}_{\text{hard}}/{\Delta t}_{\text{soft}} \approx 30$ indicates that the hard model can take roughly 30 times larger steps than the soft model in dense colonies, requiring fewer total steps to reach the same physical time.
 
 Interestingly, for the hard model with $\lambda=10^{-2}$, the maximum stable time step increases over time. This occurs because particles in the colony interior stop growing, reducing the median particle velocity $u_m$ and allowing larger steps (\autoref{eq:cfl_dt}). The soft model does not exhibit this effect, as repulsive forces always permit some overlap and sporadic motion. This theory is supported by observing that even for the soft model, the maximum stable time step increases with higher $\lambda$ values, which lead to more immobile interior cells.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_dt.png}
-    \caption{Adaptive timestep $\Delta t$ over simulation time for both collision models. The hard model stabilizes around ${\Delta t}_{hard} \approx 3 \cdot 10^{-4} h$, while the soft model decreases to ${\Delta t}_{soft} \approx 1 \cdot 10^{-5} h$.} \label{fig:simulation_time_vs_dt}
+    \caption{Adaptive timestep $\Delta t$ over simulation time for both collision models. The hard model stabilizes around ${\Delta t}_{\text{hard}} \approx 3 \cdot 10^{-4} h$, while the soft model decreases to ${\Delta t}_{\text{soft}} \approx 1 \cdot 10^{-5} h$.} \label{fig:simulation_time_vs_dt}
 \end{figure}
 
 
@@ -821,7 +810,7 @@ It is thus crucial to understand how many BBPGD iterations are expected per time
 
 The behavior of the BBPGD algorithm over a single time step is illustrated in \autoref{fig:bbpgd_residual}. In this iteration, the solver converges to the desired tolerance of $10^{-3}$ within about 2500 iterations, continuously decreasing the systems energy (see \autoref{eq:energy_function}) as shown in \autoref{fig:bbpgd_energy}.
 
-For full simulations, \autoref{fig:bbpgd_iterations_histogram} shows a histogram of the number of total BBPGD iterations required per time step. This number includes extra BBPGD calls from the ReLCP procedure, which requires up to 6 iterations to fully resolve all overlaps\cite{Weady2024SM}. The median number of iterations per time step is 470, with a long tail of more expensive steps that can require up to 30520 iterations in extreme cases. The typical number of iterations per time step is thus on the same order of magnitude as the observations in \cite{Yan2019}, although our model is more complex due to the collision-growth coupling.
+For full simulations, \autoref{fig:bbpgd_iterations_histogram} shows a histogram of the number of total BBPGD iterations required per time step. This number includes extra BBPGD calls from the ReLCP procedure, which requires up to 6 iterations to fully resolve all overlaps~\cite{Weady2024SM}. The median number of iterations per time step is 470, with a long tail of more expensive steps that can require up to 30520 iterations in extreme cases. The typical number of iterations per time step is thus on the same order of magnitude as the observations in~\cite{Yan2019}, although our model is more complex due to the collision-growth coupling.
 
 
 
@@ -883,7 +872,7 @@ By contrast, the soft model uses continuous repulsive potentials to approximate 
 
 Importantly, for many emergent pattern-formation scenarios—such as concentric ring formation—the exact enforcement of non-overlap seems less critical. Other factors, such as stress-dependent growth and a use of an adequate time step, appear to dominate the macroscopic behavior.
 
-In this context, the soft model provides a realistic approximation of cellular interactions: biological cells are deformable, and mechanical interactions in vivo are rarely perfectly rigid. Indeed, recent studies \cite{Khan_2024, Ghosh2015, SantosDiaz2025} suggest that finite stiffness or soft repulsive forces are sufficient to capture key structural and morphological features of growing bacterial colonies.
+In this context, the soft model provides a realistic approximation of cellular interactions: biological cells are deformable, and mechanical interactions in vivo are rarely perfectly rigid. Indeed, recent studies~\cite{Khan_2024, Ghosh2015, SantosDiaz2025} suggest that finite stiffness or soft repulsive forces are sufficient to capture key structural and morphological features of growing bacterial colonies.
 
 \subsection{Biological Relevance}
 
@@ -914,7 +903,7 @@ Future work should focus on developing a more sophisticated memory management st
 
 \subsection{Soft Collision Model}
 
-Beyond optimizing the hard model's solver, a promising avenue is the acceleration of the soft model using advanced molecular dynamics techniques. Libraries like AutoPas\cite{AutoPasGithub,Gratl2019,Newcome2023} offer a node-level auto-tuning framework specifically designed for particle simulations.AutoPas can dynamically select the optimal combination of algorithms (e.g., for particle interaction traversal and container data structures) tailored to the specific simulation scenario and underlying hardware architecture.
+Beyond optimizing the hard model's solver, a promising avenue is the acceleration of the soft model using advanced molecular dynamics techniques. Libraries like AutoPas~\cite{AutoPasGithub,Gratl2019,Newcome2023} offer a node-level auto-tuning framework specifically designed for particle simulations.AutoPas can dynamically select the optimal combination of algorithms (e.g., for particle interaction traversal and container data structures) tailored to the specific simulation scenario and underlying hardware architecture.
 
 Integrating such a framework could automatically accelerate the computation of repulsive forces in the soft collision model, especially for large-scale colonies where efficient neighbor-search and force evaluation are critical.
 
@@ -932,22 +921,24 @@ Integrating such a framework could automatically accelerate the computation of r
 
 \appendix
 
-\begin{figure}[H]
-    \centering
+\renewcommand{\thefigure}{A\arabic{figure}}
+\renewcommand{\thetable}{A.\arabic{table}}
+\setcounter{figure}{0}
+\setcounter{table}{0}
 
-    % Lambda = 10^-2 comparison
-    \begin{subfigure}[b]{\textwidth}
+\begin{figure}[H]
+    \makebox[\textwidth][c]{
         \centering
-        \begin{tabular}{r M{0.37\textwidth} M{0.37\textwidth}}
-             & \caption{Hard Model} & \caption{Soft Model} \\
-            \vspace{-1.0cm}                                \\
+
+        \begin{tabular}{r M{0.36\textwidth} M{0.36\textwidth} }
+             & Hard Model & Soft Model \\
             \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
             \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
             \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
         \end{tabular}
-    \end{subfigure}
+    }
 
-    \caption{Comparison of final orientation patterns at different stress sensitivity parameters $\lambda$. The color of each cell indicates its orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells, whereas the soft model tends to produce long bundles of aligned cells.}
+    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cells orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed particles for low stress sensitivies. This effect is caused by a lack of seperation forces causing cells in the center of the colony to pile up.}
     \label{fig:orientation_comparison}
 \end{figure}
 
@@ -957,35 +948,29 @@ Integrating such a framework could automatically accelerate the computation of r
     \centering
 
     % % Lambda = 10^-2 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-2}$}
-        \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-            \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
-            \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
-        \end{tabular}
-    \end{subfigure}
+
+    Growth Comparison $\lambda=10^{-2}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
+        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
+    \end{tabular}
     % Lambda = 10^-3 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-3}$}
-        \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-            \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
-            \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
-        \end{tabular}
-    \end{subfigure}
+
+    Growth Comparison $\lambda=10^{-3}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
+        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
+    \end{tabular}
 
     % Lambda = 10^-4 comparison
-    \begin{subfigure}[b]{\textwidth}
-        \centering
-        \caption{Growth Comparison $\lambda=10^{-4}$}
-        \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-            \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
-            \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
-        \end{tabular}
-    \end{subfigure}
 
-    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from \cite{Weady2024}.}
+    Growth Comparison $\lambda=10^{-4}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
+        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
+    \end{tabular}
+
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
     \label{fig:pattern_formation}
 \end{figure}
 
