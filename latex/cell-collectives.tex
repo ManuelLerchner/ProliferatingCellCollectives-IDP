@@ -83,6 +83,8 @@
     \end{subfigure}  \\
 }
 
+\newcommand{\algorithmautorefname}{Algorithm}
+
 \begin{document}
 
 \title{Proliferating Cell Collectives: \\A Comparison of Hard and Soft Collision Models}
@@ -154,7 +156,7 @@ This choice of rigid rod geometry is well-supported by experimental observations
 
 \subsection{Physical Cell Model}
 
-We model the cell collective using a rigid rod representation, where each cell has a defined length and radius. This approach is common in models of cellular collectives~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015} and is justified by experimental evidence, closely matching the morphology of common bacteria and fungi such as E. coli and Setosphaeria rostrata (see \autoref{fig:exserohilum_turcicum}).
+We model the cell collective using a rigid rod representation, where each cell has a defined length and radius. This approach is common in models of cellular collectives~\cite{You2018, Weady2024,Weady2024SM, Blanchard2015, Warren2019, Ghosh2015} and is justified by experimental evidence, closely matching the morphology of common bacteria and fungi such as E. coli and Setosphaeria rostrata (see \autoref{fig:exserohilum_turcicum}).
 
 Following the established literature, each bacterium is modeled as a spherocylinder with a variable length $\ell$ and a constant diameter $d$. At the bacterial scale, the Reynolds number is extremely small (Re $\ll 1$), placing the system firmly in the overdamped regime where viscous forces dominate inertial forces~\cite{datta2024lifelowreynoldsnumber,Rudge2012 }. Consequently, the dynamics are governed by the overdamped Langevin equation:
 
@@ -169,7 +171,7 @@ where $\mathbf{x}_i$ is the position of the $i$-th cell, $\boldsymbol{\omega}_i$
 
 \subsection{Cell Growth and Division}
 
-Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024}:
+Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024SM}:
 
 \begin{equation} \label{eq:growth}
     \dot{{\ell}} = \frac{{\ell}}{\tau} e^{\lambda \sigma}
@@ -283,7 +285,7 @@ Moreover, we add a small random rotational perturbation to the orientation of al
 
 \subsection{Colony Representation}
 
-For our implementation, we closely follow the approach described by Weady et al.~\cite{Weady2024} in their supplementary material. The entire bacterial colony is represented by a single global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$.
+For our implementation, we closely follow the approach described by Weady et al.~\cite{Weady2024SM} in their supplementary material. The entire bacterial colony is represented by a single global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$.
 
 \subsection{Colony Dynamics}
 
@@ -299,13 +301,13 @@ The translational and angular velocities of all particles in the colony are dete
 \end{itemize}
 
 
-Combined with a mapping function $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (as described in~\cite{Weady2024, Tasora2008}), we can express the colony's state update for an Euler timestep $\Delta t$ as:
+Combined with a mapping function $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (as described in~\cite{Weady2024SM,Yan2022,Tasora2008}), we can express the colony's state update for an Euler timestep $\Delta t$ as:
 
 \begin{equation} \label{eq:colony_update}
     \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{M} \mathbfcal{F}
 \end{equation}
 
-The mapping function $\mathbfcal{G}$ is required because the colony state is represented using quaternions, whereas the dynamics are expressed in terms of angular velocities that specify an instantaneous axis of rotation and rotation rate; $\mathbfcal{G}$ converts these into quaternion derivatives, enabling consistent integration using an Euler step\cite{Weady2024, Tasora2008}.
+The mapping function $\mathbfcal{G}$ is required because the colony state is represented using quaternions, whereas the dynamics are expressed in terms of angular velocities that specify an instantaneous axis of rotation and rotation rate; $\mathbfcal{G}$ converts these into quaternion derivatives, enabling consistent integration using an Euler step\cite{Weady2024SM, Tasora2008}.
 
 
 The specific implementations of the hard and soft collision models are defined by how the generalized force vector $\mathbfcal{F}$ is computed in each case.
@@ -339,7 +341,10 @@ These forces and torques are assembled into the global generalized force vector 
 
 The elastic constant $k_{cc} = \frac{Y}{\zeta}$ is a crucial parameter that determines the effective stiffness of the cells. Following~\cite{You2018}, we define it as the ratio of the cell's Young's modulus $Y$ to the fluid drag coefficient $\zeta$:
 
-Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{You2018, Blanchard2015} and $\zeta \approx 200$ Pa$\cdot$h~\cite{You2018}), we set $k_{cc} = 20000$ h$^{-1}$. The simulation uses a timestep of $\Delta t = 10^{-5}$ h, which is standard for maintaining numerical stability in such overdamped systems~\cite{Khan_2024, You2018, Blanchard2015}.
+Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{You2018, Blanchard2015} and $\zeta \approx 200$ Pa$\cdot$h~\cite{You2018}), we set $k_{cc} = 20000$ h$^{-1}$.
+
+
+This value ensures that the repulsive forces are sufficiently strong to prevent significant overlap but, due to its stiffness, it also poses severe limits on the stability of the numerical integration\cite{Yan2022}. Therefore an extremely small timestep ($\mathcal{O}(10^{-5})$ h~\cite{Khan_2024, You2018, Blanchard2015}) is required to maintain stability (See \autoref{fig:simulation_time_vs_dt}).
 
 \begin{figure}[H]
     \centering
@@ -350,7 +355,7 @@ Using typical values from the literature for bacteria ($Y \approx 4$ MPa~\cite{Y
 
 \subsection{Hard Collision Model}
 
-The hard collision model enforces strict non-overlapping constraints between cells using a constraint-based method. For each pair of nearby cells, a constraint $\alpha$ is defined based on the two closest points, $\mathbf{y}_n$ and $\mathbf{y}_m$, on their surfaces~\cite{Weady2024}. Contrary to the soft Hertzian model, the hard model defines the force and torque from each constraint via an yet unknown scalar Lagrange multiplier $\gamma_\alpha$. This multiplier represents the magnitude of the impulse required to prevent penetration. The force on cell $n$ due to constraint $\alpha$ is:
+The hard collision model enforces strict non-overlapping constraints between cells using a constraint-based method. For each pair of nearby cells, a constraint $\alpha$ is defined based on the two closest points, $\mathbf{y}_n$ and $\mathbf{y}_m$, on their surfaces~\cite{Weady2024SM}. Contrary to the soft Hertzian model, the hard model defines the force and torque from each constraint via an yet unknown scalar Lagrange multiplier $\gamma_\alpha$. This multiplier represents the magnitude of the impulse required to prevent penetration. The force on cell $n$ due to constraint $\alpha$ is:
 
 \begin{equation} \label{eq:constraint_force}
     \mathbf{F}^{hard}_{n\alpha} = \hat{\mathbf{n}}_\alpha \gamma_\alpha
@@ -405,7 +410,7 @@ The colony update rule and additional conditions combine to form a system where 
 
 
 
-The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and is non-trivial to compute directly. Weady et al.~\cite{Weady2024} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}$ using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$ and lengths $\boldsymbol{\ell}^k$. The change in $\mathbf{\Phi}$ in our model arises from two main effects:
+The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and is non-trivial to compute directly. Weady et al.~\cite{Weady2024SM} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}$ using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$ and lengths $\boldsymbol{\ell}^k$. The change in $\mathbf{\Phi}$ in our model arises from two main effects:
 
 
 \begin{enumerate}
@@ -428,9 +433,9 @@ Combining these two effects, leads to the following approximation for $\mathbf{\
 \end{equation}
 
 
-Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = \mathbfcal{G}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while $\mathbfcal{G}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See \cite{Weady2024, Tasora2008} for details).
+Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = \mathbfcal{G}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while $\mathbfcal{G}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See \cite{Weady2024SM, Tasora2008} for details).
 
-It can be shown that $\mathbfcal{L}^\top = \nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k \in \mathbb{R}^{C \times N}$ is the Jacobian that maps changes in cell lengths $\boldsymbol{\ell}$ to changes in the signed distance functions $\mathbf{\Phi}$~\cite{Weady2024}, simplifying the growth term in the last line of \autoref{eq:phi_expanded}.
+It can be shown that $\mathbfcal{L}^\top = \nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k \in \mathbb{R}^{C \times N}$ is the Jacobian that maps changes in cell lengths $\boldsymbol{\ell}$ to changes in the signed distance functions $\mathbf{\Phi}$~\cite{Weady2024SM}, simplifying the growth term in the last line of \autoref{eq:phi_expanded}.
 
 
 Substituting the approximation of $\mathbf{\Phi}^{k+1}$ from \autoref{eq:phi_expanded} into the constraint conditions of \autoref{eq:colony_update_with_constraints} yields a nonlinear complementarity problem (NCP) for $\boldsymbol{\gamma}$ which no longer depends on the unknown future state $\mathbfcal{C}^{k+1}(\boldsymbol{\gamma})$:
@@ -465,6 +470,7 @@ To solve this contact problem efficiently, we reframe it as an optimization prob
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
         \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right).
     \end{aligned}
+    \label{eq:energy_function}
 \end{equation}
 
 By construction, the gradient (slope) of this energy equals the linearized prediction:
@@ -491,24 +497,27 @@ At the solution, the Karush-Kuhn-Tucker (KKT) conditions for this constrained mi
 
 Thus, the unique global minimizer $ \boldsymbol{\gamma}^* $ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence between the KKT conditions
 of some convex optimization problem and a complementarity problem is a well-known result in
-optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Tasora2008, Yan2019, Li2021, Weady2024,Rudge2012,Macklin2014,Ferguson2021}.
+optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Yan2022,Tasora2008, Yan2019, Li2021, Weady2024SM,Rudge2012,Macklin2014,Ferguson2021}.
 
 
 
 \subsubsection{Numerical Solution via Projected Gradient Descent}
 
-This constrained minimization problem is solved using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, also implemented in~\cite{Weady2024,Yan2019}. The algorithm continues until a convergence criterion is met, and the final solution $\boldsymbol{\gamma}^*$ is used to compute the forces $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$. The colony state can then be updated using \autoref{eq:colony_update}. This process is repeated at each simulation timestep to ensure that all collisions are resolved while maintaining the physical integrity of the cell collective.
+This constrained minimization problem is solved using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, also implemented in~\cite{Weady2024SM,Yan2019}. The algorithm continues until a convergence criterion is met, and the final solution $\boldsymbol{\gamma}^*$ is used to compute the forces $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$. The colony state can then be updated using \autoref{eq:colony_update}. This process is repeated at each simulation timestep to ensure that all collisions are resolved while maintaining the physical integrity of the cell collective.
 
 \subsubsection{Limitations of the Linearization}
 
-One of the impacts of the linearization is that orthogonal motions (rotations about the contact points and translations within the half-space defined by the contact plane and the negative surface normal) will not be constrained. To address this, Weady et al.~\cite{Weady2024} developed the \textit{recursively generated linear complementarity problem} (ReLCP) method, which iteratively identifies and adds new constraints to the system until all overlaps are resolved. Its details will not be repeated here.
+One of the impacts of the linearization is that orthogonal motions (rotations about the contact points and translations within the half-space defined by the contact plane and the negative surface normal) will not be constrained. Consequently, there is a risk that cells may still overlap after the update step, even if the BBPGD algorithm has fully converged. To address this, Weady et al.~\cite{Weady2024SM} developed the \textit{recursively generated linear complementarity problem} (ReLCP) method, which iteratively identifies and solves new constraints to the system until all overlaps are resolved to a desired tolerance (See \cite{Weady2024SM} for details).
+
+Nontheless, this method also requires a small timestep $\mathcal{O}(5\cdot 10^{-4}) h$ (See \autoref{fig:simulation_time_vs_dt}) to ensure that cells do not move too far in a single step~\cite{Yan2022}. Should the timestep be too large, new overlaps can be generated that are not captured by the linearization, leading to failure of the ReLCP solver or the BBPGD method to converge.
+
 
 
 \newpage
 
 \section{Implementation}
 
-All simulations in this paper were performed with a custom C++ framework developed for large-scale simulations of proliferating cell collectives. The framework is designed for distributed-memory parallel computing and leverages standard HPC libraries to ensure scalability and efficiency. It combines ideas from the original implementation by Weady et al.~\cite{Weady2024} aswell as similar frameworks such as \cite{Tasora2008,Yan2019}. Its core components are:
+All simulations in this paper were performed with a custom C++ framework developed for large-scale simulations of proliferating cell collectives. The framework is designed for distributed-memory parallel computing and leverages standard HPC libraries to ensure scalability and efficiency and is able to scale to hundreds of thousands of cells using hundreds of CPU cores. It combines ideas from the original implementation by Weady et al.~\cite{Weady2024SM} aswell as similar frameworks such as \cite{Tasora2008,Yan2019}. Its core components are:
 The colony update rule
 \subsection{Distributed Computing Architecture}
 
@@ -518,22 +527,60 @@ The core architecture is built on two foundational libraries:
     \item MPI, which underlies all inter-process communication, including ghost-cell exchanges at domain boundaries to enable consistent collision handling across partitions.
 \end{itemize}
 
-On top of these abstractions, the framework implements the full physics pipeline, including the ReLCP solver for the hard collision model~\cite{Weady2024} and the soft collision model.
+On top of these abstractions, the framework implements the full physics pipeline, including the ReLCP solver for the hard collision model~\cite{Weady2024SM} and the soft collision model.
 
 
 \subsection{Collision Handling Pipeline}
 
-Collisions are processed through a unified pipeline. A spatial grid enables broad-phase detection, reducing neighbor searches to $O(N)$, followed by narrow-phase detection that computes exact contact points. For each collision, the framework assembles a standardized data package containing:
+Collisions are processed through a unified pipeline. A spatial grid enables broad-phase detection, reducing neighbor searches to $O(N)$, followed by narrow-phase detection that computes exact contact points. For each collision, the framework assembles a standardized data structure containing all necessary geometric information (contact points, normals, lever arms, etc.). This structure is then passed to either the hard or soft collision model, which computes the resulting forces and torques based on the chosen method. This abstraction decouples geometry from physics, allowing easy switching between collision models without altering the overall simulation flow.
 
-\begin{itemize}
-    \item Contact point in world coordinates.
-    \item Normal vector $\hat{\mathbf{n}}$ at the contact.
-    \item Torque arms from the contact point to each cell center.
-    \item Overlap distance $\delta$ (soft model).
-    \item Unique identifiers of the two cells.
-\end{itemize}
+Each call to the collision detector generates a single constraint per neighboring particle if they are within a certain threshold distance. This threshold is set to $d=0.5$, and thus even non-overlapping particles can be included in the constraint set. For the soft model, these additional constraints have no effect since $\delta < 0$ yields no forces, but for the hard model they contribute additional global information that improves stability. Ideally, constraints would be constructed between all particle pairs, regardless of distance, but for computational efficieny only nearby particles are considered~\cite{Yan2019, Yan2022}.
 
-This abstraction decouples geometry from physics: both collision models consume the same data structure but compute the resulting forces differently. This design allows easy extension to new collision models in the future.
+
+\subsection{Adaptive Timestepping}
+
+To further enhance stability and convergence, particularly for fast-moving particles that might overlap significantly within a timestep $\Delta t$, we employ an adaptive timestepping scheme. To our knowledge, such a method has not been implemented in comparable engines. As shown in \autoref{fig:simulation_time_vs_dt}, this approach quickly converges to a stable maximum $\Delta t$ for both force computation models, while adapting dynamically during the simulation—allowing finer precision when needed and even increasing $\Delta t$ in cases where motion is limited (e.g., in dense colonies with high $\lambda$, where internal cells are effectively immobile due to mechanical stress).
+
+
+The adaptive timestep strategy (outlined in \autoref{alg:adaptivedt}) is based on a Courant-FriedrichsLewy (CFL) condition~\cite{Courant1928}, which provides a stability criterion linking the temporal and spatial resolution of numerical schemes. In essence, it ensures that information or physical motion does not propagate more than one characteristic spatial length during a single timestep, i.e.
+\begin{equation}
+    \text{CFL} = \frac{u \, \Delta t}{\Delta x} \leq C_{\text{max}}.
+\end{equation}
+
+In our implementation, this condition is translated to the particle-based setting by defining a characteristic velocity scale $u_m$ as the median of all particle velocities (including growth rates).
+The characteristic spatial scale $\Delta x$ is represented by the solver tolerance $\varepsilon = 10^{-3}$, which effectively controls the maximum allowable displacement within one step.
+By enforcing the constraint that a particle should move no more than half this tolerance during a single timestep, we obtain
+
+\begin{equation} \label{eq:cfl_dt}
+    \Delta t = \frac{0.5 \, \varepsilon}{u_m}.
+\end{equation}
+
+This choice directly bounds particle motion between successive updates, preventing excessive overlap and maintaining numerical stability in both the hard and soft collision models.
+
+
+
+
+
+\begin{algorithm}[H]
+    \caption{Adaptive Timestep Control}
+    \label{alg:adaptive_dt}
+    \begin{algorithmic}[1]
+        \Require Particle set $\{p_i\}$ with velocities $v_i$ and growth rates $\dot{\ell_i}$,
+        current timestep $\Delta t$, solver tolerance $\varepsilon$, smoothing factor $\alpha$.
+        \Ensure Updated timestep $\Delta t$.
+
+        \State Compute a characteristic velocity $u_i = \|v_i\| + \dot{\ell_i}$ for each particle.
+        \State Estimate the system’s median velocity $u_m$.
+        \State Determine $\Delta t^*$ using \autoref{eq:cfl_dt}.
+        \State Smooth the timestep change to avoid oscillations:
+        \[
+            \Delta t_{\text{new}} = (1 - \alpha)\Delta t + \alpha \Delta t^* \quad \text{with } \alpha = 0.01
+        \]
+        \State Clamp $\Delta t_{\text{new}}$ within 20\% of the current $\Delta t$ to prevent abrupt changes.
+        \State Update simulation timestep: $\Delta t \gets \Delta t_{\text{new}}$.
+    \end{algorithmic}
+\end{algorithm}
+
 
 \subsection{Simulation Output}
 
@@ -632,7 +679,11 @@ TODO: check \cite{Warren2019}
 \end{figure}
 
 
-
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_colony_radius.png}
+    \caption{ }
+\end{figure}
 
 \newpage
 
@@ -718,159 +769,145 @@ TODO: check \cite{Warren2019}
 
 
 
-
+\clearpage
 \newpage
 
 \section{Computational Performance}
 
-Both models reproduce the observed patterns, but their computational requirements differ substantially.
-The hard collision model requires solving a gradient-based optimization problem at each time step,
-while the soft collision model relies on direct force calculations that can be implemented efficiently
-with standard molecular dynamics techniques such as Linked-Cells or Verlet lists~\cite{Gratl2019}.
-
-\subsection{Computational Complexity and Scalability}
-\label{sec:complexity_scalability}
-
-The key distinction between the two approaches lies in how computations and communication are distributed.
-The hard collision model incurs a significant per-step cost, since each time step requires the iterative
-solution of a global optimization problem. This introduces a computational bottleneck and limits scalability:
-all processors must participate in the solver and exchange data about the entire system at every iteration.
-
-In contrast, the soft collision model evaluates only local interactions. Its computations scale linearly
-with particle number, and locality ensures that communication in parallel implementations is restricted
-to neighboring subdomains. This enables efficient scaling to larger systems and higher processor counts.
-
-\autoref{fig:wall_time_simulation} shows the total wall time for simulations of both models
-as a function of particle number for $\lambda = 10^{-2}$.
-The soft model consistently outperforms the hard model, with a speedup factor of about 1.8x across all tested system sizes.
-
-
-% 4. Per-Particle Cost
-
-% Wall time per particle vs. particle number (log-log).
-% Motivation: Reveal scaling law .
-
-
-% 5. Communication vs. Computation Breakdown
-
-
-
-\subsection{Performance}
-\cite{Yan2019}
-
+Both models reproduce the observed patterns, but their computational requirements differ substantially. The hard collision model requires solving a gradient-based optimization problem at each time step, whereas the soft collision model relies on inexpensive direct force calculations. This creates a trade-off between per-step cost, maximum stable time step, and overall simulation time. In the following sections, we analyze these aspects in detail.
 
 \subsection{Critical Time Step}
 
-While the soft collision model is cheaper per interaction, it typically requires smaller integration time steps
-to maintain numerical stability. This constraint can offset some of its per-step performance advantage
-in long simulations, depending on the stiffness of the system.
+The soft collision model is cheaper per interaction but typically requires smaller integration time steps to maintain numerical stability due to the stiffness of the repulsive forces. In contrast, the hard collision model can often operate with larger time steps since it enforces non-overlap constraints directly, although its per-step cost is significantly higher because of the global optimization problem.
 
-TODO: mention benefints of adaptive timestep compared to hardcoded value of 1e-5
+\autoref{fig:simulation_time_vs_dt} shows the maximum stable time step $\Delta t$ for both models during a simulation. The optimal time is determined by \autoref{alg:adaptive_dt}, which adjusts $\Delta t$ based on the median particle velocity to ensure stability. The hard collision model stabilizes around ${\Delta t}_{hard} \approx 3 \cdot 10^{-4} h$, while the soft model steadily decreases, reaching ${\Delta t}_{soft} \approx 1 \cdot 10^{-5} h$ at the end. The ratio ${\Delta t}_{hard}/{\Delta t}_{soft} \approx 30$ indicates that the hard model can take roughly 30 times larger steps than the soft model in dense colonies, requiring fewer total steps to reach the same physical time.
 
-\subsection{Solver Behavior in the Hard Model}
+Interestingly, for the hard model with $\lambda=10^{-2}$, the maximum stable time step increases over time. This occurs because particles in the colony interior stop growing, reducing the median particle velocity $u_m$ and allowing larger steps (\autoref{eq:cfl_dt}). The soft model does not exhibit this effect, as repulsive forces always permit some overlap and sporadic motion. This theory is supported by observing that even for the soft model, the maximum stable time step increases with higher $\lambda$ values, which lead to more immobile interior cells.
 
-\autoref{fig:bbpgd_iterations_simulation} illustrates the number of ReLCP solver iterations required per time step in the hard collision model.
-
-
-\subsection{Strong and Weak Scaling}
-
-TODO
-
-strong scaling1: How fast can we reach a colony radius of 100 with increasing number of processors?
-
-strong scaling2: Disable division. initialize with a box of fully dense particles. Run for a fixed number of time steps (e.g. 1000). Measure wall-clock time T(P) to complete the simulation with P processors. Parallel efficiency E(P) = T(1) / (P * T(P)) if you also run a 1-core baseline for same total N.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_dt.png}
+    \caption{Adaptive timestep $\Delta t$ over simulation time for both collision models. The hard model stabilizes around ${\Delta t}_{hard} \approx 3 \cdot 10^{-4} h$, while the soft model decreases to ${\Delta t}_{soft} \approx 1 \cdot 10^{-5} h$.} \label{fig:simulation_time_vs_dt}
+\end{figure}
 
 
+\subsection{Strong Scaling}
 
-weak scaling: How many updates per second per core can we achieve when increasing both the number of particles and processors proportionally?
-% Turn off cell division (or immediately cap total particles so no birth happens).
+To assess the parallel performance of the hard and soft simulation models, we analyze runtime and speedup as a function of CPU cores. Strong scaling tests start from a single particle and grow the colony to a radius of 100, revealing how efficiently each model utilizes additional cores.
 
-% Initialize each processor with exactly N_local particles in its subdomain (same distribution they would normally have).
+At lower CPU counts ($\text{ranks}< 2^4$), the hard model is roughly 1.5x faster than the soft model (\autoref{fig:runtime_hard_soft}), likely due to its ability to take larger time steps. As core counts increase, both models converge to similar runtimes, indicating that parallelization and communication overhead dominate. Speedup analysis (\autoref{fig:speedup_hard_soft}) shows the soft model scales smoothly up to 20x for 112 ranks, while the hard model exhibits a dip at intermediate core counts, limiting its speedup to 10 before reaching a maximum of 17. This suggests that the hard model's global optimization step introduces additional communication overhead that affects scalability.
 
-% Run for a fixed number of particle-updates per core (e.g. U = 1e7 updates/core).
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{1\linewidth}
+        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_hard_soft.png}
+        \caption{Runtime vs CPU cores. For lower CPU counts, the hard model is about 1.5x faster than the soft model. For higher CPU counts, both models converge to similar runtimes.}
+        \label{fig:runtime_hard_soft}
+    \end{subfigure}
 
-% Measure:
+    \vspace{0.5cm}  % adds vertical space between the subfigures
 
-% wall-clock time T(P) to complete U updates on each core,
+    \begin{subfigure}[b]{1\linewidth}
+        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_efficiency_hard_soft.png}
+        \caption{Speedup vs CPU cores. The soft model scales smoothly up to a speedup of 20 for 112 ranks. The hard model shows a dent in the middle, limiting speedup to 10 for intermediate CPU counts and reaching a maximum of 17.}
+        \label{fig:speedup_hard_soft}
+    \end{subfigure}
 
-% updates/sec/core = U / T(P),
+    \caption{Strong scaling comparison of the hard and soft models.}
+\end{figure}
 
-% parallel efficiency E(P) = (T(1) / (P * T(P))) if you also run a 1-core baseline for same N_local.
+\subsection{Runtime and Scalability Analysis}
+\label{sec:complexity_scalability}
 
-% Expectation: updates/sec/core ~ constant and E(P) ≈ 1 if weak scaling is ideal.
+This section delves deeper into the computational performance of both collision models by examining the walltime per particle during simulations.
 
-% Pro: Clear, repeatable.
-Con: Not representative of physics when division matters.
+As shown in \autoref{fig:walltime_per_particle}, the per-particle walltime remains approximately constant across each model but is substantially lower for the soft model. This difference arises because the soft model requires only a single force evaluation per particle, whereas the particles in the hard model contribute to global effects. \autoref{fig:walltime_per_particle} also reveals subtle temporal trends: walltime decreases slightly as particle number increases, likely due to improved load balance from domain decomposition, which allows computational cores to process particles more efficiently. Conversely, walltime increases modestly over time, presumably because each particle contributes progressively to global interactions that the solver must resolve.
+
+A possible explanation for the hard model's increased walltime is the higher number of constraints it generates. Each ReLCP iteration introduces new constraints to resolve overlaps, leading to a denser constraint matrix. \autoref{fig:num_constraints} highlights this difference, showing that the soft model generates 6 constraints per particle (one per neighboring pair), while the hard model produces 21 constraints per particle due to the ReLCP procedure.
+
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_efficiency_hard_soft.png}
-    \caption{ }
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_particles_vs_wall_time_per_particle_with_fit.png}
+        \caption{Per-particle walltime for both the hard and soft models with 112 ranks.}
+        \label{fig:walltime_per_particle}
+    \end{subfigure}
+
+
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_constraints_vs_num_particles_with_fit.png}
+        \caption{Number of constraints as a function of particle count $N$ for both models.}
+        \label{fig:num_constraints}
+    \end{subfigure}
+
+    \caption{Comparison of simulation metrics for the hard and soft collision models with 112 ranks.}
+    \label{fig:comparison_metrics}
 \end{figure}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_efficiency_hard_soft_logx.png}
-    \caption{ }
-\end{figure}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_hard_soft.png}
-    \caption{ }
-\end{figure}
 
+
+\newpage
 
 
 \subsection{Insights into BBPGD Iterations}
 
+The BBPGD algorithm used in the hard collision model to solve the constraint optimization problem is naturally the most costly component of the simulation. In later stages of the simulation, when the system is densely packed and many contacts need to be resolved, calls to this function, and the underlying matrix-vector operations associated with calculating the gradient, are reponsible for about 80\% of the total wall time.
+
+It is thus crucial to understand how many BBPGD iterations are expected per time step and how this number scales with the system size. \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that the number of BBPGD iterations grows roughly linearly with the number of particles as $\text{bbpgd\_iterations} \approx  \frac{1}{72.3} N$.
+
+The behavior of the BBPGD algorithm over a single time step is illustrated in \autoref{fig:bbpgd_residual}. In this iteration, the solver converges to the desired tolerance of $10^{-3}$ within about 2500 iterations, continuously decreasing the systems energy (see \autoref{eq:energy_function}) as shown in \autoref{fig:bbpgd_energy}.
+
+For full simulations, \autoref{fig:bbpgd_iterations_histogram} shows a histogram of the number of total BBPGD iterations required per time step. This number includes extra BBPGD calls from the ReLCP procedure, which requires up to 6 iterations to fully resolve all overlaps\cite{Weady2024SM}. The median number of iterations per time step is 470, with a long tail of more expensive steps that can require up to 30520 iterations in extreme cases. The typical number of iterations per time step is thus on the same order of magnitude as the observations in \cite{Yan2019}, although our model is more complex due to the collision-growth coupling.
 
 
-Which time step results in fastest colonry radius in a fixed amout of wall time?
-
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_constraints_vs_num_particles_with_fit.png}
-    \caption{ }
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_particles_vs_wall_time_per_particle_with_fit.png}
-    \caption{ }
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_colony_radius.png}
-    \caption{ }
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_dt.png}
-    \caption{ }
-\end{figure}
-
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_residual.png}
-    \caption{Total simulation time for the hard and soft collision models as a function of particle number. The soft model is generally faster by a factor of 1.8.} \label{fig:wall_time_simulation}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_total_energy.png}
-    \caption{ReLCP solver iterations in the hard collision model. To enforce particle separation, the model must iteratively solve an LCP at each time step, with the required number of iterations increasing with particle count.} \label{fig:bbpgd_iterations_simulation}
-\end{figure}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_bbpgd_iterations_per_step_vs_num_particles_with_fit.png}
-    \caption{ }
+    \caption{Number of BBPGD iterations per time step vs. number of particles. The number of BBPGD iterations grows roughly linearly as $\text{bbpgd\_iterations} \approx  \frac{1}{72.3} N$.}
+    \label{fig:bbpgd_iterations_per_step_vs_num_particles}
 \end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_residual.png}
+        \caption{BBPGD algorithm residuals over iterations for a single time step. The solver converges to the desired tolerance of $10^{-3}$ within about 2500 iterations.}
+        \label{fig:bbpgd_residual}
+    \end{subfigure}
+
+    \vspace{1em}
+
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_total_energy.png}
+        \caption{System Energy value as described in \autoref{eq:energy_function} throughout the bbpgd algorithm. The energy decreases monotonically, confirming the convergence of the BBPGD method based on the projected gradient.}
+        \label{fig:bbpgd_energy}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_bbpgd_iterations_histogram_cumulative.png}
+        \caption{Histogram of BBPGD algorithm iterations per time step for simulations up to a colony radius of 100. The median number of iterations per time step is 470.}
+        \label{fig:bbpgd_iterations_histogram}
+    \end{subfigure}
+
+    \caption{BBPGD algorithm behavior during a single time step and across a full simulation.}
+\end{figure}
+
+\clearpage
+\newpage
+
+
+
+
+
+
 
 \newpage
 \clearpage
