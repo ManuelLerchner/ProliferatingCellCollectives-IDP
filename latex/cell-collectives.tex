@@ -150,7 +150,7 @@ The reviewed literature presents two distinct computational philosophies. Soft m
 
 However, this presents a critical, unquantified trade-off: does the hard model's ability to take larger timesteps outweigh its inherently higher computational cost per timestep? This question is especially pertinent in simulations of proliferating cell collectives, where exponentially increasing density dramatically alters the computational load of the collision resolution algorithm.
 
-A systematic benchmarking focusing on this computational trade-off between the models is largely absent. Existing studies~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021} typically validate their models by comparing simulation results to experimental data (e.g., microscopy images of bacterial colonies)~\cite{Rudge2012,Khan_2024, Rudge2013,Langeslay_2023, Ghosh2015}, prioritizing biological insights over a rigorous HPC analysis of runtime, scalability, and numerical stability under proliferation. Consequently, there is no clear guidance for modelers on which paradigm is more efficient for a given problem scale. This work aims to fill this gap by implementing both models within a unified ABM framework to provide a direct, quantitative comparison of their computational performance.
+A systematic benchmarking focusing on this computational trade-off between the models is largely absent. Existing studies~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021,Valdez2025} typically validate their models by comparing simulation results to experimental data (e.g., microscopy images of bacterial colonies)~\cite{Rudge2012,Khan_2024, Rudge2013,Langeslay_2023, Ghosh2015}, prioritizing biological insights over a rigorous HPC analysis of runtime, scalability, and numerical stability under proliferation. Consequently, there is no clear guidance for modelers on which paradigm is more efficient for a given problem scale. This work aims to fill this gap by implementing both models within a unified ABM framework to provide a direct, quantitative comparison of their computational performance.
 
 \section{Cell Mechanics}
 
@@ -598,21 +598,25 @@ The repository enables reproduction of the presented results as well as adaptati
 
 \subsection{Concentric Ring Patterns}
 
-We begin by validating our implementations through the reproduction of concentric ring patterns that arise under stress-sensitive growth, as reported in~\cite{Weady2024}. Simulations were performed for $\lambda = 10^{-1}, 10^{-2}, 10^{-3}$ using both hard and soft collision models. As shown in \autoref{fig:pattern_formation}, both models successfully produce qualitatively similar ring structures. This demonstrates that the soft collision model, despite its simpler formulation, can capture the essential dynamics responsible for these macroscopic patterns, making it a viable and potentially more efficient option for studying pattern formation.
-
-Importantly, the soft model reproduces the expected concentric rings while employing a substantially simplified approach to collision resolution. This further supports its suitability as an alternative to the more complex hard collision model when the goal is to replicate such emergent patterns.
+We begin by validating our implementations through the reproduction of concentric ring patterns that arise under stress-sensitive growth, as reported in~\cite{Weady2024}. As shown in \autoref{fig:pattern_formation}, both models successfully produce qualitatively similar ring structures, demonstrating that the core mechanics of growth and mechanical feedback are effectively captured by both collision handling approaches. As the soft model allows for some (sometimes unphysical) overlap, the resulting patterns appear significantly denser, and have a more \emph{fuzzy} appearance compared to the hard model. However, the overall macroscopic features, such as the number of rings, their spacing and the colony radius growth, are comparable between the two models.
 
 
 \subsection{Quantitative Comparison}
 
-To provide a more quantitative assessment, we analyze three key metrics: the radial distribution of stress, the radial distribution of packing fraction, and the maximum particle overlap over time. These metrics offer insights into the mechanical state of the colony and how it evolves under different collision models.
+The most apparent difference is the packing density of the cells within the colony (See \autoref{fig:dense_packing_comparison}).
 
-\autoref{fig:dense_packing_comparison} and \autoref{fig:radial_distribution_stress}--\autoref{fig:max_overlap_simulation} illustrate these results in detail While certain quantities, such as the packing fraction and the corresponding maximum overlap, differ between the two models, the overall macroscopic behavior remains similar, consistent with the pattern formation observed in \autoref{fig:pattern_formation}.
+This difference is most pronounced in the colony center and is caused by the soft model not being able to fully propagate mechanical forces outwards to the colony edge. This results in a denser packing of cells, at the center of the colony, which steadily decreases towards the edge (See \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda \approx 0$), the local packing fraction reaches values of up to 5 in the center of the colony, meaning that the local area occupied by cells is five times larger than the actual area available.
 
-TODO: check~\cite{Warren2019}
+Such an overlap is clearly unphysical, but it is a direct consequence of only considering local pairwise interactions and using a numerical timestep that is too large to fully resolve all collisions. \autoref{fig:max_overlap_simulation} confirms that the maximum overlap between any two cells steadily increases over time in the soft model, reaching an almust full overlap at the end of the simulation. Conversely, the hard model maintains a maximum overlap close $\epsilon = 10^{-3}$, as set by the solver tolerance throughout the simulation.
+
+One contributing factor to this behavior is the adaptive timestep method (See \autoref{alg:adaptive_dt}), which only considers the maximum velocity of particles, but not their actual overlap. This means that once particles start to overlap, they can continue to do so, as long as their velocities remain low. Future work could explore more sophisticated adaptive timestep schemes that also consider the maximum overlap when adjusting $\Delta t$.
+
+The hard model, in contrast, maintains a constant density of approximately 0.9 throughout the colony, as any overlap, even within the interior, is immediately propagated outwards by the non-overlapping constraints. This difference is also visually apparent in \autoref{fig:dense_packing_comparison}, where a clear difference in packing density can be observed.
+
 
 \begin{figure}[H]
     \centering
+    % First subfigure
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/density_hard.jpeg}
@@ -625,8 +629,37 @@ TODO: check~\cite{Warren2019}
         \caption{Close-up of particle packing for the soft model.}
         \label{fig:packing_soft}
     \end{subfigure}
-    \caption{Close-up comparison of particle packing. The soft model exhibits denser packing with slight particle overlap, while the hard model maintains strict non-overlap. See \autoref{fig:radial_distribution_packing_fraction} for a quantitative comparison of packing fractions.}
-    \label{fig:dense_packing_comparison}
+
+    % Second subfigure (full width)
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
+        \caption{Radial packing fraction profiles ($\eta = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models across different $\lambda$ values. The hard model maintains a nearly optimal packing fraction, while the soft model shows higher packing fractions in the colony center.}
+        \label{fig:radial_distribution_packing_fraction}
+    \end{subfigure}
+
+    % Third subfigure (full width)
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
+        \caption{Maximum particle overlap. Overlap grows over time in the soft model, while the hard model is kept near a constant value set by the tolerance hyperparameter.}
+        \label{fig:max_overlap_simulation}
+    \end{subfigure}
+
+    \caption{Comparison of particle packing and radial statistics across hard and soft models.}
+    \label{fig:combined_packing_analysis}
+\end{figure}
+
+\newpage
+
+Another key difference is the radial stress distribution within the colony (See \autoref{fig:radial_distribution_stress}). Both models qualitatively reproduce the analytically derived stress profiles~\cite{Weady2024}, with stresses being highest in the colony center and decreasing towards the edge. However, the soft model consistently predicts lower stresses, especially in the interior of the colony, where overlaps are most pronounced. This is again a direct consequence of the soft model not being able to fully propagate forces outwards, leading to a more relaxed interior.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
+    \caption{Comparison of radial stress distributions for the hard and soft collision models. Both models roughly reproduce the analytically derived stress profiles~\cite{Weady2024}.}
+    \label{fig:radial_distribution_stress}
 \end{figure}
 
 
@@ -652,36 +685,6 @@ TODO: check~\cite{Warren2019}
 
 \newpage
 
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
-        \caption{Comparison of radial stress distributions for the hard and soft collision models. Both models roughly reproduce the analytically derived stress profiles~\cite{Weady2024}.}
-        \label{fig:radial_distribution_stress}
-    \end{subfigure}
-
-    \vspace{0.5em}
-
-    \begin{subfigure}[b]{\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
-        \caption{Radial packing fraction. The soft model reaches $\approx1.2$ at the center due to overlap, while the hard model stays below 1. The packing fraction is defined as the total area occupied by particles within a radial shell divided by the shell area.}
-        \label{fig:radial_distribution_packing_fraction}
-    \end{subfigure}
-
-    \vspace{0.5em}
-
-    \begin{subfigure}[b]{\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
-        \caption{Maximum particle overlap. Overlap grows over time in the soft model, while the hard model is kept near a constant value set by the tolerance hyperparameter.}
-        \label{fig:max_overlap_simulation}
-    \end{subfigure}
-
-    \caption{Comparison of hard and soft collision models: (a) radial stress distributions, (b) radial packing fraction, and (c) maximum particle overlap.}
-    \label{fig:comparison_all}
-\end{figure}
 
 
 
@@ -708,12 +711,19 @@ Similar to You et al.~\cite{You2018,You_2021}, we can also observe the formation
     \label{fig:orientation_comparison_small}
 \end{figure}
 
-However the differences between the two models become more pronounced as the colony grows larger or the stress sensitivity parameter $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model tends to produce distinct and similar patches of aligned cells for all values of $\lambda$, whereas the soft model often results in elongated, unrealistic, bundles of aligned, densely packed cells. This artefact, is directly caused by the soft model not being able to prevent overlaps completely, causing the interior of the colony to become unrealistically dense.
+However the differences between the two models become more pronounced as the colony grows larger or the stress sensitivity parameter $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model tends to produce distinct and similar patches of aligned cells for all values of $\lambda$, whereas the soft model often results in elongated, unrealistic, bundles of aligned, densely packed cells. This artefact, is directly caused by the soft model not being able to prevent overlaps completely, causing the interior of the colony to become unrealistically dense. \autoref{fig:cluster_area_boxplot} quantifies this effect by showing the distribution of microdomain areas for both models across different $\lambda$ values. The hard model consistently produces patches of similar sizes, while the soft model produces larger microdomains, especially at lower $\lambda$.
 
 Therfore, the soft model is not suitable for studying microdomain formation in large colonies or at low stress sensitivities, but is a viable and easier-to-implement alternative studying macroscopic pattern formation in smaller colonies of up to radius $R \approx 50$, such as those presented in~\cite{You2018}.
 
 The hard model's strict non-overlapping constraints prevent cells from clustering too closely, leading to a highly realistic structure at all colony sizes, clearly resembling experimental observations.
 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/cluster_area_boxplot.png}
+    \caption{Boxplot of microdomain areas for both models across different $\lambda$ values. The hard model consistently produces patches of similar sizes, while the soft model produces larger microdomains, especially at lower $\lambda$.}
+    \label{fig:cluster_area_boxplot}
+\end{figure}
 
 
 \clearpage
