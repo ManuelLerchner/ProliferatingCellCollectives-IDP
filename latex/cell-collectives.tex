@@ -764,6 +764,7 @@ Interestingly, for the hard model with $\lambda=10^{-2}$, the maximum stable tim
 
 
 \subsection{Strong Scaling}
+\label{sec:strong_scaling}
 
 To assess the parallel performance of the hard and soft simulation models, we analyze runtime and speedup as a function of CPU cores. Strong scaling tests start from a single cell and grow the colony to a radius of 100, revealing how efficiently each model utilizes additional cores.
 
@@ -777,15 +778,14 @@ Thus, the hard model seems to be a valid alternative especially for smaller core
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{1\linewidth}
-        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_hard_soft.png}
+        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_runtime_hard_soft.png}
         \caption{Runtime vs CPU cores. For lower CPU counts, the hard model is about 1.5x faster than the soft model. For higher CPU counts, both models converge to similar runtimes.}
         \label{fig:runtime_hard_soft}
     \end{subfigure}
 
-    \vspace{0.5cm}  % adds vertical space between the subfigures
 
     \begin{subfigure}[b]{1\linewidth}
-        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_efficiency_hard_soft.png}
+        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_speedup_hard_soft.png}
         \caption{Speedup vs CPU cores. The soft model scales smoothly up to a speedup of 20 for 112 ranks. The hard model shows a dent in the middle, limiting speedup to 10 for intermediate CPU counts and reaching a maximum of 17.}
         \label{fig:speedup_hard_soft}
     \end{subfigure}
@@ -827,17 +827,21 @@ A possible explanation for the hard model's increased walltime is the higher num
 
 \subsection{Maximum attainable Colony Size}
 
-In this section, we investigate the maximum achievable colony size within a fixed computational budget using the \texttt{CoolMUC-4} high-performance computing cluster\footnote{\texttt{CoolMUC-4} is part of the Linux Cluster at the Leibniz Supercomputing Centre (LRZ). It consists of 106 compute nodes equipped with \textit{Intel Xeon Platinum 8480+ (Sapphire Rapids)} CPUs, each providing 112 cores. For further details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.}. Specifically, we compare the largest attainable colony radius obtained with both the hard and soft models with $\lambda=10^{-3}$ when running on 112 ranks over a wall time of 24 hours.
+In this section, we investigate the maximum achievable colony size within a fixed computational budget using the \texttt{CoolMUC-4} high-performance computing cluster\footnote{\texttt{CoolMUC-4} is part of the Linux Cluster at the Leibniz Supercomputing Centre (LRZ). It consists of 106 compute nodes equipped with \textit{Intel Xeon Platinum 8480+ (Sapphire Rapids)} CPUs, each providing 112 cores. For further details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.}. Specifically, we compare the largest attainable colony radius obtained with both the hard and soft models with $\lambda=10^{-3}$ when running on 112 ranks over a wall time of 24 hours. This benchmark was just executed once per model due to the high computational cost, so the results should be interpreted with some caution.
 
 
 As illustrated in \autoref{fig:huge_wall_time_vs_radius}, the soft interaction model exhibits slightly superior scalability, reaching a maximum colony radius of approximately $R = 210$, compared to $R = 195$ for the hard model. Despite the soft model requiring significantly more particles (approximately $1{,}033{,}108$), it still achieves a marginally larger colony within the same computational constraints. In contrast, the hard model attains its limit with only $168{,}339$ particles.
+
+
+In the previous section about strong scaling (\autoref{sec:strong_scaling}), we observed that the hard model was generally faster for reaching a colony radius of $R=100$. However, as the colony size increases, the hard model's performance advantage diminishes due to its higher computational cost and the continously increasing complexity of resolving global constraints. This split in the performance curves is also evident in \autoref{fig:huge_wall_time_vs_radius}, where the colony radii curves start to diverge significantly beyond $R=100$.
+
 
 Interestingly, the macroscopic structural characteristics of both colonies remain largely comparable. As shown in \autoref{fig:huge_length_shared}, the average radial particle length $\langle \text{length} \rangle$ exhibits nearly identical oscillatory patterns in both models. Unfortunately, due to the high number of particles in the soft model, we were unable to create a visual snapshot of the entire colony. However, based on the radial length profiles, we can infer that both models produce similar concentric ring patterns, despite the significant differences in microscopic density. The snapshot of the hard model is provided in \autoref{fig:huge_snapshot_hard} for reference.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/huge_wall_time_vs_radius.png}
-    \caption{Time evolution of the colony radius for hard and soft interaction modes. Simulations were performed on 112 ranks of the CoolMUC-4 cluster with a maximum wall time of 24 hours. The soft model attains a larger final radius despite higher particle counts.}
+    \caption{Time evolution of the colony radius for hard and soft interaction modes. Simulations were performed on 112 ranks of the CoolMUC-4 cluster with a maximum wall time of 24 hours. The soft model attains a larger final radius despite higher particle counts. (Sample size: 1 run per model)}
     \label{fig:huge_wall_time_vs_radius}
 \end{figure}
 
@@ -878,7 +882,6 @@ Nevertheless, it remains unclear whether the current interplay between the adapt
         \label{fig:bbpgd_residual}
     \end{subfigure}
 
-    \vspace{1em}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
