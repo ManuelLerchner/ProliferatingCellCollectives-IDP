@@ -42,7 +42,7 @@ def load_combined(sim_dirs, base_path="", offset=0):
     for sim_dir in sim_dirs:
         print("loading " + sim_dir)
 
-        source = sim_dir.split("/")[2]
+        source = "_".join(sim_dir.split("/")[0:4])
         label = clean_label(sim_dir)
 
         for off in range(offset, 1):
@@ -78,8 +78,6 @@ def load_combined(sim_dirs, base_path="", offset=0):
         params_all["Sensitivity"] = label[1]
         params_all["sim_dir"] = source
         params_all["offset"] = 0
-
-        
 
         sim_list.append(sim_all)
         params_list.append(params_all)
