@@ -120,18 +120,20 @@
 \section{Introduction}
 \subsection{Biological Motivation}
 
-The collective behaviors of biological entities, from microbial colonies to multicellular tissues, are fundamental to understanding life’s complex dynamics. These systems often exhibit emergent spatio-temporal patterns driven by local interactions and, crucially, by the growth and division of individual cells. In bacterial colonies, continuous cell proliferation at the periphery generates mechanical forces that slow growth in the densely packed center~\cite{Wittmann2023}. For species such as \textit{E. coli}, \textit{Bacillus subtilis}, and \textit{Proteus mirabilis}, as well as fungi like \textit{Setosphaeria rostrata} and \textit{Exserohilum turcicum}, this combination of expansion and central pressure produces the characteristic concentric ring patterns observed experimentally~\cite{YAMAZAKI2005136} (See \autoref{fig:exserohilum_turcicum}).
+The collective behaviors of biological entities, from microbial colonies to multicellular tissues, exemplify how local interactions among individual organisms can generate complex, large-scale structures and dynamics. These systems often exhibit emergent spatio-temporal patterns that arise from the interplay of cell growth, division, mechanical interactions, and local environmental feedback. Understanding such patterns is essential for comprehending fundamental biological processes and has applications ranging from biofilm formation to tissue engineering.
 
-\begin{figure}[h]
+A particularly compelling example is found in bacterial colonies, where the spatial organization of cells encodes a record of growth dynamics and internal mechanical stresses. Continuous cell proliferation at the expanding periphery generates significant mechanical forces that accumulate in the densely packed interior~\cite{Wittmann2023}. These compressive stresses actively suppress growth in the colony center, creating a feedback loop: peripheral cells expand outward while internal cells remain densely packed and growth-limited. For bacterial species such as \textit{E. coli}, \textit{Bacillus subtilis}, and \textit{Proteus mirabilis}, as well as fungi like \textit{Setosphaeria rostrata} and \textit{Exserohilum turcicum}, this stress-dependent growth regulation produces the characteristic concentric ring patterns observed experimentally~\cite{YAMAZAKI2005136} (see \autoref{fig:exserohilum_turcicum}).
+
+\begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/real-bacteria/Exserohilum turcicum.png}
-    \caption{Morphology of \textit{Exserohilum turcicum}. The left image displays a colony of \textit{Exserohilum turcicum}, while the right image shows a single cell of the same species. Source:~\cite{Bankole2023}.}
+    \caption{Morphology of \textit{Exserohilum turcicum}. The left image displays a typical colony exhibiting concentric ring patterns, while the right image shows the elongated, rod-shaped morphology of individual cells. Source:~\cite{Bankole2023}.}
     \label{fig:exserohilum_turcicum}
 \end{figure}
 
-Understanding these emergent structures requires computational models that capture the dynamic interplay between cell growth and division, mechanical forces, and intercellular interactions. However, simulating such dense, proliferating cell collectives presents significant computational challenges, particularly in resolving cell-cell collisions efficiently and accurately.
+Computational modeling offers a powerful tool for dissecting these complex dynamics. To reproduce such emergent structures and understand their underlying mechanisms, models must accurately capture the dynamic interplay between cell growth and division, mechanical forces, and intercellular interactions. However, simulating dense, proliferating cell collectives presents significant computational challenges: the sheer number of cells in realistic colonies, combined with the need to resolve collisions accurately and efficiently across continuously changing configurations, creates a computational bottleneck. Different collision-handling approaches (rigid constraints versus soft repulsions) present distinct trade-offs between physical accuracy, numerical stability, and computational cost.
 
-This work is directly inspired by these observations, particularly by the work of Weady et al.~\cite{Weady2024}, who developed such a computational model to study the growth of bacterial colonies and the resulting pattern formation.
+This work is directly motivated by these considerations and builds upon the pioneering computational framework developed by Weady et al.~\cite{Weady2024}, who demonstrated how to model bacterial colony growth while capturing stress-dependent feedback and pattern formation. We extend their work by systematically comparing two fundamentally different approaches to collision handling, examining their computational efficiency, physical fidelity, and suitability for large-scale simulations of proliferating cell collectives.
 
 
 
@@ -139,67 +141,69 @@ This work is directly inspired by these observations, particularly by the work o
 
 \subsection{Collision Modeling Paradigms}
 
-
-A critical computational challenge in agent-based models (ABMs) is the resolution of cell-cell collisions. Two primary paradigms exist for this purpose: potential-based (soft) and constraint-based (hard) models, each with distinct trade-offs in physical fidelity, computational cost, and numerical stability.
+A critical computational challenge in agent-based models is the resolution of cell-cell collisions. Two primary paradigms exist for this purpose: potential-based (soft) and constraint-based (hard) models, each with distinct trade-offs in physical fidelity, computational cost, and numerical stability.
 
 \begin{description}[style=nextline]
     \item[Potential-Based (Soft) Collision Models]
-        These models manage interactions by employing repulsive forces, defined by potentials like Hertzian or Lennard-Jones, when agents overlap. Their primary advantage is computational tractability, as they rely on local force calculations that are highly amenable to parallelization. This has enabled large-scale simulations, such as the work by~\cite{Warren2019}, who modeled millions of cells in 3D. However, a well-known limitation is numerical stiffness, which forces the use of small integration timesteps to maintain stability. Furthermore, as noted by~\cite{Yan2019}, the finite range of repulsive forces causes cells to behave as soft and deformable, leading to an "effective" diameter smaller than the intended geometric size.
+        Soft models manage cell interactions through repulsive forces defined by potentials such as Hertzian or Lennard-Jones functions. When cells overlap, these forces push them apart continuously. The primary advantage is computational efficiency: the calculations are local and embarrassingly parallelizable, enabling large-scale simulations. For instance, Warren et al.~\cite{Warren2019} demonstrated this by simulating millions of cells in three dimensions using a soft repulsion approach.
+
+        However, soft models suffer from two key limitations. First, the stiffness of repulsive potentials creates numerical instability, requiring very small timesteps to maintain accuracy and prevent divergence. Second, the finite range of repulsive forces means cells behave as elastically deformable objects rather than rigid bodies, effectively reducing their geometric diameter below the intended size~\cite{Yan2019}. This deformation accumulates and can distort simulation results, particularly in dense regions.
 
     \item[Constraint-Based (Hard) Collision Models]
-        These models enforce strict non-overlapping geometric constraints, ensuring high physical fidelity by treating agents as truly impenetrable. A notable application is the work of~\cite{Rudge2012}, who simulated growing bacterial colonies using a constraint-based method. They highlighted its computational intensity, as resolving constraints often requires iterative, global solutions to large systems of equations, creating a potential bottleneck. However, modern implementations like that of~\cite{Yan2019} specifically address the drawbacks of soft models: they eliminate numerical stiffness—allowing timesteps to be increased by 10-100 times—and guarantee cells maintain their precise geometric dimensions. The trade-off is a higher computational cost per timestep due to the constraint-solving process.
+        Hard models enforce strict non-overlapping constraints, treating cells as geometrically rigid and impenetrable. Constraint-based methods are widely used in physics simulations~\cite{Tasora2008,Macklin2014,Li2021,Ferguson2021}, and have also been adapted for biological systems~\cite{Rudge2012,Weady2024,Yan2019}.
+
+        The drawback is computational cost and increased complexity. Enforcing global non-overlap constraints requires iterative solvers that operate on large coupled systems of equations, creating a significant bottleneck. However, modern implementations~\cite{Yan2019} are able to efficiently reduce the numerical stiffness associated with soft models, allowing for much larger timesteps while maintaining geometric fidelity. The trade-off remains: higher cost per timestep due to constraint solving, but fewer timesteps needed overall.
 \end{description}
 
 \subsection{The Benchmarking Gap}
 
-The reviewed literature presents two distinct computational philosophies. Soft models offer computational simplicity and have been scaled to high agent counts, but at the cost of numerical stiffness and compromised physical fidelity. Hard models, particularly modern implementations like that of~\cite{Yan2019}, offer a solution to these limitations, promising greater timesteps and rigorous geometry.
+The two collision paradigms present fundamentally different trade-offs. Soft models offer computational simplicity and have been successfully scaled to millions of cells, but require small timesteps due to numerical stiffness and allow unphysical cell deformation. Hard models, particularly modern implementations~\cite{Yan2019}, eliminate stiffness and guarantee geometric rigidity, enabling timesteps $10$-$100\times$ larger. However, this advantage must be weighed against the substantially higher computational cost per timestep.
 
-However, this presents a critical, unquantified trade-off: does the hard model's ability to take larger timesteps outweigh its inherently higher computational cost per timestep? This question is especially pertinent in simulations of proliferating cell collectives, where exponentially increasing density dramatically alters the computational load of the collision resolution algorithm.
+The central question remains unanswered: does the hard model's ability to take larger timesteps outweigh its higher per-step cost? This trade-off is especially critical in proliferating cell collectives, where exponentially increasing cell density intensifies collision resolution demands.
 
-A systematic benchmarking focusing on this computational trade-off between the models is largely absent. Existing studies~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021,Valdez2025} typically validate their models by comparing simulation results to experimental data (e.g., microscopy images of bacterial colonies)~\cite{Rudge2012,Khan_2024, Rudge2013,Langeslay_2023, Ghosh2015}, prioritizing biological insights over a rigorous HPC analysis of runtime, scalability, and numerical stability under proliferation. Consequently, there is no clear guidance for modelers on which paradigm is more efficient for a given problem scale. This work aims to fill this gap by implementing both models within a unified ABM framework to provide a direct, quantitative comparison of their computational performance.
+To our knowledge, a direct systematic comparison of these models is absent from the literature. Existing studies validate their chosen approach against experimental data, such as microscopy images, growth curves, and morphological features~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021,Valdez2025,Rudge2013,Langeslay_2023}, prioritizing biological accuracy over computational analysis. Few provide rigorous benchmarking of runtime, scalability, or numerical stability as colony density increases. Consequently, modelers lack clear guidance on which paradigm is more efficient for a given problem scale.
+
+This work addresses this gap by implementing both models within a unified computational framework, enabling direct quantitative comparison of their performance across a range of colony sizes and densities.
 
 \section{Cell Mechanics}
 
-The mechanical representation of cells is a critical factor in determining simulation outcomes. For many bacteria and fungal hyphae, approximating them as rigid rods is a reasonable simplification that captures their elongated morphology and the primary drivers of their collective behavior. Although real cells exhibit some degree of flexibility and deformability, the rigid rod model effectively captures the essential mechanics of cell-cell interactions and colony expansion, reproducing key emergent patterns observed experimentally~\cite{Rudge2012,Khan_2024,Rudge2013,Langeslay_2023,Ghosh2015}.
+For many bacteria and fungal hyphae, approximating cells as rigid rods is a reasonable simplification that captures their elongated morphology while preserving the essential mechanics of cell-cell interactions and colony expansion. Although real cells exhibit some flexibility and deformability, this idealization effectively reproduces key emergent patterns observed experimentally~\cite{Rudge2012,Khan_2024,Rudge2013,Langeslay_2023,Ghosh2015}. This choice is well-supported by experimental observations and aligns with established practices in modeling microbial systems.
 
-This choice of rigid rod geometry is well-supported by experimental observations and aligns with established practices in modeling microbial systems. The following collision models are applied to these rigid rod entities.
+The spherocylinder geometry is particularly well-suited for capturing the dominant mechanical effects in dense cell collectives: it accommodates rotational interactions through contact, enables accurate force transmission along the cell body, and simplifies geometric contact calculations without sacrificing biological realism. Moreover, this representation scales well computationally, allowing simulations of large colonies without prohibitive memory or processing demands.
 
 \subsection{Physical Cell Model}
 
-We model the cell collective using a rigid rod representation, where each cell has a defined length and radius. This approach is common in models of cellular collectives~\cite{You2018, Weady2024,Weady2024SM, Blanchard2015, Warren2019, Ghosh2015} and is justified by experimental evidence, closely matching the morphology of common bacteria and fungi such as E. coli and Setosphaeria rostrata (see \autoref{fig:exserohilum_turcicum}).
+Each cell is modeled as a spherocylinder (a rigid rod with hemispherical caps) characterized by a variable length $\ell$ and constant diameter $d$. This representation is widely used in cellular collective models~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015} and closely matches the morphology of common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} (see \autoref{fig:exserohilum_turcicum}).
 
-Following the established literature, each bacterium is modeled as a spherocylinder with a variable length $\ell$ and a constant diameter $d$. At the bacterial scale, the Reynolds number is extremely small (Re $\ll 1$), placing the system firmly in the overdamped regime where viscous forces dominate inertial forces~\cite{datta2024lifelowreynoldsnumber,Rudge2012 }. Consequently, the dynamics are governed by the overdamped Langevin equation:
+At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \ll 1$), meaning that viscous forces dominate over inertia and bacteria move in a \textit{sticky} environment where they stop almost immediately after a force is applied~\cite{datta2024lifelowreynoldsnumber,Rudge2012}. The dynamics are therefore governed by the overdamped Langevin equation:
 
 \begin{equation} \label{eq:overdamped_langevin}
     \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \boldsymbol{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
 \end{equation}
 
-where $\mathbf{x}_i$ is the position of the $i$-th cell, $\boldsymbol{\omega}_i$ is its orientation, and $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$. The constant $\zeta$ is a drag coefficient representing friction with the surrounding fluid, and $\mathbf{r}_{ij}$ is the vector from the center of cell $i$ to the point of contact with cell $j$.
-
-\autoref{fig:spherocylinder_model} illustrates the spherocylinder model and the forces and torques acting on cells during a collision.
-
+Here, $\mathbf{x}_i$ is the position of cell $i$, $\boldsymbol{\omega}_i$ is its angular velocity, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. Figure~\ref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
 
 \subsection{Cell Growth and Division}
 
 Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024SM}:
 
 \begin{equation} \label{eq:growth}
-    \dot{{\ell}} = \frac{{\ell}}{\tau} e^{\lambda \sigma}
+    \dot{\ell} = \frac{\ell}{\tau} e^{-\lambda \sigma}
 \end{equation}
 
-where $\tau$ is a characteristic time scale, $\sigma$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. This parameter controls the growth rate and ultimately the macroscopic pattern formation of the colony.
-
-The stress $\sigma_i$ for a cell $i$ is computed by projecting all contact forces from neighboring cells onto the cell's longitudinal axis, defined by the unit tangent vector $\hat{\mathbf{t}}_i$:
+where $\tau$ is a characteristic timescale, $\sigma$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. Stress on cell $i$ is computed by projecting contact forces onto the cell's longitudinal axis:
 
 \begin{equation} \label{eq:stress}
-    \sigma_i = \sum_{j} \frac{1}{2} \left| \hat{\mathbf t}_i \cdot \mathbf F_{ij} \right|
+    \sigma_i = \sum_{j} \frac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
 \end{equation}
 
-For the simulations presented here, we chose an initial cell length of $\ell = 1$ and a diameter of $d = 0.5$, following. Once a cell reaches a critical length of $\ell_{crit} = 2$, it divides into two daughter cells. To prevent artificial synchronization of division events, we introduce randomness in the daughter cells' lengths, which are randomly set between $0.98\ell_0$ and $1.02\ell_0$, following the approach in~\cite{Khan_2024}.
+where $\hat{\mathbf{t}}_i$ is the unit tangent vector along the cell's length.
+
+For all simulations, cells begin with length $\ell_0 = 1$ and diameter $d = 0.5$. Division occurs when a cell reaches $\ell_{\text{crit}} = 2$, producing two daughter cells with lengths randomly sampled from $[0.98\ell_0, 1.02\ell_0]$ to avoid artificial synchronization of division events~\cite{Khan_2024}.
 
 \subsection{Rotational Diffusion}
 
-Moreover, we add a small random rotational perturbation to the orientation of all cells at each timestep to account for Brownian rotational diffusion. This small pertubation ensures that the cells break perfect alignment over time, which is important for realistic colony morphology.
+To account for Brownian motion, we apply a small random rotational perturbation to each cell at every timestep. This ensures cells gradually lose perfect alignment over time, which is important for realistic microdomain structure.
 
 
 \begin{figure}[H]
@@ -284,7 +288,7 @@ Moreover, we add a small random rotational perturbation to the orientation of al
         node[midway, above] {$\boldsymbol{\omega}_j$};
 
     \end{tikzpicture}
-    \caption{2D schematic of the spherocylinder cell model. Each cell is represented as a rigid rod with length $\ell$ and diameter $d$. Cells grow along their longitudinal axis and divide into two daughter cells upon reaching a critical length of $2\ell_0$. Collisions generate contact forces $\mathbf{F}_{ij}$ and $\mathbf{F}_{ji}$ (red). Torque arises from the cross product of the lever arm $\mathbf{r}_{ij}$ (dashed blue) and the contact force, leading to changes in orientation $\boldsymbol{\omega}$ (orange).}
+    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange). Division occurs when cells reach length $2\ell_0$, producing two daughters cells in their place.}
     \label{fig:spherocylinder_model}
 
 \end{figure}
@@ -546,7 +550,7 @@ Each call to the collision detector generates a single constraint per neighborin
 
 \subsection{Adaptive Timestepping}
 
-To further enhance stability and convergence, particularly for fast-moving cells that might overlap significantly within a timestep $\Delta t$, we employ an adaptive timestepping scheme. To our knowledge, such a method has not been implemented in comparable engines. As shown in \autoref{fig:simulation_time_vs_dt}, this approach quickly converges to a stable maximum $\Delta t$ for both force computation models, while adapting dynamically during the simulation—allowing finer precision when needed and even increasing $\Delta t$ in cases where motion is limited (e.g., in dense colonies with high $\lambda$, where internal cells are effectively immobile due to mechanical stress).
+To further enhance stability and convergence, particularly for fast-moving cells that might overlap significantly within a timestep $\Delta t$, we employ an adaptive timestepping scheme. To our knowledge, such a method has not been implemented in comparable engines. As shown in \autoref{fig:simulation_time_vs_dt}, this approach quickly converges to a stable maximum $\Delta t$ for both force computation models, while adapting dynamically during the simulation, allowing finer precision when needed and even increasing $\Delta t$ in cases where motion is limited (e.g., in dense colonies with high $\lambda$, where internal cells are effectively immobile due to mechanical stress).
 
 
 The adaptive timestep strategy (outlined in \autoref{alg:adaptivedt}) is based on a Courant-FriedrichsLewy (CFL) condition~\cite{Courant1928}, which provides a stability criterion linking the temporal and spatial resolution of numerical schemes. In essence, it ensures that information or physical motion does not propagate more than one characteristic spatial length during a single timestep, i.e.
@@ -919,7 +923,7 @@ The hard model enforces strict non-overlap, which can be useful for capturing pr
 
 By contrast, the soft model uses continuous repulsive potentials to approximate collisions. This approach is computationally efficient and scalable, making it well-suited for exploring large colonies or wide parameter spaces.
 
-Importantly, for many emergent pattern-formation scenarios—such as concentric ring formation—the exact enforcement of non-overlap seems less critical. Other factors, such as stress-dependent growth and a use of an adequate time step, appear to dominate the macroscopic behavior.
+Importantly, for many emergent pattern-formation scenarios, such as concentric ring formation, the exact enforcement of non-overlap seems less critical. Other factors, such as stress-dependent growth and a use of an adequate time step, appear to dominate the macroscopic behavior.
 
 In this context, the soft model provides a realistic approximation of cellular interactions: biological cells are deformable, and mechanical interactions in vivo are rarely perfectly rigid. Indeed, recent studies~\cite{Khan_2024, Ghosh2015, SantosDiaz2025} suggest that finite stiffness or soft repulsive forces are sufficient to capture key structural and morphological features of growing bacterial colonies.
 
