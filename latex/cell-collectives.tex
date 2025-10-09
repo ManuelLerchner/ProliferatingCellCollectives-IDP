@@ -104,12 +104,17 @@
 \maketitle
 
 \begin{abstract}
-    This work investigates the computational modeling of proliferating cell collectives, comparing an established constraint-based collision model as developed by Weady et al.~\cite{Weady2024} with a simpler potential-based collision model employing a nonlinear Hertzian contact law. While both approaches are demonstrated to reproduce key emergent patterns observed in bacterial colony growth, we highlight that  ...............
+    This work compares hard (constraint-based) and soft (potential-based) collision models for simulating proliferating cell collectives by implementing both approaches within a unified computational framework. Building on the foundational work of Weady et al.~\cite{Weady2024}, we systematically benchmark their performance on bacterial colony growth simulations.
 
+    Both approaches successfully reproduce experimentally observed patterns, including concentric rings and microdomain formation. However, they exhibit distinct computational and physical trade-offs. The hard model enforces strict non-overlap and stabilizes at timesteps approximately $30\times$ larger than the soft model ($\Delta t \approx 3 \times 10^{-4}$ h versus $10^{-5}$ h), at higher per-step computational cost. The soft model suffers from numerical stiffness and allows unphysical cell overlap, producing packing fractions exceeding 5 in colony centers compared to the hard model's realistic packing fraction of 0.9.
+
+    Moreover, we introduce an adaptive timestepping algorithm based on the Courant-Friedrichs-Lewy condition, which dynamically selects stable timesteps tailored to the current colony state. Benchmarking reveals the hard model outperforms the soft model for small to moderate colonies ($R \leq 100$), while the soft model's superior scalability enables larger final colony sizes ($R \approx 200$) within practical runtimes.
+
+    Despite microscopic differences in packing and stress distributions, both models yield comparable macroscopic patterns, suggesting colony-level behavior is robust to collision model details. The soft model provides an efficient, biologically plausible alternative for large-scale studies, while the hard model remains valuable when precise stress calculations or geometric integrity are required.
 \end{abstract}
 
 \begin{IEEEkeywords}
-    active matter, cell collectives, particle simulation, soft collision model, hard collision model, pattern formation, computational biology, performance comparison, agent-based modeling
+    collision models, constraint-based simulation, potential-based repulsion, bacterial colony growth, proliferating cell collectives, adaptive timestepping, pattern formation, computational performance, stress-sensitive growth, microdomain formation
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -768,7 +773,7 @@ Interestingly, for the hard model with $\lambda=10^{-2}$, the maximum stable tim
 
 To assess the parallel performance of the hard and soft simulation models, we analyze runtime and speedup as a function of CPU cores. Strong scaling tests start from a single cell and grow the colony to a radius of 100, revealing how efficiently each model utilizes additional cores.
 
-At lower CPU counts ($\text{ranks}< 2^4$), the hard model is roughly 1.5x faster than the soft model (\autoref{fig:runtime_hard_soft}), likely due to its ability to take larger time steps. As core counts increase, both models converge to similar runtimes. Speedup analysis (\autoref{fig:speedup_hard_soft}) shows the soft model scales smoothly up to 20x for 112 ranks, while the hard model exhibits a dip at intermediate core counts, limiting its speedup to 10 before reaching a maximum of 17.
+At lower CPU counts ($\text{ranks}< 2^4$), the hard model is slightly faster than the soft model (\autoref{fig:runtime_hard_soft}), likely due to its ability to take larger time steps. As core counts increase, both models converge to similar runtimes. Speedup analysis (\autoref{fig:speedup_hard_soft}) shows the soft model scales smoothly up to 20x for 112 ranks, while the hard model slows in the mid-range, limiting the speedup to 17.5x at 112 ranks.
 
 A contributing factor to the poor performance of the soft model at low core counts is the unnaturally high packing densities it produces, thus requiring more cells to reach the same colony radius (See \autoref{fig:colony_radius_vs_num_cells}). Even, with an extremly small per-particle cost (See \autoref{fig:walltime_per_particle}), these additional costs, combined with a smaller stable time step (See \autoref{fig:simulation_time_vs_dt}), lead to longer overall runtimes.
 
@@ -779,14 +784,14 @@ Thus, the hard model seems to be a valid alternative especially for smaller core
     \centering
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_runtime_hard_soft.png}
-        \caption{Runtime vs CPU cores. For lower CPU counts, the hard model is about 1.5x faster than the soft model. For higher CPU counts, both models converge to similar runtimes.}
+        \caption{Runtime vs CPU cores. The hard model is slightly faster at low core counts, but both models converge to similar runtimes at high core counts.}
         \label{fig:runtime_hard_soft}
     \end{subfigure}
 
 
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_speedup_hard_soft.png}
-        \caption{Speedup vs CPU cores. The soft model scales smoothly up to a speedup of 20 for 112 ranks. The hard model shows a dent in the middle, limiting speedup to 10 for intermediate CPU counts and reaching a maximum of 17.}
+        \caption{Speedup vs CPU cores. The soft model scales smoothly up to 20x for 112 ranks, while the hard model slows in the mid-range, limiting speedup to 17.5x at 112 ranks.}
         \label{fig:speedup_hard_soft}
     \end{subfigure}
 
