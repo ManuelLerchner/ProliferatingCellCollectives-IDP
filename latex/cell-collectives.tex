@@ -175,13 +175,14 @@ The spherocylinder geometry is particularly well-suited for capturing the domina
 
 Each cell is modeled as a spherocylinder (a rigid rod with hemispherical caps) characterized by a variable length $\ell$ and constant diameter $d$. This representation is widely used in cellular collective models~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015} and closely matches the morphology of common bacteria and fungi such as \textit{E. coli} and \textit{Setosphaeria rostrata} (see \autoref{fig:exserohilum_turcicum}).
 
-At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \ll 1$), meaning that viscous forces dominate over inertia and bacteria move in a \textit{sticky} environment where they stop almost immediately after a force is applied~\cite{datta2024lifelowreynoldsnumber,Rudge2012}. The dynamics are therefore governed by the overdamped Langevin equation:
+At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \ll 1$), meaning that viscous forces dominate over inertia and bacteria move in a \textit{sticky} environment where they stop immediately after a force is applied~\cite{datta2024lifelowreynoldsnumber,Rudge2012}. The system is therefore governed by the overdamped Langevin equation:
 
 \begin{equation} \label{eq:overdamped_langevin}
-    \frac{d \mathbf{x}_i}{dt} = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad \frac{d \boldsymbol{\omega}_i}{dt} = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
+    \mathbf{u}_i = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad
+    \boldsymbol{\omega}_i = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
 \end{equation}
 
-Here, $\mathbf{x}_i$ is the position of cell $i$, $\boldsymbol{\omega}_i$ is its angular velocity, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. Figure~\ref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
+Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angular velocities of cell $i$, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. Figure~\ref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
 
 \subsection{Cell Growth and Division}
 
@@ -288,45 +289,49 @@ To account for Brownian motion, we apply a small random rotational perturbation 
         node[midway, above] {$\boldsymbol{\omega}_j$};
 
     \end{tikzpicture}
-    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange). Division occurs when cells reach length $2\ell_0$, producing two daughters cells in their place.}
+    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange). Cell division occurs when a cell reaches critical length $2\ell_0$, producing two daughter cells of length $\ell_0$ in place of the parent cell.}
     \label{fig:spherocylinder_model}
 
 \end{figure}
 
-\newpage
-
-\section{Computational Framework}
+\section{Unified Computational Framework}
 
 \subsection{Colony Representation}
 
-For our implementation, we closely follow the approach described by Weady et al.~\cite{Weady2024SM} in their supplementary material. The entire bacterial colony is represented by a single global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$.
+Following Weady et al.~\cite{Weady2024SM}, the bacterial colony is represented by a global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$.
+
+Quaternions are used instead of Euler angles or rotation matrices because they avoid singularities (gimbal lock), provide stable numerical integration over long simulations, and require less memory (4 components vs. 9 for rotation matrices).
 
 \subsection{Colony Dynamics}
 
-The translational and angular velocities of all cells in the colony are determined by the force-velocity relationship $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$. Here, $\mathbfcal{F}$ is the generalized force vector for the entire colony, containing both force and torque components for each cell. Similarly, $\mathbfcal{U}$ is the generalized velocity vector containing the resulting translational and angular velocities. These vectors are structured as follows:
+The translational and angular velocities of all cells in the colony are determined simultaneously by the force-velocity relationship $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$. Here, $\mathbfcal{F} \in \mathbb{R}^{6N}$ is the generalized force vector for the entire colony, containing both force and torque components for each cell. Similarly, $\mathbfcal{U} \in \mathbb{R}^{6N}$ is the generalized velocity vector containing the resulting translational and angular velocities. The components of these vectors are defined as:
 
-\begin{itemize}
-    \item
-          $\mathbfcal{F} = [\dots, \mathbf{f}_n^\top, \boldsymbol{\tau}_n^\top, \dots]^\top \in \mathbb{R}^{6N}$ represents the force $\mathbf{f}_n$ and torque $\boldsymbol{\tau}_n$ for the $n$-th cell.
-    \item
-          $\mathbfcal{M} = \text{diag}([\dots, \frac{1}{\zeta l_n}\mathbf{I}, \frac{12}{\zeta l_n^3}\mathbf{I}, \dots]) \in \mathbb{R}^{6N \times 6N}$ is a diagonal mobility matrix, consisting of the inverses of the cell's linear and angular mobility coefficients (from Eq.~\ref{eq:overdamped_langevin}) along its diagonal. Here, $\mathbf{I}$ is the $3 \times 3$ identity matrix.
-    \item
-          $\mathbfcal{U} = [\dots, \mathbf{u}_n^\top, \boldsymbol{\omega}_n^\top, \dots]^\top \in \mathbb{R}^{6N}$ represents the resulting translational velocity $\mathbf{u}_n$ and angular velocity $\boldsymbol{\omega}_n$ for the $n$-th cell.
-\end{itemize}
+\begin{equation}
+    \mathbfcal{F} = [\mathbf{f}_1, \boldsymbol{\tau}_1, \dots, \mathbf{f}_N, \boldsymbol{\tau}_N]^\top, \quad
+    \mathbfcal{U} = [\mathbf{u}_1, \boldsymbol{\omega}_1, \dots, \mathbf{u}_N, \boldsymbol{\omega}_N]^\top
+\end{equation}
 
+where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ due to all other cells $j$ in contact with it, and $\boldsymbol{\tau}_i = \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}$ is the corresponding total torque.
 
-Combined with a mapping function $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ to the corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (as described in~\cite{Weady2024SM,Yan2022,Tasora2008}), we can express the colony's state update for an Euler timestep $\Delta t$ as:
+The block-diagonal mobility matrix $\mathbfcal{M}$ encodes the drag coefficients for translation and rotation of each cell and depends on the individual cell lengths $\ell_i$:
+
+\begin{equation}
+    \mathbfcal{M} = \frac{1}{\zeta}\; \text{diag}\left(\frac{1}{l_1}\mathbf{I}_3, \frac{12}{l_1^3}\mathbf{I}_3, \dots \right) \in \mathbb{R}^{6N \times 6N}
+\end{equation}
+
+where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix.
+
+\subsection{State Integration}
+
+The orientation quaternion $\mathbf{q}_i$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_i = \frac{1}{2} \boldsymbol{\omega}_i \otimes \mathbf{q}_i$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (See~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}$, the colony's state is updated via explicit Euler integration:
 
 \begin{equation} \label{eq:colony_update}
     \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{M} \mathbfcal{F}
 \end{equation}
 
-The mapping function $\mathbfcal{G}$ is required because the colony state is represented using quaternions, whereas the dynamics are expressed in terms of angular velocities that specify an instantaneous axis of rotation and rotation rate; $\mathbfcal{G}$ converts these into quaternion derivatives, enabling consistent integration using an Euler step~\cite{Weady2024SM, Tasora2008}.
+This mapping applies the quaternion kinematics to all quaternion components of the colony, converting generalized forces in $\mathbb{R}^{6N}$ into consistent updates in $\mathbb{R}^{7N}$ and ensuring the Euler integration respects both translational and rotational dynamics.
 
-
-The specific implementations of the hard and soft collision models are defined by how the generalized force vector $\mathbfcal{F}$ is computed in each case.
-
-\newpage
+The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ is computed; the state update mechanism remains identical.
 
 \subsection{Soft Collision Model}
 
