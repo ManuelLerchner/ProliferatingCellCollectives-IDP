@@ -178,8 +178,8 @@ Each cell is modeled as a spherocylinder (a rigid rod with hemispherical caps) c
 At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \ll 1$), meaning that viscous forces dominate over inertia and bacteria move in a \textit{sticky} environment where they stop immediately after a force is applied~\cite{datta2024lifelowreynoldsnumber,Rudge2012}. The system is therefore governed by the overdamped Langevin equation:
 
 \begin{equation} \label{eq:overdamped_langevin}
-    \mathbf{u}_i = \frac{1}{\zeta l_i} \sum_j \mathbf{F}_{ij}, \quad
-    \boldsymbol{\omega}_i = \frac{12}{\zeta l_i^3} \sum_j (\mathbf{r}_{ij} \times \mathbf{F}_{ij})
+    \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_j \mathbf{F}_{ij}, \quad
+    \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}
 \end{equation}
 
 Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angular velocities of cell $i$, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. Figure~\ref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
@@ -304,34 +304,32 @@ Quaternions are used instead of Euler angles or rotation matrices because they a
 
 \subsection{Colony Dynamics}
 
-The translational and angular velocities of all cells in the colony are determined simultaneously by the force-velocity relationship $\mathbfcal{U} = \mathbfcal{M} \mathbfcal{F}$. Here, $\mathbfcal{F} \in \mathbb{R}^{6N}$ is the generalized force vector for the entire colony, containing both force and torque components for each cell. Similarly, $\mathbfcal{U} \in \mathbb{R}^{6N}$ is the generalized velocity vector containing the resulting translational and angular velocities. The components of these vectors are defined as:
+The translational and angular velocities of all cells in the colony from \autoref{eq:overdamped_langevin} are determined simultaneously by a force-velocity relationship $\mathbfcal{U} = \mathbfcal{M}^k \mathbfcal{F}$. Here, $\mathbfcal{F} \in \mathbb{R}^{6N}$ is the generalized force vector for the entire colony, containing both force and torque components for each cell. Similarly, $\mathbfcal{U} \in \mathbb{R}^{6N}$ is the generalized velocity vector containing the resulting translational and angular velocities. The components of these vectors are defined as:
 
 \begin{equation}
     \mathbfcal{F} = [\mathbf{f}_1, \boldsymbol{\tau}_1, \dots, \mathbf{f}_N, \boldsymbol{\tau}_N]^\top, \quad
     \mathbfcal{U} = [\mathbf{u}_1, \boldsymbol{\omega}_1, \dots, \mathbf{u}_N, \boldsymbol{\omega}_N]^\top
 \end{equation}
 
-where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ due to all other cells $j$ in contact with it, and $\boldsymbol{\tau}_i = \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}$ is the corresponding total torque.
-
-The block-diagonal mobility matrix $\mathbfcal{M}$ encodes the drag coefficients for translation and rotation of each cell and depends on the individual cell lengths $\ell_i$:
+where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ due to all other cells $j$ in contact with it, and $\boldsymbol{\tau}_i = \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}$ is the total torque. The diagonal mobility matrix $\mathbfcal{M}^k$ at timestep $k$ encodes the drag coefficients for all cells based on their current lengths $\ell_i^k$:
 
 \begin{equation}
-    \mathbfcal{M} = \frac{1}{\zeta}\; \text{diag}\left(\frac{1}{l_1}\mathbf{I}_3, \frac{12}{l_1^3}\mathbf{I}_3, \dots \right) \in \mathbb{R}^{6N \times 6N}
+    \mathbfcal{M}^k = \text{diag}\left(\frac{1}{\zeta \ell_1^k}\mathbf{I}_3, \frac{12}{\zeta {\ell_1^k}^3}\mathbf{I}_3, \dots \right) \in \mathbb{R}^{6N \times 6N}
 \end{equation}
 
 where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix.
 
 \subsection{State Integration}
 
-The orientation quaternion $\mathbf{q}_i$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_i = \frac{1}{2} \boldsymbol{\omega}_i \otimes \mathbf{q}_i$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in position and quaternion in $\mathbb{R}^{7N}$ (See~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}$, the colony's state is updated via explicit Euler integration:
+The orientation quaternion $\mathbf{q}_i^k$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_i^k = \frac{1}{2} \boldsymbol{\omega}_i \otimes \mathbf{q}_i^k$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}^k$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in positions and quaternions in $\mathbb{R}^{7N}$ (See~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}^k$, the colony's state is updated via explicit Euler integration:
 
 \begin{equation} \label{eq:colony_update}
-    \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G} \mathbfcal{M} \mathbfcal{F}
+    \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}
 \end{equation}
 
-This mapping applies the quaternion kinematics to all quaternion components of the colony, converting generalized forces in $\mathbb{R}^{6N}$ into consistent updates in $\mathbb{R}^{7N}$ and ensuring the Euler integration respects both translational and rotational dynamics.
+This mapping applies the quaternion kinematics to all quaternion components of the colony and ensures the Euler integration respects both translational and rotational dynamics.
 
-The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ is computed; the state update mechanism remains identical.
+The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ is computed, the state update mechanism remains identical.
 
 \subsection{Soft Collision Model}
 
@@ -417,7 +415,7 @@ The colony update rule and additional conditions combine to form a system where 
 
 \begin{equation} \label{eq:colony_update_with_constraints}
     \begin{split}
-        \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G} \mathbfcal{M} \mathbfcal{F}(\boldsymbol{\gamma})         \\
+        \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}(\boldsymbol{\gamma})         \\
         \text{ s.t.} \quad  & \mathbf{0} \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}(\boldsymbol{\gamma}) \geq \mathbf{0}.
     \end{split}
 \end{equation}
@@ -442,14 +440,14 @@ Combining these two effects, leads to the following approximation for $\mathbf{\
     \begin{split}
         \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t \Bigl( \dot{\mathbf{\Phi}}_{\text{motion}} + \dot{\mathbf{\Phi}}_{\text{growth}} \Bigr)\\
         & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}^k - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
-        & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \mathbfcal{G} \mathbfcal{M}  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
-        & = \mathbf{\Phi}^k + \Delta t \Bigl( \mathbfcal{D}^\top \mathbfcal{M}  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda  \boldsymbol{\sigma}(\boldsymbol{\gamma})} \Bigr)\\
-        & = \mathbf{\Phi}^k + \Delta t \Bigl( \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \Bigr)
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \mathbfcal{G}^k \mathbfcal{M}^k  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( \mathbfcal{D}^\top \mathbfcal{M}^k  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda  \boldsymbol{\sigma}(\boldsymbol{\gamma})} \Bigr)\\
+        & = \mathbf{\Phi}^k + \Delta t \Bigl( \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \Bigr)
     \end{split}
 \end{equation}
 
 
-Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = \mathbfcal{G}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while $\mathbfcal{G}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See~\cite{Weady2024SM, Tasora2008} for details).
+Here we use the fact that the matrix $\mathbfcal{D}$ from above can also be expressed as $\mathbfcal{D} = {\mathbfcal{G}^k}^\top (\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$. Here, $\nabla_{\mathbfcal{C}} \mathbf{\Phi}$ is the constraint Jacobian that maps small changes in the colony configuration $\mathbfcal{C}$ to changes in the signed distance functions $\mathbf{\Phi}$. Consequently, its transpose, $(\nabla_{\mathbfcal{C}} \mathbf{\Phi})^\top$, maps forces along the constraint directions back to generalized forces in configuration space $\mathbb{R}^{7N}$, while ${\mathbfcal{G}^k}^\top$ pulls these forces into the reduced coordinate space of translational and angular velocities $\mathbb{R}^{6N}$ (See~\cite{Weady2024SM, Tasora2008} for details).
 
 It can be shown that $\mathbfcal{L}^\top = \nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k \in \mathbb{R}^{C \times N}$ is the Jacobian that maps changes in cell lengths $\boldsymbol{\ell}$ to changes in the signed distance functions $\mathbf{\Phi}$~\cite{Weady2024SM}, simplifying the growth term in the last line of \autoref{eq:phi_expanded}.
 
@@ -463,7 +461,7 @@ Substituting the approximation of $\mathbf{\Phi}^{k+1}$ from \autoref{eq:phi_exp
          & \mathbf{0} \leq \boldsymbol{\gamma} \perp
         \mathbf{\Phi}^k
         + \Delta t \Biggl(
-        \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma}
+        \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma}
         - \mathbfcal{L}^\top
         \tfrac{\boldsymbol{\ell}}{\tau}
         e^{-\lambda \mathbfcal{L}\boldsymbol{\gamma}}
@@ -482,7 +480,7 @@ To solve this contact problem efficiently, we reframe it as an optimization prob
     \begin{aligned}
         E(\boldsymbol{\gamma}) =
         \boldsymbol{\gamma}^\top\mathbf{\Phi}^k
-         & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
+         & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} \\
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
         \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right).
     \end{aligned}
@@ -493,7 +491,7 @@ By construction, the gradient (slope) of this energy equals the linearized predi
 
 \begin{equation}
     \begin{split}
-        \nabla_{\boldsymbol{\gamma}} E & = \boldsymbol{\Phi}^k + \Delta t \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} - \Delta t \mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \\
+        \nabla_{\boldsymbol{\gamma}} E & = \boldsymbol{\Phi}^k + \Delta t \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} - \Delta t \mathbfcal{L}^\top \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \\
         & = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma})
     \end{split}
 \end{equation}
