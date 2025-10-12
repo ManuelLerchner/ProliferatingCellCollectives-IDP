@@ -714,8 +714,6 @@ Similar to You et al.~\cite{You2018,You_2021}, we observe the formation of micro
 
 Even though the hard and soft collision models presented in this paper are not directly comparable to You et al.~\cite{You2018}, as You et al. use constant growth rates while the models here employ stress-dependent growth, their observations still provide useful context. You et al. showed that reduced growth rates produce larger microdomains. In the models presented here, stress sensitivity $\lambda$ mimics this effect by inhibiting growth in the densely packed colony center, which similarly produces larger microdomains. We observe this trend in simulations of the soft model (see \autoref{fig:orientation_comparison}), where higher $\lambda$ values lead to reduced growth rates and correspondingly larger microdomains, consistent with You et al.'s findings. The hard model shows no such trend.
 
-\subsection{Microdomain Formation in Large Colonies}
-
 Although the hard and soft models produce similar orientation patterns in small colonies ($R \approx 50$), pronounced differences emerge as colonies grow larger or $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintains distinct patches of similarly-sized aligned cells across all $\lambda$ values. In contrast, the soft model produces elongated, unrealistic bundles of densely packed aligned cells that do not resemble experimentally observed microdomains.
 
 This artifact stems directly from the soft model's higher interior growth rates, which cannot be effectively resolved by local pairwise repulsive forces. Without sufficient outward stress propagation, the interior becomes unphysically dense, forcing cells into long, aligned bundles.
@@ -725,17 +723,15 @@ The impact of $\lambda$ on microdomain structure is clearly visible: the hard mo
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/cluster_area_boxplot.png}
-    \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$ values. The hard model produces consistent domain sizes, while the soft model shows high variability with many large clusters, especially at $\lambda = 10^{-4}$. Clusters are identified using connected-component labeling~\cite{You2018}, grouping neighboring cells with similar orientations.}
+    \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$ values. The hard model produces consistent domain sizes, while the soft model shows high variability with many large clusters, especially at $\lambda = 10^{-4}$. Clusters are identified using a graph-based connected-component algorithm~\cite{You2018}, grouping neighboring cells with similar orientations (within 3\% of each other).}
     \label{fig:cluster_area_boxplot}
 \end{figure}
-
-\subsection{Implications for Model Selection}
 
 Both models successfully reproduce microdomain formation in small colonies ($R \lesssim 50$), demonstrating that the fundamental mechanisms are captured adequately by both collision approaches at small scales. However, substantial differences emerge as colonies grow larger or $\lambda$ decreases. The soft model's unphysical packing density progressively distorts domain structure, producing elongated cell bundles that do not match experimental observations. In contrast, the hard model maintains biologically realistic domain morphologies across all tested parameters.
 
 Potential improvements to the soft model could address these limitations. An enhanced adaptive timestep scheme could reduce $\Delta t$ when packing fraction exceeds a threshold, allowing repulsive forces more time to resolve overlaps before they accumulate. Additionally, introducing a global outward pressure or expansion force could help prevent excessive interior packing by providing a uniform resistance to overcrowding, distributing mechanical stress more effectively throughout the colony.
 
-In its current form, the soft model is unsuitable for studying microdomain formation in large colonies or at low stress-sensitivity. However, it remains a viable and computationally simpler alternative for studying macroscopic pattern formation in smaller colonies where packing artifacts do not significantly distort the overall dynamics, such as those explored in~\cite{You2018}. For studies requiring accurate microdomain resolution or exploration of parameter regimes with weak stress-sensitivity, the hard model is the appropriate choice.
+In its current form, the soft model is unsuitable for studying microdomain formation in large colonies or at low stress-sensitivity. However, it remains a viable and computationally simpler alternative for studying macroscopic pattern formation in smaller colonies where packing artifacts do not significantly distort the overall dynamics, such as those explored in~\cite{You2018}. For studies requiring accurate microdomain resolution or exploration of parameter regimes with weak stress-sensitivity, the hard model is the appropriate choicem, although future work is needed to investigate the impact of the stress sensitivity parameter $\lambda$ on the hard model's microdomain formation similarly to the analysis performed by You et al.~\cite{You2018}.
 
 \begin{figure*}[p]
     \makebox[\textwidth][c]{
@@ -779,65 +775,59 @@ At higher stress-sensitivity ($\lambda = 10^{-2}$), growth becomes strongly supp
     \label{fig:radial_distribution_growth_rate}
 \end{figure}
 
+
 \section{Computational Performance}
 \label{sec:performance_analysis}
 
-Both the hard and soft collision models are capable of reproducing the experimentally observed macroscopic patterns in growing bacterial colonies, including concentric rings and microdomain formation in small colonies. However, they differ significantly in terms of computational performance, which is critical for large-scale simulations. In this section, we analyze and compare the performance of both models in detail.
-
+Both the hard and soft collision models successfully reproduce experimentally observed macroscopic patterns in growing bacterial colonies, however, they differ significantly in computational performance. This section provides a detailed comparison of computational aspects for both models. All benchmarks were performed on the \texttt{CoolMUC-4}\footnote{\texttt{CoolMUC-4} is part of the Linux Cluster at the Leibniz Supercomputing Centre (LRZ). It consists of 106 compute nodes equipped with \textit{Intel Xeon Platinum 8480+ (Sapphire Rapids)} CPUs, each providing 112 cores. For further details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.} HPC cluster.
 
 \subsection{Critical Time Step}
 
-The soft collision model is cheaper per interaction but typically requires smaller integration time steps to maintain numerical stability due to the stiffness of the repulsive forces. In contrast, the hard collision model can often operate with larger time steps since it enforces non-overlap constraints directly, although its per-step cost is significantly higher because of the global optimization problem.
+Figure~\ref{fig:simulation_time_vs_dt} shows the maximum stable timestep $\Delta t$ determined by \autoref{alg:adaptive_dt} for both models during a simulation. The hard model stabilizes around $\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h, while the soft model steadily decreases to $\Delta t_{\text{soft}} \approx 10^{-5}$ h. The ratio $\Delta t_{\text{hard}}/\Delta t_{\text{soft}} \approx 30$ indicates the hard model can take roughly 30 times larger steps than the soft model in dense colonies, requiring significantly fewer steps to simulate equivalent physical time. Notably, for the hard model with $\lambda = 10^{-2}$, the maximum stable timestep increases over time. This occurs because interior cells stop growing (see \autoref{fig:radial_distribution_growth_rate}), reducing median velocity $u_m$ and allowing larger steps. The soft model does not exhibit this effect.
 
-\autoref{fig:simulation_time_vs_dt} shows the maximum stable time step $\Delta t$ for both models during a simulation. The optimal time is determined by \autoref{alg:adaptive_dt}, which adjusts $\Delta t$ based on the median cell velocity to ensure stability. The hard collision model stabilizes around ${\Delta t}_{\text{hard}} \approx 3 \cdot 10^{-4} h$, while the soft model steadily decreases, reaching ${\Delta t}_{\text{soft}} \approx 1 \cdot 10^{-5} h$ at the end. The ratio ${\Delta t}_{\text{hard}}/{\Delta t}_{\text{soft}} \approx 30$ indicates that the hard model can take roughly 30 times larger steps than the soft model in dense colonies, and thus requires significantly fewer steps to simulate the same physical time span.
-
-Interestingly, for the hard model with $\lambda=10^{-2}$, the maximum stable time step increases over time. This occurs because cells in the colony interior stop growing (see \autoref{fig:radial_distribution_growth_rate}), reducing the median particle velocity $u_m$ and allowing larger steps. The soft model does not exhibit this effect, as repulsive forces always permit some overlap and sporadic motion.
+Compared to using a fixed timestep, the adaptive scheme provides significant performance benefits. Early iterations can use larger timesteps, while later stages, which require higher resolution due to increased cell density and interactions, can use smaller timesteps to maintain stability. A fixed, small timestep throughout is impractical for growing bacterial colonies, since computational load increases dramatically with cell number. Setting the timestep low enough to guarantee stability at the very end of the simulation would require extremely fine resolution early on, making the entire simulation prohibitively expensive.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_dt.png}
-    \caption{Adaptive timestep $\Delta t$ over simulation time for both collision models. The hard model stabilizes around ${\Delta t}_{\text{hard}} \approx 3 \cdot 10^{-4} h$, while the soft model decreases to ${\Delta t}_{\text{soft}} \approx 1 \cdot 10^{-5} h$.} \label{fig:simulation_time_vs_dt}
+    \caption{Adaptive timestep $\Delta t$ over simulation time for both collision models. The hard model stabilizes around $\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h, while the soft model tends to $\Delta t_{\text{soft}} \approx 1 \cdot 10^{-5}$ h.}
+    \label{fig:simulation_time_vs_dt}
 \end{figure}
-
 
 \subsection{Strong Scaling}
 \label{sec:strong_scaling}
 
-To assess the parallel performance of the hard and soft simulation models, we analyze runtime and speedup as a function of CPU cores. Strong scaling tests start from a single cell and grow the colony to a radius of 100, revealing how efficiently each model utilizes additional cores.
+To evaluate parallel performance, we examine runtime and speedup as functions of CPU core count. Strong scaling tests grow colonies from a single cell to a radius of 100, measuring how efficiently each model leverages additional computational resources. The underlying domain decomposition strategy is identical for both models, ensuring a fair comparison.
 
-At lower CPU counts ($\text{ranks}< 2^4$), the hard model is slightly faster than the soft model (\autoref{fig:runtime_hard_soft}), likely due to its ability to take larger time steps. As core counts increase, both models converge to similar runtimes. Speedup analysis (\autoref{fig:speedup_hard_soft}) shows the soft model scales smoothly up to 20x for 112 ranks, while the hard model slows in the mid-range, limiting the speedup to 17.5x at 112 ranks.
+Generally, the hard model outperforms the soft model by approximately 20\% at low core counts (see \autoref{fig:runtime_hard_soft}), likely because it advances with larger timesteps. As core count increases, both models converge to similar runtimes. Speedup results (see \autoref{fig:speedup_hard_soft}) show the soft model scales smoothly to 20$\times$ at 112 ranks, whereas the hard model experiences mid-range slowdown, limiting speedup to 17.5$\times$ at 112 ranks.
 
-A contributing factor to the poor performance of the soft model at low core counts is the unnaturally high packing densities it produces, thus requiring more cells to reach the same colony radius (See \autoref{fig:colony_radius_vs_num_cells}). Even, with an extremly small per-particle cost (See \autoref{fig:walltime_per_particle}), these additional costs, combined with a smaller stable time step (See \autoref{fig:simulation_time_vs_dt}), lead to longer overall runtimes.
-
-Thus, the hard model seems to be a valid alternative especially for smaller core counts, as it can take larger time steps and requires produces no overhead for simulating unphysically dense colonies.
-
+The soft model's poor performance at low core counts stems partly from its higher packing densities, which require more cells to reach the same colony radius (see \autoref{fig:colony_radius_vs_num_cells}). Although per-particle cost is low (see \autoref{fig:walltime_per_particle}), the increased cell count combined with smaller stable timesteps (see \autoref{fig:simulation_time_vs_dt}) could negate these advantages.
 
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_runtime_hard_soft.png}
-        \caption{Runtime vs CPU cores. The hard model is slightly faster at low core counts, but both models converge to similar runtimes at high core counts.}
+        \caption{Runtime to reach a colony radius of 100 versus CPU cores. The hard model is slightly faster at low core counts; both converge to similar runtimes at high core counts.}
         \label{fig:runtime_hard_soft}
     \end{subfigure}
 
-
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_speedup_hard_soft.png}
-        \caption{Speedup vs CPU cores. The soft model scales smoothly up to 20x for 112 ranks, while the hard model slows in the mid-range, limiting speedup to 17.5x at 112 ranks.}
+        \caption{Speedup versus CPU cores. The soft model scales smoothly to 20$\times$ for 112 ranks, while the hard model is limited to 17.5$\times$. Speedup is defined as $S = T_1 / T_r$, where $T_1$ is the runtime on 1 core and $T_r$ is the runtime on $r$ cores.}
         \label{fig:speedup_hard_soft}
     \end{subfigure}
 
-    \caption{Strong scaling comparison of the hard and soft models.}
+    \caption{Strong scaling comparison of hard and soft models.}
 \end{figure}
 
-\subsection{Runtime and Scalability Analysis}
+\subsection{Model Efficiency: Walltime and Interaction Overhead}
 \label{sec:complexity_scalability}
 
-This section delves deeper into the computational performance of both collision models by examining the walltime per cell during simulations.
+As shown in \autoref{fig:walltime_per_particle}, per-particle walltime for the soft model is consistently lower by roughly two orders of magnitude compared to the hard model. This reflects the soft model's simpler, local force evaluations, in contrast to the hard model's global constraint-solving step, which introduces higher computational overhead.
 
-As shown in \autoref{fig:walltime_per_particle}, the per-cell walltime remains approximately constant across each model but is substantially lower for the soft model. This difference arises because the soft model requires only a single force evaluation per cell, whereas the cells in the hard model contribute to global effects. \autoref{fig:walltime_per_particle} also reveals subtle temporal trends: walltime decreases slightly as cell number increases, likely due to improved load balance from domain decomposition, which allows computational cores to process cells more efficiently. Conversely, walltime increases modestly over time, presumably because each cell contributes progressively to global interactions that the solver must resolve.
+For the soft model, per-particle walltime decreases as the simulation progresses, reflecting improved load balancing and more efficient CPU core utilization. In contrast, the hard model shows a slight increase in per-particle walltime over time, likely caused by growing complexity of global constraint resolution as more particles interact and more BBPGD iterations are required to find feasible solutions.
 
-A possible explanation for the hard model's increased walltime is the higher number of constraints it generates. Each ReLCP iteration introduces new constraints to resolve overlaps, leading to a denser constraint matrix. \autoref{fig:num_constraints} highlights this difference, showing that the soft model generates 6 constraints per cell (one per neighboring pair), while the hard model produces 21 constraints per cell due to the ReLCP procedure.
+Another key factor is the computational load from collision handling (see \autoref{fig:num_constraints}). The soft model processes roughly 6 collision interactions per cell at dense packing levels, consistent with resolving local pairwise interactions. In contrast, the hard model generates approximately 21 constraints per cell due to the ReLCP procedure, which iteratively identifies and resolves newly formed overlaps until all are eliminated. This higher constraint density means the matrices and vectors involved in the optimization problem become larger, leading to increased computational cost per step.
 
 
 \begin{figure}[h]
@@ -845,68 +835,69 @@ A possible explanation for the hard model's increased walltime is the higher num
     \begin{subfigure}[b]{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_particles_vs_wall_time_per_particle_with_fit.png}
-        \caption{Per-cell walltime for both the hard and soft models with 112 ranks.}
+        \caption{Per-cell walltime for both models with 112 ranks.}
         \label{fig:walltime_per_particle}
     \end{subfigure}
-
 
     \begin{subfigure}[b]{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_num_constraints_vs_num_particles_with_fit.png}
-        \caption{Number of constraints as a function of cell count $N$ for both models.}
+        \caption{Number of cell-cell interactions (constraints) per cell for both models.}
         \label{fig:num_constraints}
     \end{subfigure}
 
-    \caption{Comparison of simulation metrics for the hard and soft collision models with 112 ranks.}
+    \caption{Comparison of simulation metrics for hard and soft models with 112 ranks.}
     \label{fig:comparison_metrics}
 \end{figure}
 
+\subsection{Maximum Attainable Colony Size}
 
-\subsection{Maximum attainable Colony Size}
+We investigate the maximum achievable colony size within a fixed computational budget of 24 hours on 112 CPUs, using $\lambda = 10^{-3}$ where concentric ring patterns are expected.
 
-In this section, we investigate the maximum achievable colony size within a fixed computational budget using the \texttt{CoolMUC-4} high-performance computing cluster\footnote{\texttt{CoolMUC-4} is part of the Linux Cluster at the Leibniz Supercomputing Centre (LRZ). It consists of 106 compute nodes equipped with \textit{Intel Xeon Platinum 8480+ (Sapphire Rapids)} CPUs, each providing 112 cores. For further details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.}. Specifically, we compare the largest attainable colony radius obtained with both the hard and soft models with $\lambda=10^{-3}$ when running on 112 ranks over a wall time of 24 hours. This benchmark was just executed once per model due to the high computational cost, so the results should be interpreted with some caution.
+As illustrated in \autoref{fig:huge_wall_time_vs_radius}, the soft model reaches a maximum colony radius of approximately $R = 210$ compared to $R = 195$ for the hard model, despite requiring substantially more particles (approximately 1,033,108 versus 168,339). This demonstrates that the soft model's per-particle efficiency outweighs the cost of simulating additional cells.
 
+Contrary to the strong scaling results (see \autoref{sec:strong_scaling}), the soft model becomes increasingly beneficial as colony size increases beyond $R = 100$. As the colony grows, the hard model's per-step cost and increasing complexity in global constraint resolution begin to dominate, making the simpler soft model more competitive despite its smaller timesteps.
 
-As illustrated in \autoref{fig:huge_wall_time_vs_radius}, the soft interaction model exhibits slightly superior scalability, reaching a maximum colony radius of approximately $R = 210$, compared to $R = 195$ for the hard model. Despite the soft model requiring significantly more particles (approximately $1{,}033{,}108$), it still achieves a marginally larger colony within the same computational constraints. In contrast, the hard model attains its limit with only $168{,}339$ particles.
-
-
-In the previous section about strong scaling (\autoref{sec:strong_scaling}), we observed that the hard model was generally faster for reaching a colony radius of $R=100$. However, as the colony size increases, the hard model's performance advantage diminishes due to its higher computational cost and the continously increasing complexity of resolving global constraints. This split in the performance curves is also evident in \autoref{fig:huge_wall_time_vs_radius}, where the colony radii curves start to diverge significantly beyond $R=100$.
+Despite these performance differences, macroscopic structure remains comparable. As shown in \autoref{fig:huge_length_shared}, the average radial cell length exhibits nearly identical oscillatory patterns in both models, confirming that microscopic density differences do not significantly alter emergent macroscopic patterns. A full snapshot of the colony structure for the hard model at the maximum size is shown in \autoref{fig:huge_colony_hard}.
 
 
-Interestingly, the macroscopic structural characteristics of both colonies remain largely comparable. As shown in \autoref{fig:huge_length_shared}, the average radial particle length $\langle \text{length} \rangle$ exhibits nearly identical oscillatory patterns in both models. Unfortunately, due to the high number of particles in the soft model, we were unable to create a visual snapshot of the entire colony. However, based on the radial length profiles, we can infer that both models produce similar concentric ring patterns, despite the significant differences in microscopic density. The snapshot of the hard model is provided in \autoref{fig:huge_snapshot_hard} for reference.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/huge_wall_time_vs_radius.png}
-    \caption{Time evolution of the colony radius for hard and soft interaction modes. Simulations were performed on 112 ranks of the CoolMUC-4 cluster with a maximum wall time of 24 hours. The soft model attains a larger final radius despite higher particle counts. (Sample size: 1 run per model)}
-    \label{fig:huge_wall_time_vs_radius}
-\end{figure}
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/huge_wall_time_vs_radius.png}
+        \caption{Colony radius over wall time for both models.}
+        \label{fig:huge_wall_time_vs_radius}
+    \end{subfigure}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/huge_length_shared.png}
-    \caption{Radial dependence of the average cell length $\langle \text{length} \rangle$ for both models at their maximum attained colony size. Both models exhibit similar oscillatory patterns, indicating comparable macroscopic structure.}
-    \label{fig:huge_length_shared}
-\end{figure}
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/huge_length_shared.png}
+        \caption{Average cell length $\langle \text{length} \rangle$ as a function of radius for both models at maximum colony size.}
+        \label{fig:huge_length_shared}
+    \end{subfigure}
 
-Overall, these results demonstrate that the soft interaction model can achieve slightly larger colonies within the same computational budget, despite its higher particle requirements. However, both models produce similar macroscopic patterns, suggesting that either approach can be effectively used for studying large-scale colony growth, depending on whether computational efficiency or adherence to non-overlapping constraints is prioritized.
+    \caption{Note: this benchmark was just executed once per model, so results should be interpreted with some caution.}
+\end{figure}
 
 
 \subsection{Insights into BBPGD Iterations}
 
+This section analyzes the performance characteristics of the Barzilai-Borwein projected gradient descent (BBPGD) algorithm used in the hard collision model to solve the underlying constrained optimization problem. Understanding the convergence properties and computational efficiency of this solver is crucial, as it represents the most computationally intensive component of the overall simulation framework. In later stages of the simulation, when the system becomes densely packed and many contact constraints must be resolved simultaneously, BBPGD calls and the underlying matrix-vector operations account for approximately 85\% of total wall time.
 
-This last section focuses on the performance characteristics of the BBPGD algorithm used in the hard collision model to solve the underlying constrained optimization problem. Understanding the behavior, convergence properties, and computational efficiency of this solver is crucial, as it represents the most computationally intensive component of the overall simulation framework. In the later stages of the simulation, when the system becomes densely packed and a large number of contact constraints must be resolved simultaneously, calls to this function, along with the underlying matrix-vector operations required for gradient evaluations, account for approximately 85\% of the total wall time.
+A key metric is the number of BBPGD iterations required per simulation step and how this quantity scales with system size. Figure~\ref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that iteration count remains mostly on the order of $\mathcal{O}(1000)$, with occasional peaks reaching $\mathcal{O}(5000)$ during critical moments such as large-scale rearrangements or near jamming transitions. This count includes additional BBPGD calls from the ReLCP procedure, which requires up to 11 iterations to fully resolve remaining overlaps~\cite{Weady2024SM}. The typical iteration count per timestep is consistent with related studies~\cite{Yan2019}, though our model's collision-growth coupling introduces additional complexity.
 
-It is therefore essential to analyze how many BBPGD iterations are typically required per time step and how this quantity scales with increasing system size. \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} illustrates that the number of BBPGD iterations remains mostly on the order of $\mathcal{O}(1000)$, with occasional spikes reaching up to $\mathcal{O}(5000)$ during critical moments of the simulation, such as during large-scale rearrangements or near jamming transitions. This number includes additional BBPGD calls arising from the ReLCP procedure, which just requires up to 11 iterations to fully resolve all remaining overlaps as predicted in~\cite{Weady2024SM}. The typical iteration count per time step is thus consistent with the order of magnitude observed in related studies~\cite{Yan2019}, although our model introduces further complexity due to the collision-growth coupling.
+The convergence behavior within a single, typical, timestep is illustrated in Figure~\ref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\epsilon = 10^{-3}$ within approximately 2500 iterations while continuously reducing system energy (Figure~\ref{fig:bbpgd_energy}) as defined in \autoref{eq:energy_function}. Energy decreases monotonically, confirming BBPGD convergence under the projected gradient framework. The residual exhibits a highly oscillatory pattern, which is a well-known characteristic of BBPGD caused by adaptive step size selection~\cite{BBPGD,Schneider2021}. This oscillatory behavior does not indicate instability; rather, it reflects the algorithm's adaptive nature as it adjusts step sizes to maintain descent while navigating the constraint landscape.
 
-The convergence behavior of the BBPGD algorithm within a single time step is further illustrated in \autoref{fig:bbpgd_residual}. In this example, the solver successfully reaches the desired tolerance of $\epsilon = 10^{-3}$ within approximately 2500 iterations, while continuously reducing the system's energy, as defined in \autoref{eq:energy_function}, as shown in \autoref{fig:bbpgd_energy}. The energy decreases monotonically, confirming that the BBPGD method converges as expected under the projected gradient framework. The residual, however, exhibits a highly oscillatory pattern, which is a well-known characteristic of the BBPGD algorithm caused by the adaptive step size selection~\cite{BBPGD,Schneider2021}.
+Several opportunities exist for optimizing the current implementation. Whether the current interplay between adaptive timestepping (\autoref{alg:adaptive_dt}) and the BBPGD solver is fully optimal remains an open question. Future work could explore more sophisticated adaptive timestepping strategies that incorporate direct feedback from the solver—for example, adjusting $\Delta t$ based on the number of BBPGD iterations or the observed rate of change in the colony’s energy. In parallel, advanced warm-start strategies that leverage information from previous timesteps could substantially accelerate BBPGD convergence, particularly in later stages where most of the colony structure evolves only gradually.
 
-Nevertheless, it remains unclear whether the current interplay between the adaptive time-stepping scheme (\autoref{alg:adaptive_dt}) and the BBPGD solver is fully optimal. Future work could explore more sophisticated adaptive time-stepping strategies that incorporate feedback from the solver, for example by adjusting $\Delta t$ based on the number of BBPGD iterations required in the previous time step. A further line of investigation could assess whether using smaller time steps and thus requiring fewer BBPGD iterations per step might ultimately reduce total runtime, despite the increased number of integration steps. Additionally, exploring warm-start or initialization strategies for the BBPGD solver, possibly by leveraging information from the solution at the previous time step, could significantly accelerate convergence.
+Another promising direction is to investigate the fundamental trade-off between timestep size and solver effort: smaller timesteps produce easier, faster-converging BBPGD subproblems, which may paradoxically reduce total runtime despite requiring more steps. A systematic study of this trade-off could guide the development of more optimal timestep selection strategies that balance per-step computational cost against overall simulation efficiency.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_num_particles_vs_bbpgd_steps.png}
-    \caption{Number of BBPGD iterations per time step as a function of the number of particles in the system. The number of iterations remains roughly around $\mathcal{O}(1000)$, with occasional spikes up to $\mathcal{O}(5000)$ at critical points in the simulation.}
+    \caption{Number of BBPGD iterations per timestep as a function of particle count. Iterations remain roughly $\mathcal{O}(1000)$ on average, with occasional spikes to $\mathcal{O}(5000)$ at critical simulation points.}
     \label{fig:bbpgd_iterations_per_step_vs_num_particles}
 \end{figure}
 
@@ -915,32 +906,23 @@ Nevertheless, it remains unclear whether the current interplay between the adapt
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_residual.png}
-        \caption{BBPGD algorithm residuals over iterations for a single time step. The solver converges to the desired tolerance of $10^{-3}$ within about 2500 iterations.}
+        \caption{BBPGD residuals over iterations for a single timestep. The solver converges to tolerance $\epsilon = 10^{-3}$ within approximately 2500 iterations, showing highly oscillatory behavior. The residual directly represents the current maximum overlap between any two cells in the colony.}
         \label{fig:bbpgd_residual}
     \end{subfigure}
-
 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_total_energy.png}
-        \caption{System Energy value as described in \autoref{eq:energy_function} throughout the bbpgd algorithm. The energy decreases monotonically, confirming the convergence of the BBPGD method based on the projected gradient.}
+        \caption{System energy (\autoref{eq:energy_function}) throughout the convergence process. Energy decreases monotonically, suggesting stable gradient descent behavior.}
         \label{fig:bbpgd_energy}
     \end{subfigure}
 
-    \caption{BBPGD algorithm behavior during a single time step and across a full simulation.}
+    \caption{Insights into BBPGD solver performance during a typical timestep.}
+    \label{fig:bbpgd_analysis}
 \end{figure}
 
 \clearpage
 \newpage
-
-
-
-
-
-
-
-\newpage
-\clearpage
 
 \section{Discussion}
 
@@ -984,7 +966,7 @@ Future work should focus on developing a more sophisticated memory management st
 
 \subsection{Soft Collision Model}
 
-Beyond optimizing the hard model's solver, a promising avenue is the acceleration of the soft model using advanced molecular dynamics techniques. Libraries like AutoPas~\cite{AutoPasGithub,Gratl2019,Newcome2023} offer a node-level auto-tuning framework specifically designed for particle simulations.AutoPas can dynamically select the optimal combination of algorithms (e.g., for particle interaction traversal and container data structures) tailored to the specific simulation scenario and underlying hardware architecture.
+Beyond optimizing the hard model's solver, a promising avenue is the acceleration of the soft model using advanced molecular dynamics techniques. Libraries like AutoPas~\cite{Gratl2019,Newcome2023} offer a node-level auto-tuning framework specifically designed for particle simulations.AutoPas can dynamically select the optimal combination of algorithms (e.g., for particle interaction traversal and container data structures) tailored to the specific simulation scenario and underlying hardware architecture.
 
 Integrating such a framework could automatically accelerate the computation of repulsive forces in the soft collision model, especially for large-scale colonies where efficient neighbor-search and force evaluation are critical.
 
@@ -997,16 +979,13 @@ Integrating such a framework could automatically accelerate the computation of r
 \nobalance
 
 
-
 \onecolumn
 
 \appendix
-
 \renewcommand{\thefigure}{A\arabic{figure}}
 \renewcommand{\thetable}{A.\arabic{table}}
 \setcounter{figure}{0}
 \setcounter{table}{0}
-
 
 
 \begin{figure}[H]
@@ -1017,13 +996,6 @@ Integrating such a framework could automatically accelerate the computation of r
 \end{figure}
 
 
-
-
-\newpage
-
-
-
-\clearpage
 \newpage
 \twocolumn
 \tableofcontents
