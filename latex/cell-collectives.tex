@@ -924,51 +924,40 @@ Another promising direction is to investigate the fundamental trade-off between 
 \clearpage
 \newpage
 
-\section{Discussion}
+\section{Discussion and Conclusion}
 
-\subsection{Model Selection Insights}
+This work presented a systematic comparison of hard (constraint-based) and soft (potential-based) collision models for simulating proliferating cell collectives, implemented within a unified computational framework. Our investigation yielded several key insights that clarify the trade-offs between these two dominant modeling paradigms.
 
-The choice between hard and soft collision models involves a clear trade-off between physical fidelity and computational efficiency.
-The hard model enforces strict non-overlap, which can be useful for capturing precise mechanical interactions or stress distributions in densely packed cell populations. However, it comes at considerable computational cost, requiring iterative global solvers and limiting scalability to large systems or long simulations.
+We demonstrated that both models successfully reproduce the concentric ring patterns and microdomain formation observed in experimental bacterial colonies, confirming that these macroscopic phenomena are emergent properties of growth-mechanics feedback and are robust to the specific details of collision resolution. This robustness is a significant finding, as it justifies the use of computationally cheaper models for studies focused on colony-level pattern formation.
 
-By contrast, the soft model uses continuous repulsive potentials to approximate collisions. This approach is computationally efficient and scalable, making it well-suited for exploring large colonies or wide parameter spaces.
+However, beneath this macroscopic similarity lie critical microscopic differences. The hard model enforces strict non-overlap, maintaining a physically realistic packing fraction of approximately 0.9 throughout the colony and producing reliable stress distributions and microdomain structures. In contrast, the soft model, while computationally more efficient, is unable to fully reproduce the stress profiles predicted by continuum theory and allows significant and unphysical cell overlap. This leads to packing fractions exceeding 5 in colony centers, distorting microdomain morphology and producing elongated, unrealistic cell bundles, especially in large colonies or under low stress-sensitivity conditions.
 
-Importantly, for many emergent pattern-formation scenarios, such as concentric ring formation, the exact enforcement of non-overlap seems less critical. Other factors, such as stress-dependent growth and a use of an adequate time step, appear to dominate the macroscopic behavior.
+Our performance benchmarking revealed a clear computational trade-off. The hard model's ability to use timesteps approximately 30 times larger than the soft model ($\Delta t_{\text{hard}} \approx 3 \times 10^{-4}$ h vs. $\Delta t_{\text{soft}} \approx 10^{-5}$ h) is offset by its higher per-step cost, driven by the iterative BBPGD solver required for global constraint resolution. Consequently, the hard model outperforms the soft model for small to moderate colonies ($R \leq 100$), while the soft model's superior per-particle efficiency enables it to simulate larger final colony sizes ($R \approx 200$) within a fixed computational budget.
 
-In this context, the soft model provides a realistic approximation of cellular interactions: biological cells are deformable, and mechanical interactions in vivo are rarely perfectly rigid. Indeed, recent studies~\cite{Khan_2024, Ghosh2015, SantosDiaz2025} suggest that finite stiffness or soft repulsive forces are sufficient to capture key structural and morphological features of growing bacterial colonies.
+The introduction of an adaptive timestepping algorithm based on the Courant-Friedrichs-Lewy condition proved essential for maintaining numerical stability in both models, dynamically selecting stable timesteps tailored to the current colony state. Strong scaling tests suggested that both models highly benefit from parallelization, and generally scale well up to 112 CPU cores. At high core counts, both models achieve similar runtimes.
 
-\subsection{Biological Relevance}
+In conclusion, the choice between hard and soft collision models is not a matter of correctness but of application. The soft model provides an efficient, biologically plausible alternative for large-scale studies of macroscopic pattern formation where geometric precision is secondary. In contrast, the hard model remains the definitive choice when precise stress calculations, geometric integrity, or accurate microdomain resolution are required, despite its higher computational cost.
 
-Our results indicate that the soft collision model successfully reproduces major emergent patterns despite its simplified mechanics. This aligns with the view that colony-level behaviors are robust to the details of individual cell interactions, provided that key features like stress-dependent growth are captured.
-
-Furthermore, the soft model naturally represents continuous pressure and proximity effects, which are biologically more plausible than instantaneous, perfectly rigid constraints. This makes it a compelling choice for simulating biological systems where cells exhibit elasticity and deformability.
-
-\section{Conclusion}
-
-This paper demonstrates that a computationally efficient soft collision model can reproduce complex emergent patterns in proliferating cell collectives, including concentric rings observed in bacterial colonies.
-
-While hard collision models offer exact non-overlap and may be valuable when studying precise mechanical stresses or jamming phenomena, they are computationally intensive and less scalable. Soft models, using finite repulsion to approximate contact interactions, achieve a realistic balance between biological plausibility and computational performance.
-
-\newpage
 \section{Future Work}
 
-The current implementation provides a functional baseline for hard collision modeling, yet significant opportunities exist for performance optimization in the constraint solver.
+The computational challenges identified in this work suggest several promising research directions to enhance the scale and efficiency of simulating proliferating cell collectives. While our current implementation provides a solid foundation, significant optimizations remain to fully exploit modern HPC architectures.
 
-\subsection{Hard Collision Model}
-The present PETSc-based implementation of the ReLCP constraint solver faces computational bottlenecks that limit its scalability, primarily due to dynamic memory management strategies for constraint matrices and vectors. While an allocation factor mitigates frequent reallocations, sudden increases in collision events still trigger costly memory recopies. Furthermore, allocated memory is not reused between solver iterations, necessitating complete cleanup and reallocation at each time step.
+\subsection{Adaptive Resource Allocation for Early-Stage Simulations}
 
-Future work should focus on developing a more sophisticated memory management strategy that leverages PETSc's advanced features, such as memory pooling for constraint matrices and vectors, matrix preallocation routines with accurate nonzero pattern prediction, and incremental growth strategies to minimize MPI synchronization overhead.
+A key limitation in our current parallel implementation is the inefficient resource utilization during the initial growth phases. While dynamic load balancing distributes cells evenly across ranks, most MPI ranks remain largely empty until the colony reaches a substantial size. Future work should investigate adaptive resource strategies that begin with fewer, more densely populated ranks and dynamically scale up the active processor count as the colony expands. This could involve implementing a work-stealing approach where idle ranks temporarily assist overloaded ones, or developing a hierarchical domain decomposition that initially partitions at a coarser granularity.
 
+\subsection{GPU Acceleration via PETSc}
 
-\subsection{GPU Acceleration}
+The computational bottleneck of the hard model, particularly for large colonies, is the BBPGD solver. Building on the work of \cite{Tasora2008}, who demonstrated the effectiveness of GPU acceleration for similar constraint-based models, future work will leverage PETSc's built-in GPU support. PETSc enables seamless offloading of linear algebra operations to GPUs through simple runtime configuration, requiring minimal code changes. This approach has been shown to provide significant performance improvements for large-scale simulations where the constraint solver dominates computational cost.
 
-\cite{Tasora2008}
+\subsection{Specialized Molecular Dynamics Libraries for Soft Model Optimization}
 
-\subsection{Soft Collision Model}
+For the soft collision model's pairwise force calculations, we identified significant optimization potential through integration with specialized molecular dynamics libraries like AutoPas~\cite{Gratl2019,Newcome2023}. Beyond basic neighbor search optimization, AutoPas can automatically select optimal data structures (e.g., Verlet lists vs. cell lists) and traversal schemes based on the evolving colony density and hardware characteristics. Future work will implement a dedicated AutoPas backend for the soft model's force kernel, enabling automatic tuning of cutoff radii and load-balanced thread distribution.
 
-Beyond optimizing the hard model's solver, a promising avenue is the acceleration of the soft model using advanced molecular dynamics techniques. Libraries like AutoPas~\cite{Gratl2019,Newcome2023} offer a node-level auto-tuning framework specifically designed for particle simulations.AutoPas can dynamically select the optimal combination of algorithms (e.g., for particle interaction traversal and container data structures) tailored to the specific simulation scenario and underlying hardware architecture.
+\section*{Acknowledgments}
 
-Integrating such a framework could automatically accelerate the computation of repulsive forces in the soft collision model, especially for large-scale colonies where efficient neighbor-search and force evaluation are critical.
+We gratefully acknowledge the computational and data resources as well as the support provided by the Leibniz Supercomputing Centre (\url{www.lrz.de}). All benchmarks in this work were performed on the \texttt{CoolMUC-4} cluster, which is part of the Linux Cluster at LRZ. For further details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.
+
 
 \newpage
 
