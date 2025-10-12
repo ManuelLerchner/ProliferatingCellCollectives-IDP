@@ -508,7 +508,7 @@ Following Weady et al.~\cite{Weady2024SM}, we use a convergence tolerance of $\e
 
 \subsubsection{Limitations of the Linearization}
 
-A fundamental limitation of the linearization is that orthogonal motions—specifically rotations about contact points and translations parallel to the contact plane—are unconstrained within the linear approximation. Consequently, even after the BBPGD algorithm converges to the specified tolerance $\epsilon$, residual overlaps may still be present that violate the non-overlap constraint~\cite{Weady2024SM}.
+A fundamental limitation of the linearization is that orthogonal motions, specifically rotations about contact points and translations parallel to the contact plane, are unconstrained within the linear approximation. Consequently, even after the BBPGD algorithm converges to the specified tolerance $\epsilon$, residual overlaps may still be present that violate the non-overlap constraint~\cite{Weady2024SM}.
 
 To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recursively generated linear complementarity problem (ReLCP) method. After each BBPGD convergence, ReLCP identifies any remaining overlaps by examining all pairwise cell distances, generates new constraints for these violations, and re-solves the complementarity problem with the augmented constraint set. This process iterates until all cell overlaps fall below the tolerance $\epsilon = 10^{-3}$. This hierarchical approach ensures that the non-overlap condition is strictly enforced, even in the presence of complex contact geometries and coupled motions (see \autoref{fig:bbpgd_residual}). The iterative refinement procedure typically converges within a small number of iterations, making it computationally tractable for most simulations~\cite{Weady2024SM}.
 
@@ -538,7 +538,7 @@ Each collision detector call generates a single constraint per neighboring cell-
 
 \subsection{Adaptive Timestepping}
 
-To enhance stability and convergence—particularly for fast-moving cells that might overlap significantly within a timestep—we employ an adaptive timestepping scheme. To our knowledge, this approach has not been implemented in comparable engines. As shown in \autoref{fig:simulation_time_vs_dt}, the method quickly converges to a stable maximum $\Delta t$ for both collision models while adapting dynamically throughout the simulation. It allows finer precision when needed and can even increase $\Delta t$ in cases where motion is limited, such as dense colonies with high $\lambda$ where internal cells are effectively immobile due to mechanical stress.
+To enhance stability and convergence, particularly for fast-moving cells that might overlap significantly within a timestep, we employ an adaptive timestepping scheme. To our knowledge, this approach has not been implemented in comparable engines. As shown in \autoref{fig:simulation_time_vs_dt}, the method quickly converges to a stable maximum $\Delta t$ for both collision models while adapting dynamically throughout the simulation. It allows finer precision when needed and can even increase $\Delta t$ in cases where motion is limited, such as dense colonies with high $\lambda$ where internal cells are effectively immobile due to mechanical stress.
 
 The adaptive timestep strategy (outlined in \autoref{alg:adaptive_dt}) is based on the Courant-Friedrichs-Lewy (CFL) condition~\cite{Courant1928}, which provides a stability criterion linking temporal and spatial resolution:
 
@@ -572,7 +572,7 @@ This directly bounds cell motion between successive updates, preventing excessiv
 
 \subsection{Simulation Output and Availability}
 
-Simulation results are written in VTK format for visualization with ParaView~\cite{ahrens2005paraview}. All cell attributes—positions, orientations, lengths, stresses, growth rates, and contact forces—are periodically saved to disk, enabling comprehensive post-processing and detailed analysis.
+Simulation results are written in VTK format for visualization with ParaView~\cite{ahrens2005paraview}. All cell attributes, such as positions, orientations, lengths, stresses, growth rates, and contact forces, are periodically saved to disk, enabling comprehensive post-processing and detailed analysis.
 
 The full simulation framework, including all features and implementations described in this work, is openly available on GitHub at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP}.
 
@@ -582,148 +582,202 @@ The full simulation framework, including all features and implementations descri
 
 \subsection{Concentric Ring Patterns}
 
-We begin by validating our implementations through the reproduction of concentric ring patterns that arise under stress-sensitive growth, as reported in~\cite{Weady2024}. As shown in \autoref{fig:pattern_formation}, both models successfully produce qualitatively similar ring structures, demonstrating that the core mechanics of growth and mechanical feedback are effectively captured by both collision handling approaches. As the soft model allows for some (sometimes unphysical) overlap, the resulting patterns appear significantly denser, and have a more \emph{fuzzy} appearance compared to the hard model. However, the overall macroscopic features, such as the number of rings, their spacing and the colony radius growth, are comparable between the two models.
+We validate both implementations by reproducing concentric ring patterns that arise under stress-sensitive growth, as reported in~\cite{Weady2024}. As shown in \autoref{fig:pattern_formation}, both models successfully produce qualitatively similar ring structures, demonstrating that the core mechanics of growth and mechanical feedback are effectively captured by both collision handling approaches.
 
+The effect of $\lambda$ on pattern formation is consistent across both models. At very low stress-sensitivity ($\lambda = 10^{-4}$), no clear rings form even at the maximum simulated colony radius of 100, since growth inhibition is too weak to generate significant stress gradients. At intermediate sensitivity ($\lambda = 10^{-3}$), distinct concentric rings emerge early in the simulation and persist as the colony expands, with ring spacing determined by the balance between growth and stress. At high sensitivity ($\lambda = 10^{-2}$), an initially formed ring quickly dissipates as cells reorient to random orientations and growth nearly ceases due to strong mechanical inhibition throughout most of the colony.
 
-\subsection{Cell density and local packing fraction}
+Despite these qualitatively similar outcomes, visual differences emerge between the models. The soft model produces visibly denser patterns with a fuzzy appearance due to allowable cell overlap, while the hard model yields sharper, more sparsely looking rings. Nevertheless, macroscopic features, such as number of rings, spacing, and colony expansion rate, remain comparable between the two models, suggesting that colony-level pattern formation is robust to the details of collision handling.
 
-The most apparent difference is the packing density of the cells within the colony (See \autoref{fig:dense_packing_comparison}).
+\begin{figure*}[p]
+    \centering
 
-This difference is most pronounced in the colony center and is caused by the soft model not being able to fully propagate mechanical forces outwards to the colony edge. This results in a denser packing of cells, at the center of the colony, which steadily decreases towards the edge (See \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), the local packing fraction reaches values of up to 5 in the center of the colony, meaning that the local area occupied by cells is five times larger than the actual area available.
+    % % Lambda = 10^-2 comparison
 
-Such an overlap is clearly unphysical, but it is a direct consequence of only considering local pairwise interactions and using a numerical timestep that is too large to fully resolve all collisions. \autoref{fig:max_overlap_simulation} confirms that the maximum overlap between any two cells steadily increases over time in the soft model, reaching an almust full overlap at the end of the simulation. Conversely, the hard model maintains a maximum overlap close $\epsilon = 10^{-3}$, as set by the solver tolerance throughout the simulation.
+    Growth Comparison $\lambda=10^{-2}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
+        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
+    \end{tabular}
+    % Lambda = 10^-3 comparison
 
-One contributing factor to this behavior is the adaptive timestep method (See \autoref{alg:adaptive_dt}), which only considers the maximum velocity of cells, but not their actual overlap. This means that once cells start to overlap, they can continue to do so, as long as their velocities remain low. Future work could explore more sophisticated adaptive timestep schemes that also consider the maximum overlap when adjusting $\Delta t$.
+    Growth Comparison $\lambda=10^{-3}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
+        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
+    \end{tabular}
 
-The hard model, in contrast, maintains a constant density of approximately 0.9 throughout the colony, as any overlap, even within the interior, is immediately propagated outwards by the non-overlapping constraints. This difference is also visually apparent in \autoref{fig:dense_packing_comparison}, where a clear difference in packing density can be observed.
+    % Lambda = 10^-4 comparison
 
+    Growth Comparison $\lambda=10^{-4}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
+        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
+    \end{tabular}
+
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
+    \label{fig:pattern_formation}
+\end{figure*}
+
+\subsection{Cell Density and Local Packing Fraction}
+
+The most striking difference between the models emerges in cell packing density (see \autoref{fig:dense_packing_comparison}). The soft model exhibits significantly denser packing in the colony center, decreasing radially outward (see \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), local packing fractions reach values of 5, far exceeding the maximum possible for rigid spherocylinders. In contrast, the hard model maintains approximately constant, and physically realistic, packing density ($\sim 0.9$) throughout the colony, as non-overlap constraints immediately propagate any interior overlaps outward.
+
+The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge, combined with a numerical timestep too large to resolve all collisions. Figure~\ref{fig:max_overlap_simulation} quantifies this effect: the soft model's maximum cell overlap steadily increases throughout the simulation, reaching nearly complete interpenetration by the end. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ by enforcing strict non-overlap constraints.
+
+A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ on cell velocities but not on current overlap. Once cells begin overlapping, they can continue doing so as long as velocities remain low. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$, though this remains as future work.
 
 \begin{figure}[H]
     \centering
-    % First subfigure
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/density_hard.jpeg}
-        \caption{Close-up of cell packing for the hard model.}
-        \label{fig:packing_hard}
+        \caption{Hard model}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/density_soft.jpeg}
-        \caption{Close-up of cell packing for the soft model.}
-        \label{fig:packing_soft}
+        \caption{Soft model}
     \end{subfigure}
+    \caption{Close-up comparison of cell packing in the colony center for both collision models. The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding.}
+    \label{fig:dense_packing_comparison}
+\end{figure}
 
-    % Second subfigure (full width)
+\begin{figure}[H]
+    \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
-        \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models across different $\lambda$ values. Here $A_{\text{cells}}$ is the total area occupied by cells within a radial bin of width 2 at distance $r$ from the colony center, and $A_{\text{total}}$ is the annular area of that bin. The hard model maintains a nearly optimal packing fraction, while the soft model shows higher packing fractions in the colony center.}
+        \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models. Here $A_{\text{cells}}$ is the total area occupied by cells within a radial bin of width 2 at distance $r$ from the colony center, and $A_{\text{total}}$ is the annular area of that bin. The hard model maintains nearly optimal packing, while the soft model exhibits higher fractions in the colony center.}
         \label{fig:radial_distribution_packing_fraction}
     \end{subfigure}
 
-    % Third subfigure (full width)
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
-        \caption{Maximum cell overlap for any pair of cells over the course of the simulation. The hard model maintains a maximum overlap close to the solver tolerance $\epsilon = 10^{-3}$, while the soft model shows a steady increase in overlap, reaching almost full overlap at the end of the simulation.}
+        \caption{Maximum cell overlap over simulation time. The hard model maintains overlap near the solver tolerance $\epsilon = 10^{-3}$, while the soft model exhibits steady increase, reaching near-complete overlap by the simulation end.}
         \label{fig:max_overlap_simulation}
     \end{subfigure}
 
-    \caption{Simulation snapshots and quantitative analysis investigating the impact of overcrowding in the soft model.}
+    \caption{Cell packing analysis comparing hard and soft collision models.}
     \label{fig:combined_packing_analysis}
 \end{figure}
 
 \subsection{Colony Growth Dynamics and Number of Cells}
 \label{sec:colony_growth_dynamics}
 
-This severe overcrowding in the soft model does however not meaningfully impact the growth behavior and the expansion speed of the colony and does not affect the formation of concentric ring patterns (See \autoref{fig:sim_time_vs_colony_radius} and \autoref{fig:pattern_formation}). However, it does lead to significantly more particles being required to reach the same colony radius (See \autoref{fig:colony_radius_vs_num_cells}).  Especially for low stress-sensitivity ($\lambda = 10^{-4}$) where cells tend to grow exponentially regardless of their expericenced stress, the soft model requires almost three times as many cells to reach the same colony radius as the hard model, indicating that the interior of the colony is severely overcrowded and unable to effectively contribute to the outward pressure of the colony.
+Despite the severe overcrowding in the soft model, cell packing density does not meaningfully impact colony expansion speed or ring pattern formation (see \autoref{fig:pattern_formation} and \autoref{fig:sim_time_vs_colony_radius}).
 
-This directly impacts the performance of the soft model, as all these additional cells need to be simulated, aswell, increasing the computational cost. A full investigation of the performance differences is provided in \autoref{sec:performance_comparison}.
+However, the soft model requires significantly more cells to reach the same colony radius (see \autoref{fig:colony_radius_vs_num_cells}). At low stress-sensitivity ($\lambda = 10^{-4}$), where growth is largely decoupled from mechanical inhibition, the soft model requires almost three times as many cells as the hard model to reach the same radius. This disparity indicates that the overcrowded interior cannot effectively contribute to outward colony pressure: interior cells remain essentially stationary, while still growing and dividing, leading to a large excess of cells that do not aid expansion.
+
+The computational implications are significant: the soft model must simulate substantially more cells to achieve equivalent colony sizes, directly increasing memory usage and runtime. A detailed performance analysis comparing both models is provided in \autoref{sec:performance_analysis}.
 
 \begin{figure}[h]
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_colony_radius.png}
-        \caption{Simulation time vs. colony radius for both models. Both models show similar growth dynamics, with the soft model being slightly slower due to the allowance of cell overlaps.}
+        \caption{Simulation time vs. colony radius. Both models exhibit similar growth dynamics, though the soft model is slightly slower due to allowable cell overlap.}
         \label{fig:sim_time_vs_colony_radius}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_num_particles.png}
-        \caption{Number of cells vs. colony radius for both models. The soft model requires significantly more cells to reach the same colony radius, especially at low stress-sensitivity ($\lambda = 10^{-4}$).}
+        \caption{Number of cells required to reach a given colony radius. The soft model requires substantially more cells, particularly at low stress-sensitivity ($\lambda = 10^{-4}$).}
         \label{fig:colony_radius_vs_num_cells}
     \end{subfigure}
 
-    \caption{Comparison of colony growth dynamics between the hard and soft collision models.}
+    \caption{Colony growth dynamics and cell scaling comparison between hard and soft models.}
     \label{fig:comparison_combined}
 \end{figure}
 
-\subsection{Microdommain formation in Small Colonies}
+\subsection{Microdomain Formation}
+\label{sec:microdomain_formation}
 
-
-Similar to You et al.~\cite{You2018,You_2021}, we can also observe the formation of microdomains of aligned cells within the colony. These domains emerge from mechanical interactions and growth dynamics, creating local regions where cells share similar orientations. As shown in \autoref{fig:orientation_comparison_small}, both hard and soft collision models capture this phenomenon for small colonies ($R \approx 50$) and are able to produce macroscopic patterns closely resembling the experimental observations of real \textit{E. coli} colonies as presented in~\cite{You2018}. You et al.~\cite{You2018} uses a simplified version of the soft collision model presented here, where particles experience no stress and grow linearly in time. Their findings for cells dividing at lengths of $\ell_{crit} = 2$ indicate that the typical size of these microdomains should be much smaller than the ones we observe here, however, they also suggest that a decrease in the growth rate (which is effectively caused by stress in our model) leads to larger microdomains, which could explain this discrepancy.
+Similar to You et al.~\cite{You2018,You_2021}, we observe the formation of microdomains, defined as localized regions where cells share similar orientations. These domains emerge from mechanical interactions and growth dynamics. As shown in \autoref{fig:orientation_comparison_small}, both hard and soft collision models reproduce this phenomenon for small colonies ($R \approx 50$), producing patterns that closely resemble experimental observations of real \textit{E. coli} colonies~\cite{You2018}.
 
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figures/orientation_comparisons/r50_soft_e-2.jpeg}
-        \caption{Orientation pattern for the soft model at $R \approx 50$.}
+        \caption{Soft model at $R \approx 50$.}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figures/orientation_comparisons/r50_hard_e-2.jpeg}
-        \caption{Orientation pattern for the hard model at $R \approx 50$.}
+        \caption{Hard model at $R \approx 50$.}
     \end{subfigure}
-    \caption{Cell orientation patterns for both models at colony radius. The coloring indicates the cell orientation angle..}
+    \caption{Cell orientation patterns for both models. Color indicates cell orientation angle.}
     \label{fig:orientation_comparison_small}
 \end{figure}
 
-\subsection{Microdommain formation in Large Colonies}
+Even though the hard and soft collision models presented in this paper are not directly comparable to You et al.~\cite{You2018}, as You et al. use constant growth rates while the models here employ stress-dependent growth, their observations still provide useful context. You et al. showed that reduced growth rates produce larger microdomains. In the models presented here, stress sensitivity $\lambda$ mimics this effect by inhibiting growth in the densely packed colony center, which similarly produces larger microdomains. We observe this trend in simulations of the soft model (see \autoref{fig:orientation_comparison}), where higher $\lambda$ values lead to reduced growth rates and correspondingly larger microdomains, consistent with You et al.'s findings. The hard model shows no such trend.
 
-However the differences between the two models become more pronounced as the colony grows larger or the stress sensitivity parameter $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintainse distinct and similar sized patches of aligned cells for all values of $\lambda$, whereas the soft model often results in elongated, unrealistic, bundles of aligned, densely packed cells.
+\subsection{Microdomain Formation in Large Colonies}
 
-This artefact, is directly caused by the soft model, experiencing higher growth rates in the colony interior, which cannot be effectively resolved due to the local nature of the repulsive forces. This causes the interior of the colony to become unrealistically and forces cells to align in long, dense bundles, which do not resemble the experimentally observed microdomains. \autoref{fig:cluster_area_boxplot} quantifies this effect by showing the distribution of microdomain areas for both models across different $\lambda$ values. Here clusters are identified using the same idea as You et al.~\cite{You2018}, employing a simple connected-component labeling algorithm, which groups neighboring cells with similar orientations into the same cluster.
+Although the hard and soft models produce similar orientation patterns in small colonies ($R \approx 50$), pronounced differences emerge as colonies grow larger or $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintains distinct patches of similarly-sized aligned cells across all $\lambda$ values. In contrast, the soft model produces elongated, unrealistic bundles of densely packed aligned cells that do not resemble experimentally observed microdomains.
+
+This artifact stems directly from the soft model's higher interior growth rates, which cannot be effectively resolved by local pairwise repulsive forces. Without sufficient outward stress propagation, the interior becomes unphysically dense, forcing cells into long, aligned bundles.
+
+The impact of $\lambda$ on microdomain structure is clearly visible: the hard model consistently produces microdomains of similar area across all stress-sensitivity values, while the soft model exhibits a broad distribution with many large clusters, particularly at low $\lambda = 10^{-4}$ (see Figure~\ref{fig:cluster_area_boxplot}).
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/cluster_area_boxplot.png}
-    \caption{Boxplot of microdomain areas for large colonies ($R \approx 100$) across different $\lambda$ values. The hard model consistently produces microdomains of similar size, while the soft model shows a wider distribution with many large clusters, especially at low stress-sensitivity ($\lambda = 10^{-4}$).}
+    \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$ values. The hard model produces consistent domain sizes, while the soft model shows high variability with many large clusters, especially at $\lambda = 10^{-4}$. Clusters are identified using connected-component labeling~\cite{You2018}, grouping neighboring cells with similar orientations.}
     \label{fig:cluster_area_boxplot}
 \end{figure}
 
+\subsection{Implications for Model Selection}
 
-To summarize this section, we find that both models are capable of reproducing the experimentally observed microdomain formation in small colonies of up to $R \approx 50$. However, as the colony grows larger or the stress sensitivity decreases, the soft models tendency to produce unphysically dense packings creates artifacts that distort the microdomain structure. This weakness could potentially be mitigated by implementing a more sophisticated stress model that ensures that both models produce similar radial stress profiles (See \autoref{fig:radial_distribution_stress}), or by encorporating a maximum global packing fraction constraint in the adaptive timestep scheme (\autoref{alg:adaptive_dt}), which lowers the timestep if the maximum packing fraction exceeds a certain threshold to provide more time for the repulsive forces to resolve overlaps.
+Both models successfully reproduce microdomain formation in small colonies ($R \lesssim 50$), demonstrating that the fundamental mechanisms are captured adequately by both collision approaches at small scales. However, substantial differences emerge as colonies grow larger or $\lambda$ decreases. The soft model's unphysical packing density progressively distorts domain structure, producing elongated cell bundles that do not match experimental observations. In contrast, the hard model maintains biologically realistic domain morphologies across all tested parameters.
 
-Therfore, in it s current form, the soft model is not suitable for studying microdomain formation in large colonies or at low stress sensitivities, but is a viable and easier-to-implement alternative studying macroscopic pattern formation in smaller colonies, such as those presented in~\cite{You2018}.
+Potential improvements to the soft model could address these limitations. An enhanced adaptive timestep scheme could reduce $\Delta t$ when packing fraction exceeds a threshold, allowing repulsive forces more time to resolve overlaps before they accumulate. Additionally, introducing a global outward pressure or expansion force could help prevent excessive interior packing by providing a uniform resistance to overcrowding, distributing mechanical stress more effectively throughout the colony.
+
+In its current form, the soft model is unsuitable for studying microdomain formation in large colonies or at low stress-sensitivity. However, it remains a viable and computationally simpler alternative for studying macroscopic pattern formation in smaller colonies where packing artifacts do not significantly distort the overall dynamics, such as those explored in~\cite{You2018}. For studies requiring accurate microdomain resolution or exploration of parameter regimes with weak stress-sensitivity, the hard model is the appropriate choice.
+
+\begin{figure*}[p]
+    \makebox[\textwidth][c]{
+        \centering
+
+        \begin{tabular}{r M{0.36\textwidth} M{0.36\textwidth} }
+             & Hard Model & Soft Model \\
+            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
+            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
+            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
+        \end{tabular}
+    }
+
+    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cells orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed cells for low stress sensitivies. This effect is caused by a lack of seperation forces causing cells in the center of the colony to pile up.}
+    \label{fig:orientation_comparison}
+\end{figure*}
 
 \subsection{Radial Stress Distribution and Growth Rate}
 
-\begin{figure*}
+Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $p(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$, which predicts a logarithmic dependence on the colony radius.
+
+Although the overall shape of the profiles is comparable, the magnitude of the predicted stresses differs substantially between the two models. Quantitatively, the hard model produces stress values that are approximately 1.5 times higher than the analytical prediction, whereas the soft model yields stresses that are only about half the analytical value. This two-fold variation in stress magnitude is significant and likely plays a central role in explaining the discrepancies in growth dynamics and microdomain organization discussed in \autoref{sec:colony_growth_dynamics} and \autoref{sec:microdomain_formation}.
+
+\begin{figure*}[b]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
-    \caption{Radial stress profiles for both models across different $\lambda$ values. Both models produce similar qualitative stress distributions, with stresses being highest in the colony center and decreasing towards the edge following the analytical profile. However, the hard model consistently predicts higher stresses,while the soft model predicts lower stresses.}
+    \caption{Radial stress profiles for both models across different $\lambda$ values. Both models produce similar qualitative stress distributions, with stresses highest in the colony center and decreasing toward the edge following the analytical profile. However, the hard model consistently predicts higher stresses, while the soft model predicts lower stresses.}
     \label{fig:radial_distribution_stress}
 \end{figure*}
 
-Another key difference is the radial stress distribution within the colony (See \autoref{fig:radial_distribution_stress}). Both models produce similar radially averaged stress profiles, as origininally reported in~\cite{Weady2024}, with stresses being highest in the colony center and decreasing towards the edge following the derived $p(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$ profile. However, for both models, the magnitude of the stresses does not fully match the analytical prediction. The hard model consistently produces stresses that are approximately 1.5 times higher than the analytical solution, while the soft model predicts stresses only about 0.5 times the analytical solution.
+The consistently elevated stresses observed in the hard model, as also noted by Weady et al.~\cite{Weady2024}, are likely a consequence of the discrete cell-based representation not fully satisfying the continuum assumptions used in the analytical derivation. In contrast, the soft model produces lower stresses because it lacks a global force propagation mechanism: stress is transmitted only through local pairwise repulsive interactions, which are insufficient to communicate mechanical load effectively across the entire colony. Consequently, stresses in the colony interior remain low, and central cells experience weaker mechanical inhibition. These cells therefore continue to grow and divide, eventually leading to the overcrowding and distorted microdomain patterns described in \autoref{sec:colony_growth_dynamics}.
 
-The consistently higher stresses in the hard model, also observed by Weady et al.~\cite{Weady2024}, are likely due to the discrete cell-based representation not fully matching the continuum assumptions underlying the analytical derivation. In contrast, the lower stresses in the soft model appear to result from a missing global force propagation mechanism, which restricts stress calculations to local pairwise interactions based only on the current overlap. This limitation causes unnaturally rapid growth and division at the colony center, leading to severe overcrowding and distorted internal structure (\autoref{sec:colony_growth_dynamics}). As shown in \autoref{fig:radial_distribution_growth_rate}, cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity ($\lambda = 10^{-4}$). At higher stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed throughout the interior, with only a thin layer of edge cells actively dividing. Consequently, the colony exhibits a dormant interior while expansion is driven primarily by edge growth. This shift is reflected in \autoref{fig:sim_time_vs_colony_radius}, which shows that colony expansion transitions from exponential to linear over time, consistent with experimental observations of \textit{E. coli} and \textit{Saccharomyces cerevisiae} colonies~\cite{Warren2019,Hallatschek2007,Giometto2018}.
+The consequences of this imbalance in stress transmission are clearly reflected in the radial growth rate profiles. As shown in \autoref{fig:radial_distribution_growth_rate}, cells in the soft model exhibit substantially higher growth rates than those in the hard model throughout most of the colony interior, especially at low stress-sensitivity values ($\lambda = 10^{-3}$ and $\lambda = 10^{-4}$).
 
+At higher stress-sensitivity ($\lambda = 10^{-2}$), growth becomes strongly suppressed in the interior for both models, and only cells near the colony periphery remain actively dividing. This shift from interior-driven to edge-driven proliferation is also apparent in \autoref{fig:sim_time_vs_colony_radius} and is consistent with experimental observations in real microbial systems, including bacterial and yeast colonies such as \textit{E. coli} and \textit{Saccharomyces cerevisiae}~\cite{Warren2019,Hallatschek2007,Giometto2018}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
-    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. For high stress-sensitivity, growth is effectively limited to a thin layer at the colony edge.}
+    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity ($\lambda = 10^{-3}$ and $\lambda = 10^{-4}$). At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing.}
     \label{fig:radial_distribution_growth_rate}
 \end{figure}
-
-
-
-
 
 \section{Computational Performance}
 \label{sec:performance_analysis}
@@ -963,53 +1017,11 @@ Integrating such a framework could automatically accelerate the computation of r
 \end{figure}
 
 
-\begin{figure}[H]
-    \makebox[\textwidth][c]{
-        \centering
 
-        \begin{tabular}{r M{0.36\textwidth} M{0.36\textwidth} }
-             & Hard Model & Soft Model \\
-            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
-            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
-            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
-        \end{tabular}
-    }
-
-    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cells orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed cells for low stress sensitivies. This effect is caused by a lack of seperation forces causing cells in the center of the colony to pile up.}
-    \label{fig:orientation_comparison}
-\end{figure}
 
 \newpage
 
-\begin{figure}[p]
-    \centering
 
-    % % Lambda = 10^-2 comparison
-
-    Growth Comparison $\lambda=10^{-2}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
-        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
-    \end{tabular}
-    % Lambda = 10^-3 comparison
-
-    Growth Comparison $\lambda=10^{-3}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
-        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
-    \end{tabular}
-
-    % Lambda = 10^-4 comparison
-
-    Growth Comparison $\lambda=10^{-4}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
-        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
-    \end{tabular}
-
-    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring pattern are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
-    \label{fig:pattern_formation}
-\end{figure}
 
 \clearpage
 \newpage
