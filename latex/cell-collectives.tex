@@ -178,7 +178,7 @@ At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \
     \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}
 \end{equation}
 
-Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angular velocities of cell $i$, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. Figure~\ref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
+Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angular velocities of cell $i$, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. \autoref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
 \subsection{Cell Growth and Division}
 
 Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024SM}:
@@ -187,19 +187,21 @@ Bacterial cells grow along their longitudinal axis according to the following mo
     \dot{\ell} = \frac{\ell}{\tau} e^{-\lambda \sigma}
 \end{equation}
 
-where $\tau$ is a characteristic timescale, $\sigma$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. Stress on cell $i$ is computed by projecting contact forces onto the cell's longitudinal axis:
+where $\tau$ is a characteristic timescale, $\sigma$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. As the compressive stress increases, the effective growth rate $\dot{\ell}$ decreases, leading to slower elongation. When $\sigma = 0$, cells grow exponentially with a rate determined solely by $\tau$, whereas increasing $\sigma$ progressively suppresses growth. For sufficiently large compressive stresses, the exponential term tends toward zero, effectively halting elongation.
+
+The stress on cell $i$ is computed by projecting contact forces onto the cell's longitudinal axis $\hat{\mathbf{t}}_i$:
 
 \begin{equation} \label{eq:stress}
     \sigma_i = \sum_{j} \frac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
 \end{equation}
 
-where $\hat{\mathbf{t}}_i$ is the unit tangent vector along the cell's length.
+In our simulations, the initial cell is initialized with length $\ell = 1$ and diameter $d = 0.5$. Cell division occurs when a cell reaches a critical length $\ell_{\text{crit}} = 2$, producing two daughter cells with lengths randomly sampled from $\left[0.98\,\frac{\ell_{\text{crit}}}{2},\, 1.02\,\frac{\ell_{\text{crit}}}{2}\right]$ to prevent artificial synchronization of division events.
 
-In our simulations, each cell is initialized with length $\ell_0 = 1$ and diameter $d = 0.5$. Division occurs when a cell reaches $\ell_{\text{crit}} = 2$, producing two daughter cells with lengths randomly sampled from $[0.98\ell_0, 1.02\ell_0]$ to prevent artificial synchronization of division events~\cite{Khan_2024}.
+
 
 \subsection{Rotational Diffusion}
 
-To account for Brownian motion and other sources of random fluctuations, we apply a small rotational perturbation to each cell at every timestep. This introduces gradual rotational diffusion, preventing cells from forming artificially perfect, aligned configurations and promoting more realistic microdomain structure within the colony. The magnitude of these perturbations is chosen relatively small compared to deterministic torques, ensuring they do not dominate cell dynamics.
+To account for Brownian motion and other sources of random fluctuations, we apply a small rotational perturbation to each cell at every timestep. This introduces gradual rotational diffusion, preventing cells from forming artificially aligned configurations and promoting realistic spatial arrangements.
 
 \begin{figure}[H]
     \centering
@@ -258,15 +260,15 @@ To account for Brownian motion and other sources of random fluctuations, we appl
         % label at right daughter
         \node at (right_daughter) [below] {$\mathbf{x}_\text{right}$};
 
-        \draw[<->,thick,dashed] ($(x) + (-2,1)$) -- ($(x) + (2,1)$) node[midway,above] {$2\ell_0$};
+        \draw[<->,thick,dashed] ($(x) + (-2,0.8)$) -- ($(x) + (2,0.8)$) node[midway,above] {$\ell_{\text{crit}}$};
 
-        \draw[<->,thick,dashed] ($(x) + (-1.5-\R-\R,-\R)$) -- ($(x) + (-1.5-\R-\R,\R)$) node[midway,left] {$d$};
+        \draw[<->,thick,dashed] ($(x) + (-1.3-\R-\R,-\R)$) -- ($(x) + (-1.3-\R-\R,\R)$) node[midway,left] {$d$};
 
-        \draw[<->,thick,dashed] ($(right_daughter) + (-2.5-\R-\R,-\R)$) -- ($(right_daughter) + (-2.5-\R-\R,\R)$) node[midway,left] {$d$};
+        \draw[<->,thick,dashed] ($(right_daughter) + (-2.3-\R-\R,-\R)$) -- ($(right_daughter) + (-2.3-\R-\R,\R)$) node[midway,left] {$d$};
 
-        \draw[<->,thick,dashed] ($(left_daughter) + (-1,-1)$) -- ($(left_daughter) + (1,-1)$) node[midway,below] {$\ell_0$};
+        \draw[<->,thick,dashed] ($(left_daughter) + (-1,-0.8)$) -- ($(left_daughter) + (1,-0.8)$) node[midway,below] {$\frac{\ell_{\text{crit}}}{2}$};
 
-        \draw[<->,thick,dashed] ($(right_daughter) + (-1,-1)$) -- ($(right_daughter) + (1,-1)$) node[midway,below] {$\ell_0$};
+        \draw[<->,thick,dashed] ($(right_daughter) + (-1,-0.8)$) -- ($(right_daughter) + (1,-0.8)$) node[midway,below] {$\frac{\ell_{\text{crit}}}{2}$};
 
 
 
@@ -282,7 +284,7 @@ To account for Brownian motion and other sources of random fluctuations, we appl
         node[midway, above] {$\boldsymbol{\omega}_j$};
 
     \end{tikzpicture}
-    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange). Cell division occurs when a cell reaches critical length $2\ell_0$, producing two daughter cells of length $\ell_0$ in place of the parent cell.}
+    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange), and also produce translational displacements of the cells. Cell division occurs when a cell reaches critical length $\ell_{\text{crit}} = 2$.}
     \label{fig:spherocylinder_model}
 
 \end{figure}
@@ -299,11 +301,13 @@ Quaternions are used instead of Euler angles or rotation matrices because they a
 
 \subsection{Colony Dynamics}
 
-The translational and angular velocities of all cells in the colony from \autoref{eq:overdamped_langevin} are determined simultaneously by a force-velocity relationship $\mathbfcal{U} = \mathbfcal{M}^k \mathbfcal{F}$. Here, $\mathbfcal{F} \in \mathbb{R}^{6N}$ is the generalized force vector for the entire colony, containing both force and torque components for each cell. Similarly, $\mathbfcal{U} \in \mathbb{R}^{6N}$ is the generalized velocity vector containing the resulting translational and angular velocities. The components of these vectors are defined as:
+The translational and angular velocities of all cells in the colony from \autoref{eq:overdamped_langevin} are determined simultaneously by a force-velocity relationship $\mathbfcal{U} = \mathbfcal{M}^k \mathbfcal{F}$. Here, $\mathbfcal{F} \in \mathbb{R}^{6N}$ is the generalized force vector for the entire colony, containing both force and torque components for each cell. Similarly, $\mathbfcal{U} \in \mathbb{R}^{6N}$ is the generalized velocity vector containing the resulting translational and angular velocities. The vectors are defined as:
 
 \begin{equation}
-    \mathbfcal{F} = [\mathbf{f}_1, \boldsymbol{\tau}_1, \dots, \mathbf{f}_N, \boldsymbol{\tau}_N]^\top, \quad
-    \mathbfcal{U} = [\mathbf{u}_1, \boldsymbol{\omega}_1, \dots, \mathbf{u}_N, \boldsymbol{\omega}_N]^\top
+    \begin{alignedat}{5}
+        \mathbfcal{F} &= [&\mathbf{f}_1,&\;\boldsymbol{\tau}_1,&\;\dots,&\;\mathbf{f}_N,&\;\boldsymbol{\tau}_N&]^\top \in \mathbb{R}^{6N}, \\
+        \mathbfcal{U} &= [&\mathbf{u}_1,&\;\boldsymbol{\omega}_1,&\;\dots,&\;\mathbf{u}_N,&\;\boldsymbol{\omega}_N&]^\top \in \mathbb{R}^{6N}
+    \end{alignedat}
 \end{equation}
 
 where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ due to all other cells $j$ in contact with it, and $\boldsymbol{\tau}_i = \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}$ is the total torque. The diagonal mobility matrix $\mathbfcal{M}^k$ at timestep $k$ encodes the drag coefficients for all cells based on their current lengths $\ell_i^k$:
@@ -312,17 +316,15 @@ where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ du
     \mathbfcal{M}^k = \text{diag}\left(\frac{1}{\zeta \ell_1^k}\mathbf{I}_3, \frac{12}{\zeta {\ell_1^k}^3}\mathbf{I}_3, \dots \right) \in \mathbb{R}^{6N \times 6N}
 \end{equation}
 
-where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix.
+where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix. The resulting matrix-vector product thus implements the overdamped Langevin equation from \autoref{eq:overdamped_langevin} for all cells simultaneously.
 
 \subsection{State Integration}
 
-The orientation quaternion $\mathbf{q}_i^k$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_i^k = \frac{1}{2} \boldsymbol{\omega}_i \otimes \mathbf{q}_i^k$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}^k$, which converts Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in positions and quaternions in $\mathbb{R}^{7N}$ (See~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}^k$, the colony's state is updated via explicit Euler integration:
+The orientation quaternion $\mathbf{q}_n^k$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_n^k = \frac{1}{2} \boldsymbol{\omega}_n \otimes \mathbf{q}_n^k$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}^k \in \mathbb{R}^{7N \times 6N}$, converting Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in positions and quaternions in $\mathbb{R}^{7N}$ according to the quaternion kinematics (see~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}^k$, the colony's state is updated via explicit Euler integration.
 
 \begin{equation} \label{eq:colony_update}
     \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}
 \end{equation}
-
-This mapping applies the quaternion kinematics to all quaternion components of the colony and ensures the Euler integration respects both translational and rotational dynamics.
 
 The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ is computed, the state update mechanism remains identical.
 
@@ -349,7 +351,7 @@ The total force and torque on cell $n$ are computed by summing contributions fro
 
 \subsubsection{Model Parameters and Numerical Stability}
 
-The elastic constant is defined as $k_{cc} = \frac{Y}{\zeta}$, where $Y$ is the cell's Young's modulus and $\zeta$ is the fluid drag coefficient. Using typical bacterial parameters ($Y \approx 4$ MPa and $\zeta \approx 200$ Pa$\cdot$h)~\cite{You2018, Blanchard2015}, we set $k_{cc} = 20000$ h$^{-1}$. This value is sufficiently large to prevent significant overlap between cells. However, the steep, nonlinear nature of the Hertzian force law creates numerical stiffness: cells can undergo rapid acceleration when overlap occurs, potentially causing large position changes within a single timestep. To maintain stability, an extremely small timestep ($\Delta t \sim 10^{-5}$ h) is required~\cite{Khan_2024, You2018, Blanchard2015} (See \autoref{fig:simulation_time_vs_dt}). This timestep restriction is a well-known limitation of soft collision models and creates a significant computational bottleneck for large colonies.
+The elastic constant is defined as $k_{cc} = \frac{Y}{\zeta}$, where $Y$ is the cell's Young's modulus and $\zeta$ is the fluid drag coefficient. Using typical bacterial parameters ($Y \approx 4$ MPa and $\zeta \approx 200$ Pa$\cdot$h)~\cite{You2018, Blanchard2015}, we set $k_{cc} = 20000$ h$^{-1}$. This value is sufficiently large to prevent significant overlap between cells. However, the steep, nonlinear nature of the Hertzian force law creates numerical stiffness: cells can undergo rapid acceleration when overlap occurs, potentially causing large position changes within a single timestep. To maintain stability, an extremely small timestep ($\Delta t \sim 10^{-5}$ h) is required~\cite{Khan_2024, You2018, Blanchard2015}. This timestep restriction is a well-known limitation of soft collision models and creates a significant computational bottleneck for large colonies.
 
 \begin{figure}[H]
     \centering
@@ -372,12 +374,12 @@ where $\hat{\mathbf{n}}_\alpha$ is the normal vector at the contact point. The t
     \mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D} \boldsymbol{\gamma}
 \end{equation}
 
-where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a sparse matrix consisting of contact normals and lever arms for all constraints. This matrix-vector product mimics the force assembly in Eq.~\ref{eq:force_assembly}, but uses the unknown multipliers $\boldsymbol{\gamma}$ instead of explicit force calculations. Similarly, the stress on each cell can also be expressed as a linear function of the multipliers:
+where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a sparse matrix consisting of contact normals and lever arms for all constraints. This matrix-vector product mimics the force assembly in ~\autoref{eq:force_assembly}, but uses the unknown multipliers $\boldsymbol{\gamma}$ instead of explicit force calculations. Similarly, the stress on each cell can also be expressed as a linear function of the multipliers:
 \begin{equation} \label{eq:stress_as_function_of_multipliers}
     \boldsymbol{\sigma}(\boldsymbol{\gamma}) = \mathbfcal{L} \boldsymbol{\gamma}
 \end{equation}
 
-where $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes stress contributions from each constraint, such that the matrix-vector product mimics the stress calculation in Eq.~\ref{eq:stress},
+where $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes stress contributions from each constraint, such that the matrix-vector product mimics the stress calculation in \autoref{eq:stress},
 
 \subsubsection{Constraint Conditions}
 
@@ -411,7 +413,7 @@ The colony update rule and additional conditions combine to form a system where 
 
 
 
-The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and is non-trivial to compute directly. Weady et al.~\cite{Weady2024SM} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}$ using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$ and lengths $\boldsymbol{\ell}^k$. The change in $\mathbf{\Phi}$ in our model arises from two main effects:
+The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and is non-trivial to compute directly. Weady et al.~\cite{Weady2024SM} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ using a first-order Taylor expansion around the current state $\mathbfcal{C}^k$ and lengths $\boldsymbol{\ell}^k$. The change in $\mathbf{\Phi}$ in our model arises from two main effects:
 
 \begin{enumerate}
     \item \textbf{Cell Motion:} All cell distances change due to the motion driven by collision forces. This is captured by the term $\dot{\mathbf{\Phi}^k}_{\text{motion}} = \frac{d \mathbf{\Phi}^k}{d \mathbfcal{C}} \frac{d \mathbfcal{C}}{dt} = (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}$.
@@ -423,7 +425,7 @@ Combining these two effects, leads to the following approximation for $\mathbf{\
 \begin{equation}\label{eq:phi_expanded}
     \small
     \begin{split}
-        \mathbf{\Phi}^{k+1} & \approx \mathbf{\Phi}^k + \Delta t \Bigl( \dot{\mathbf{\Phi}}_{\text{motion}} + \dot{\mathbf{\Phi}}_{\text{growth}} \Bigr)\\
+        \mathbf{\Phi}^{k+1}(\boldsymbol{\gamma}) & \approx \mathbf{\Phi}^k + \Delta t \Bigl( \dot{\mathbf{\Phi}}_{\text{motion}} + \dot{\mathbf{\Phi}}_{\text{growth}} \Bigr)\\
         & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}^k - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
         & = \mathbf{\Phi}^k + \Delta t \Bigl( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \mathbfcal{G}^k \mathbfcal{M}^k  \mathbfcal{F}(\boldsymbol{\gamma}) - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \Bigr)\\
         & \overset{\dagger}{=}
@@ -434,13 +436,13 @@ Combining these two effects, leads to the following approximation for $\mathbf{\
     \end{split}
 \end{equation}
 
-Here ($\dagger$) we use the fact that $\mathbfcal{D}^\top = (\nabla_{\mathbfcal{C}} \mathbf{\Phi}) \mathbfcal{G}^k$, where $\mathbfcal{D}^\top$ is the Jacobian that maps velocities from the generalized coordinate space $\mathbb{R}^{6N}$ to changes in the signed distance functions $\mathbf{\Phi}$. Similarly, its transpose, $\mathbfcal{D}$ (which we introduced in \autoref{eq:force_as_function_of_multipliers}), maps forces from the constraint space back to the generalized coordinate space (See~\cite{Weady2024SM, Tasora2008} for details).
+Here ($\dagger$), we use the previously introduced $\mathbfcal{D}$, and note that its transpose, $\mathbfcal{D}^\top$, can be interpreted as the Jacobian that maps velocities from the generalized coordinate space $\mathbb{R}^{6N}$ to changes in the signed distance functions $\mathbf{\Phi}$ (see~\cite{Weady2024SM, Tasora2008} for details).
 
-Moreover ($\ddagger$), we use a similar relation $\mathbfcal{L}^\top = \nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k \in \mathbb{R}^{C \times N}$, which defines the Jacobian mapping changes in cell lengths $\boldsymbol{\ell}$ to variations in the signed distance functions $\mathbf{\Phi}$~\cite{Weady2024SM}. Again, its transpose $\mathbfcal{L}$ (introduced in \autoref{eq:stress_as_function_of_multipliers}) maps stresses from the constraint space back to the length space.
+Similarly ($\ddagger$), the previously defined $\mathbfcal{L}$ has a transpose, $\mathbfcal{L}^\top$, which maps changes in cell lengths $\boldsymbol{\ell}$ to variations in the signed distance functions $\mathbf{\Phi}$. The transpose therefore allows stresses to be mapped from the constraint space back to the length space (see~\cite{Weady2024SM} for details).
 
 \subsubsection{Nonlinear Complementarity Problem}
 
-Substituting the approximation of $\mathbf{\Phi}^{k+1}$ from \autoref{eq:phi_expanded} into the constraint conditions of \autoref{eq:colony_update_with_constraints} yields a nonlinear complementarity problem (NCP) for $\boldsymbol{\gamma}$ which no longer depends on the unknown future state $\mathbfcal{C}^{k+1}(\boldsymbol{\gamma})$ and thus can be solved efficiently:
+Substituting the approximation of $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ from \autoref{eq:phi_expanded} into the constraint conditions of \autoref{eq:colony_update_with_constraints} yields a nonlinear complementarity problem (NCP) for $\boldsymbol{\gamma}$ which no longer depends on the unknown future state $\mathbfcal{C}^{k+1}(\boldsymbol{\gamma})$ and thus can be solved efficiently:
 \begin{empheq}[box=\fbox]{equation} \label{eq:ncp_boxed}
     \small
     \begin{aligned}
@@ -459,7 +461,7 @@ Substituting the approximation of $\mathbf{\Phi}^{k+1}$ from \autoref{eq:phi_exp
 
 \subsubsection{Energy Minimization Solution}
 
-To solve this contact problem efficiently, we reframe it as an optimization problem~\cite{CellModellerMaths}. We design a special function $E(\boldsymbol{\gamma})$ whose minimization resolves the contact forces. Physically, $E$ represents the work done by the contact forces and the system's internal energy:
+To solve this nonlinear complementarity problem efficiently, we reframe it as an optimization problem~\cite{CellModellerMaths}. We design a special function $E(\boldsymbol{\gamma})$ whose minimization resolves the contact forces. Physically, $E$ represents the work done by the contact forces and the system's internal energy:
 
 \begin{equation} \label{eq:energy_function}
     \small
@@ -472,7 +474,7 @@ To solve this contact problem efficiently, we reframe it as an optimization prob
     \end{aligned}
 \end{equation}
 
-By construction, the gradient of this energy equals the linearized prediction:
+By construction, the gradient of this energy equals the linearized separation distances $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ from \autoref{eq:phi_expanded}:
 
 \begin{equation}
     \begin{split}
@@ -488,18 +490,18 @@ At the solution, the Karush-Kuhn-Tucker (KKT) conditions for this constrained mi
 \begin{enumerate}
     \item \textbf{Primal feasibility} ($\boldsymbol{\gamma}^* \geq 0$): We enforce this explicitly through a projection (\texttt{max} operator) during minimization, which prevents forces from becoming attractive. Physically, this ensures that contact forces only push cells apart according to the \textbf{Repulsive Forces} constraint.
 
-    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) \geq 0$): This must be true at the minimum. If the gradient pointed downhill ($\nabla E < 0$) at the solution, it would mean we could lower the energy further by increasing $\boldsymbol{\gamma}$, which contradicts that we are at a minimum. The only way to be at a minimum with the $\boldsymbol{\gamma} \geq 0$ constraint is if the gradient is zero (pointing nowhere) or positive (pointing uphill away from the boundary), meaning $\boldsymbol{\Phi}^{k+1} \geq 0$. Physically, this guarantees that no cells overlap after the update step in accordance with the \textbf{No-Overlap} constraint.
+    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) \geq 0$): At the solution $\boldsymbol{\gamma}^*$, the directional derivative of the energy must be non-negative in every feasible direction. A negative partial derivative would indicate that the energy could be reduced by increasing $\gamma_\alpha$, contradicting the optimality of $\boldsymbol{\gamma}^*$. Given the identity $\nabla E(\boldsymbol{\gamma}^*) = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*)$, this condition ensures $\boldsymbol{\Phi}^{k+1} \geq 0$, enforcing the \textbf{No-Overlap} constraint.
 
-    \item \textbf{Complementary slackness} ($\boldsymbol{\gamma}^{*\top} \boldsymbol{\Phi}^{k+1} = 0$): This condition holds for a similar reason. If a contact force is active ($\gamma_\alpha > 0$), it means the system is free to adjust this force to find the minimum. At the true minimum, there can be no direction left to lower the energy. Therefore, for a non-zero force to be part of the final, optimal solution, the gradient (which equals $\Phi^{k+1}_\alpha = 0$) must be zero at that point, indicating the cells are in contact. Conversely, if $\gamma_\alpha = 0$, the gradient can be positive ($\Phi^{k+1}_\alpha > 0$) because we cannot go to lower energies by making $\gamma_\alpha$ more negative (as it is forbidden). Thus, the product $\gamma_\alpha \Phi^{k+1}_\alpha = 0$ for each contact $\alpha$, leading to the overall complementary slackness condition. Physically, this means forces act only where cells are touching. Separated cells never experience any repulsive force, satisfying the \textbf{Complementarity Condition}.
+    \item \textbf{Complementary slackness} ($\boldsymbol{\gamma}^{*\top} \boldsymbol{\Phi}^{k+1} = 0$): This condition holds for a similar reason. Since both $\boldsymbol{\gamma}^* \geq 0$ and $\boldsymbol{\Phi}^{k+1} \geq 0$ at the solution, their product can only be zero if at least one term is zero for each contact. If a contact force is active ($\gamma_\alpha > 0$), it means the system is free to adjust this force to find the minimum. At the true minimum, there can be no direction left to lower the energy. Therefore, for a non-zero force to be part of the final, optimal solution, the gradient (which equals $\Phi^{k+1}_\alpha$) must be zero at that point. Conversely, if $\gamma_\alpha = 0$, the gradient can be positive ($\Phi^{k+1}_\alpha \geq 0$) because we cannot go to lower energies by making $\gamma_\alpha$ more negative (as it is forbidden by the Repulsive Forces constraint). Thus, the product $\gamma_\alpha \Phi^{k+1}_\alpha = 0$ for each contact $\alpha$, leading to the overall complementary slackness condition. Physically, this means forces act only where cells are touching. Separated cells never experience any repulsive force, satisfying the \textbf{Complementarity Condition}.
 \end{enumerate}
 
-Thus, the unique global minimizer $\boldsymbol{\gamma}^*$ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence between the KKT conditions of a convex optimization problem and a complementarity problem is a well-known result in optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Yan2022,Tasora2008, Yan2019, Li2021, Weady2024SM,Rudge2012,Macklin2014,Ferguson2021}.
+Thus, the unique global minimizer $\boldsymbol{\gamma}^*$ resolves all contacts according to the physical laws of rigid-body interactions. This equivalence between the KKT conditions of a convex optimization problem and a complementarity problem is a well-known result in optimization theory~\cite{Nocedal2006} and is widely used in constraint-based physics simulations~\cite{Yan2022,Tasora2008, Yan2019, Li2021, Weady2024SM,Rudge2012,Macklin2014,Ferguson2021,CellModellerMaths}.
 
 \subsubsection{Numerical Solution}
 
-We solve the constrained optimization using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, as implemented in~\cite{Weady2024SM,Yan2019}. This method is particularly well-suited for large-scale constrained optimization problems due to its computational efficiency and scalability. The algorithm iterates until a convergence criterion is met, producing $\boldsymbol{\gamma}^*$, which is then used to compute $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$ and update the colony state via Eq.~\ref{eq:colony_update}.
+We solve the constrained optimization problem using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, implemented as in~\cite{Weady2024SM,Yan2019}. This method is well-suited to large-scale problems due to its computational efficiency and scalability. The solver iterates until a convergence criterion is met, yielding the optimal contact forces $\boldsymbol{\gamma}^*$. These are used to compute $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$ and update the colony state via \autoref{eq:colony_update}.
 
-Following Weady et al.~\cite{Weady2024SM}, we use a convergence tolerance of $\epsilon = 10^{-3}$, which directly corresponds to the maximum permissible overlap of any cell pair after the update step. This approach ensures that the residual computed by the algorithm has a clear physical interpretation, allowing us to control the accuracy of the simulation in terms of actual cell overlaps.
+Following Weady et al.~\cite{Weady2024SM}, we adopt a convergence criterion based on a residual that corresponds directly to physical overlap. The solver terminates when the residual falls below a user specified tolerance of $\epsilon = 10^{-3}$, which ensures that the maximum overlap between any pair of cells is below 0.2\% of the cell diameter.
 
 \subsubsection{Limitations of the Linearization}
 
@@ -509,7 +511,7 @@ To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recurs
 
 Nevertheless, this approach still requires a sufficiently small timestep $\Delta t \sim 5 \times 10^{-4}$ h (see \autoref{fig:simulation_time_vs_dt}) to ensure that cells do not move excessively~\cite{Yan2022}. When cells move too far within a single timestep, new overlaps can be generated that the linearization fails to capture during the current iteration, preventing constraint resolution. In practice, this causes the BBPGD method to fail to converge, or ReLCP to be unable to resolve all overlaps within a reasonable number of iterations, resulting in simulation failure.
 
-Despite this computational restriction, the hard model's timestep requirement is less severe than the soft model's, though it still represents a significant computational bottleneck for large multicellular colonies with thousands or millions of cells.
+Despite this computational restriction, the hard model's timestep requirement is less severe than the soft model's, though it still represents a significant computational bottleneck for large multicellular colonies with millions of cells.
 
 \section{Implementation}
 
@@ -617,7 +619,7 @@ Despite these qualitatively similar outcomes, visual differences emerge between 
 
 The most striking difference between the models emerges in cell packing density (see \autoref{fig:dense_packing_comparison}). The soft model exhibits significantly denser packing in the colony center, decreasing radially outward (see \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), local packing fractions reach values of 5, far exceeding the maximum possible for rigid spherocylinders. In contrast, the hard model maintains approximately constant, and physically realistic, packing density ($\sim 0.9$) throughout the colony, as non-overlap constraints immediately propagate any interior overlaps outward.
 
-The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge, combined with a numerical timestep too large to resolve all collisions. Figure~\ref{fig:max_overlap_simulation} quantifies this effect: the soft model's maximum cell overlap steadily increases throughout the simulation, reaching nearly complete interpenetration by the end. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ by enforcing strict non-overlap constraints.
+The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge, combined with a numerical timestep too large to resolve all collisions. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model's maximum cell overlap steadily increases throughout the simulation, reaching nearly complete interpenetration by the end. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ by enforcing strict non-overlap constraints.
 
 A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ on cell velocities but not on current overlap. Once cells begin overlapping, they can continue doing so as long as velocities remain low. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$, though this remains as future work.
 
@@ -713,7 +715,7 @@ Although the hard and soft models produce similar orientation patterns in small 
 
 This artifact stems directly from the soft model's higher interior growth rates, which cannot be effectively resolved by local pairwise repulsive forces. Without sufficient outward stress propagation, the interior becomes unphysically dense, forcing cells into long, aligned bundles.
 
-The impact of $\lambda$ on microdomain structure is clearly visible: the hard model consistently produces microdomains of similar area across all stress-sensitivity values, while the soft model exhibits a broad distribution with many large clusters, particularly at low $\lambda = 10^{-4}$ (see Figure~\ref{fig:cluster_area_boxplot}).
+The impact of $\lambda$ on microdomain structure is clearly visible: the hard model consistently produces microdomains of similar area across all stress-sensitivity values, while the soft model exhibits a broad distribution with many large clusters, particularly at low $\lambda = 10^{-4}$ (see \autoref{fig:cluster_area_boxplot}).
 
 \begin{figure}[h]
     \centering
@@ -778,7 +780,7 @@ Both the hard and soft collision models successfully reproduce experimentally ob
 
 \subsection{Critical Timestep}
 
-Figure~\ref{fig:simulation_time_vs_dt} shows the maximum stable timestep $\Delta t$ determined by \autoref{alg:adaptive_dt} for both models during a simulation. The hard model stabilizes around $\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h, while the soft model steadily decreases to $\Delta t_{\text{soft}} \approx 10^{-5}$ h. The ratio $\Delta t_{\text{hard}}/\Delta t_{\text{soft}} \approx 30$ indicates the hard model can take roughly 30 times larger steps than the soft model in dense colonies, requiring significantly fewer steps to simulate equivalent physical time. Notably, for the hard model with $\lambda = 10^{-2}$, the maximum stable timestep increases over time. This occurs because interior cells stop growing (see \autoref{fig:radial_distribution_growth_rate}), reducing median velocity $u_m$ and allowing larger steps. The soft model does not exhibit this effect.
+\autoref{fig:simulation_time_vs_dt} shows the maximum stable timestep $\Delta t$ determined by \autoref{alg:adaptive_dt} for both models during a simulation. The hard model stabilizes around $\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h, while the soft model steadily decreases to $\Delta t_{\text{soft}} \approx 10^{-5}$ h. The ratio $\Delta t_{\text{hard}}/\Delta t_{\text{soft}} \approx 30$ indicates the hard model can take roughly 30 times larger steps than the soft model in dense colonies, requiring significantly fewer steps to simulate equivalent physical time. Notably, for the hard model with $\lambda = 10^{-2}$, the maximum stable timestep increases over time. This occurs because interior cells stop growing (see \autoref{fig:radial_distribution_growth_rate}), reducing median velocity $u_m$ and allowing larger steps. The soft model does not exhibit this effect.
 
 Compared to using a fixed timestep, the adaptive scheme provides significant performance benefits. Early iterations can use larger timesteps, while later stages, which require higher resolution due to increased cell density and interactions, can use smaller timesteps to maintain stability. A fixed, small timestep throughout is impractical for growing bacterial colonies, since computational load increases dramatically with cell number. Setting the timestep low enough to guarantee stability at the very end of the simulation would require extremely fine resolution early on, making the entire simulation prohibitively expensive.
 
@@ -881,9 +883,9 @@ Despite these performance differences, macroscopic structure remains comparable.
 
 This section analyzes the performance characteristics of the Barzilai-Borwein projected gradient descent (BBPGD) algorithm used in the hard collision model to solve the underlying constrained optimization problem. Understanding the convergence properties and computational efficiency of this solver is crucial, as it represents the most computationally intensive component of the overall simulation framework. In later stages of the simulation, when the system becomes densely packed and many contact constraints must be resolved simultaneously, BBPGD calls and the underlying matrix-vector operations account for approximately 85\% of total wall time.
 
-A key metric is the number of BBPGD iterations required per simulation step and how this quantity scales with system size. Figure~\ref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that iteration count remains mostly on the order of $\mathcal{O}(1000)$, with occasional peaks reaching $\mathcal{O}(5000)$ during critical moments such as large-scale rearrangements or near jamming transitions. This count includes additional BBPGD calls from the ReLCP procedure, which requires up to 11 iterations to fully resolve remaining overlaps~\cite{Weady2024SM}. The typical iteration count per timestep is consistent with related studies~\cite{Yan2019}, though our model's collision-growth coupling introduces additional complexity.
+A key metric is the number of BBPGD iterations required per simulation step and how this quantity scales with system size. \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that iteration count remains mostly on the order of $\mathcal{O}(1000)$, with occasional peaks reaching $\mathcal{O}(5000)$ during critical moments such as large-scale rearrangements or near jamming transitions. This count includes additional BBPGD calls from the ReLCP procedure, which requires up to 11 iterations to fully resolve remaining overlaps~\cite{Weady2024SM}. The typical iteration count per timestep is consistent with related studies~\cite{Yan2019}, though our model's collision-growth coupling introduces additional complexity.
 
-The convergence behavior within a single, typical, timestep is illustrated in Figure~\ref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\epsilon = 10^{-3}$ within approximately 2500 iterations while continuously reducing system energy (Figure~\ref{fig:bbpgd_energy}) as defined in \autoref{eq:energy_function}. Energy decreases monotonically, confirming BBPGD convergence under the projected gradient framework. The residual exhibits a highly oscillatory pattern, which is a well-known characteristic of BBPGD caused by adaptive step size selection~\cite{BBPGD,Schneider2021}. This oscillatory behavior does not indicate instability; rather, it reflects the algorithm's adaptive nature as it adjusts step sizes to maintain descent while navigating the constraint landscape.
+The convergence behavior within a single, typical, timestep is illustrated in \autoref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\epsilon = 10^{-3}$ within approximately 2500 iterations while continuously reducing system energy (\autoref{fig:bbpgd_energy}) as defined in \autoref{eq:energy_function}. Energy decreases monotonically, confirming BBPGD convergence under the projected gradient framework. The residual exhibits a highly oscillatory pattern, which is a well-known characteristic of BBPGD caused by adaptive step size selection~\cite{BBPGD,Schneider2021}. This oscillatory behavior does not indicate instability; rather, it reflects the algorithm's adaptive nature as it adjusts step sizes to maintain descent while navigating the constraint landscape.
 
 Several opportunities exist for optimizing the current implementation. Whether the current interplay between adaptive timestepping (\autoref{alg:adaptive_dt}) and the BBPGD solver is fully optimal remains an open question. Future work could explore more sophisticated adaptive timestepping strategies that incorporate direct feedback from the solver, for example by adjusting $\Delta t$ based on the number of BBPGD iterations or the observed rate of change in the colony's energy. In parallel, advanced warm-start strategies that leverage information from previous timesteps could substantially accelerate BBPGD convergence, particularly in later stages where most of the colony structure evolves only gradually.
 
