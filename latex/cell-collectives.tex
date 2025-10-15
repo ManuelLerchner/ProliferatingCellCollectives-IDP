@@ -165,17 +165,15 @@ This work aims to address this gap by implementing both soft and hard collision 
 
 \section{Cell Mechanics}
 
-Accurately modeling mechanical interactions between cells is essential for simulating colony growth and emergent spatial patterns. From a computational perspective, approximating bacteria and fungi as rigid spherocylinders balances biological realism with efficiency, capturing the elongated morphology of these organisms while preserving the essential mechanics of cell-cell interactions and colony expansion.
+Accurately modeling mechanical interactions between cells is essential for simulating colony growth and emergent spatial patterns. From a computational perspective, approximating bacteria and fungi as rigid spherocylinders (rods with hemispherical end caps) offers a balance between biological realism and computational efficiency. This representation captures the elongated morphology of these organisms while preserving the fundamental mechanics of cell-cell interactions and colony expansion. Although real cells exhibit some deformability, the rigid spherocylinder approximation successfully captures essential collective dynamics at significantly reduced computational cost and is well validated experimentally~\cite{Rudge2012,Khan_2024,Rudge2013,Langeslay_2023,Ghosh2015}. The spherocylinder geometry closely matches common organisms such as \textit{E. coli} and \textit{Setosphaeria rostrata} (see \autoref{fig:exserohilum_turcicum}), and has become standard in computational models of microbial collectives~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015}.
 
-Although real cells exhibit some flexibility and deformation, the rigid-rod idealization reproduces key emergent behaviors observed experimentally~\cite{Rudge2012,Khan_2024,Rudge2013,Langeslay_2023,Ghosh2015} and is well established in existing models of cellular collectives.
-
-In this framework, each cell is modeled as a spherocylinder (a rigid rod with hemispherical end caps) with a variable length $\ell$ that grows over time to capture cell growth and division, and a fixed diameter $d$ that remains constant across the population. This geometry allows for efficient contact detection~\cite{GeometricTools} and supports rotational interactions. It closely matches the morphology of common microbes such as \textit{E. coli} and \textit{Setosphaeria rostrata} (see \autoref{fig:exserohilum_turcicum}) and is widely used in computational models of cellular collectives~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015}. Its simplicity and computational efficiency enable simulations of large colonies without incurring prohibitive costs.
+Each spherocylinder is characterized by a time-varying length $\ell$ that increases during growth prior to division, and a fixed diameter $d$ that remains constant across the population. This geometry enables efficient contact detection algorithms~\cite{GeometricTools} and naturally accommodates rotational dynamics essential for capturing realistic colony mechanics.
 
 At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \ll 1$), so viscous forces dominate over inertia. In this highly viscous, \textit{sticky} environment, cells stop almost immediately once forces cease~\cite{datta2024lifelowreynoldsnumber,Rudge2012}. As a result, cell motion is governed by the overdamped Langevin equation:
 
 \begin{equation} \label{eq:overdamped_langevin}
-    \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_j \mathbf{F}_{ij}, \quad
-    \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_j \mathbf{r}_{ij} \times \mathbf{F}_{ij}
+    \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_{j \neq i} \mathbf{F}_{ij}, \quad
+    \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_{j \neq i} \mathbf{r}_{ij} \times \mathbf{F}_{ij}
 \end{equation}
 
 Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angular velocities of cell $i$, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. \autoref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
@@ -184,15 +182,15 @@ Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angul
 Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024SM}:
 
 \begin{equation} \label{eq:growth}
-    \dot{\ell} = \frac{\ell}{\tau} e^{-\lambda \sigma}
+    \dot{\ell}_i = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i}
 \end{equation}
 
-where $\tau$ is a characteristic timescale, $\sigma$ is the compressive stress along the cell's main axis, and $\lambda$ is a stress sensitivity parameter. As the compressive stress increases, the effective growth rate $\dot{\ell}$ decreases, leading to slower elongation. When $\sigma = 0$, cells grow exponentially with a rate determined solely by $\tau$, whereas increasing $\sigma$ progressively suppresses growth. For sufficiently large compressive stresses, the exponential term tends toward zero, effectively halting elongation.
+where $\tau$ is a characteristic timescale, $\sigma_i$ is the compressive stress along cell $i$'s main axis, and $\lambda$ is a stress sensitivity parameter. As the compressive stress increases, the effective growth rate $\dot{\ell}_i$ decreases toward zero, leading to slower elongation. When $\sigma_i = 0$, the cell grows exponentially with a rate determined solely by $\tau$.
 
 The stress on cell $i$ is computed by projecting contact forces onto the cell's longitudinal axis $\hat{\mathbf{t}}_i$:
 
 \begin{equation} \label{eq:stress}
-    \sigma_i = \sum_{j} \frac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
+    \sigma_i = \sum_{j \neq i} \frac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
 \end{equation}
 
 In our simulations, the initial cell is initialized with length $\ell = 1$ and diameter $d = 0.5$. Cell division occurs when a cell reaches a critical length $\ell_{\text{crit}} = 2$, producing two daughter cells with lengths randomly sampled from $\left[0.98\,\frac{\ell_{\text{crit}}}{2},\, 1.02\,\frac{\ell_{\text{crit}}}{2}\right]$ to prevent artificial synchronization of division events.
@@ -295,9 +293,7 @@ To account for Brownian motion and other sources of random fluctuations, we appl
 
 \subsection{Colony Representation}
 
-Following Weady et al.~\cite{Weady2024SM}, the bacterial colony is represented by a global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$.
-
-Quaternions are used instead of Euler angles or rotation matrices because they avoid singularities (gimbal lock), provide stable numerical integration over long simulations, and require less memory (4 components vs. 9 for rotation matrices).
+Following Weady et al.~\cite{Weady2024SM}, the bacterial colony is represented by a global state vector $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$, where $N$ is the number of cells. Each cell is represented by a 7-dimensional sub-vector consisting of a position vector $\mathbf{x}_n \in \mathbb{R}^3$ and a unit quaternion $\mathbf{q}_n \in \mathbb{R}^4$ representing its orientation. The lengths of all cells are stored separately in a vector $\boldsymbol{\ell} = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}$. Quaternions are used instead of Euler angles or rotation matrices because they avoid singularities and provide stable numerical integration over long simulations.
 
 \subsection{Colony Dynamics}
 
@@ -320,13 +316,16 @@ where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix. The resulting matrix-v
 
 \subsection{State Integration}
 
-The orientation quaternion $\mathbf{q}_n^k$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_n^k = \frac{1}{2} \boldsymbol{\omega}_n \otimes \mathbf{q}_n^k$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}^k \in \mathbb{R}^{7N \times 6N}$, converting Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in positions and quaternions in $\mathbb{R}^{7N}$ according to the quaternion kinematics (see~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}^k$, the colony's state is updated via explicit Euler integration.
+The orientation quaternion $\mathbf{q}_n^k$ for each cell evolves according to the kinematic equation $\dot{\mathbf{q}}_n^k = \frac{1}{2} \boldsymbol{\omega}_n \otimes \mathbf{q}_n^k$, where $\otimes$ denotes quaternion multiplication. To integrate translational and rotational dynamics consistently, we introduce a mapping $\mathbfcal{G}^k \in \mathbb{R}^{7N \times 6N}$, converting Cartesian translational and angular velocities from $\mathbb{R}^{6N}$ into corresponding changes in positions and quaternions in $\mathbb{R}^{7N}$ according to the quaternion kinematics (see~\cite{Weady2024SM,Yan2022,Tasora2008}). Using $\mathbfcal{G}^k$, the colony's state and the length vector are updated via explicit Euler integration.
 
 \begin{equation} \label{eq:colony_update}
-    \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}
+    \begin{aligned}
+        \mathbfcal{C}^{k+1}     & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F} \\
+        \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}
+    \end{aligned}
 \end{equation}
 
-The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ is computed, the state update mechanism remains identical.
+The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ and in particular the inter-cell forces $\mathbf{F}_{ij}$ are computed. The state update mechanism remains identical.
 
 \subsection{Soft Collision Model}
 
@@ -342,7 +341,7 @@ where $\delta$ is the overlap distance, $d$ is the cell diameter, $k_{cc}$ is an
 
 \subsubsection{Force Assembly}
 
-The total force and torque on cell $n$ are computed by summing contributions from all pairwise elastic interactions and can be used to assemble the global force vector $\mathbfcal{F}$:
+The total force and torque on cell $n$ are computed by summing contributions from all pairwise elastic interactions and can be used to assemble the global force vector $\mathbfcal{F}$ and compute the cell growth rates $\dot{\boldsymbol{\ell}}$ via \autoref{eq:growth}:
 
 \begin{equation} \label{eq:force_assembly}
     \mathbf{f}_i         = \sum_{j \neq i} \mathbf{F}^{\text{elastic}}_{ij}, \qquad
@@ -362,7 +361,7 @@ The elastic constant is defined as $k_{cc} = \frac{Y}{\zeta}$, where $Y$ is the 
 
 \subsection{Hard Collision Model}
 
-The hard collision model enforces strict non-overlapping constraints between cells using a constraint-based method. For each nearby cell pair, a constraint $\alpha$ is defined based on the closest points on their surfaces, $\mathbf{y}_n$ and $\mathbf{y}_m$~\cite{Weady2024SM}. Unlike the soft model, which uses repulsive forces, the hard model determines contact forces via unknown scalar Lagrange multipliers $\gamma_\alpha$, which represent the magnitude of the impulse needed to prevent penetration.
+The hard collision model adapted from Weady et al.~\cite{Weady2024SM} enforces strict non-overlapping constraints between cells using a constraint-based method. For each nearby cell pair, a constraint $\alpha$ is defined based on the closest points on their surfaces, $\mathbf{y}_n$ and $\mathbf{y}_m$. Unlike the soft model, which uses repulsive forces, the hard model determines contact forces via unknown scalar Lagrange multipliers $\gamma_\alpha$, which represent the magnitude of the impulse needed to prevent penetration.
 
 The force on cell $n$ from constraint $\alpha$ is:
 \begin{equation} \label{eq:constraint_force}
@@ -374,12 +373,12 @@ where $\hat{\mathbf{n}}_\alpha$ is the normal vector at the contact point. The t
     \mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D} \boldsymbol{\gamma}
 \end{equation}
 
-where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a sparse matrix consisting of contact normals and lever arms for all constraints. This matrix-vector product mimics the force assembly in ~\autoref{eq:force_assembly}, but uses the unknown multipliers $\boldsymbol{\gamma}$ instead of explicit force calculations. Similarly, the stress on each cell can also be expressed as a linear function of the multipliers:
+where $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ is a sparse matrix consisting of contact normals and lever arms for all constraints. This matrix-vector product mimics the force assembly in ~\autoref{eq:force_assembly}, but uses the unknown multipliers $\boldsymbol{\gamma}$ instead of explicit force calculations. Similarly, the stress vector $\boldsymbol{\sigma} = [\dots, \sigma_n, \dots]^\top \in \mathbb{R}^{N}$ can also be expressed linearly in terms of $\boldsymbol{\gamma}$:
 \begin{equation} \label{eq:stress_as_function_of_multipliers}
     \boldsymbol{\sigma}(\boldsymbol{\gamma}) = \mathbfcal{L} \boldsymbol{\gamma}
 \end{equation}
 
-where $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes stress contributions from each constraint, such that the matrix-vector product mimics the stress calculation in \autoref{eq:stress},
+where $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ encodes stress contributions from each constraint, such that the matrix-vector product mimics the stress calculation in \autoref{eq:stress}. This also means that the growth rates $\dot{\boldsymbol{\ell}}$ depend (nonlinearly) on $\boldsymbol{\gamma}$ via \autoref{eq:growth}.
 
 \subsubsection{Constraint Conditions}
 
@@ -388,7 +387,7 @@ To ensure that solving for the multipliers $\boldsymbol{\gamma}$ leads to physic
 
 \begin{enumerate}
     \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq \mathbf{0}$. This ensures that the forces are repulsive, preventing cells from attracting each other.
-    \item \textbf{No-Overlap:} $\mathbf{\Phi}^{k+1} \geq \mathbf{0}$ with $\mathbf{\Phi}^{k+1} = [\dots, \Phi_\alpha^{k+1}, \dots]^\top$. Here, $\mathbf{\Phi}^{k+1} \in \mathbb{R}^{C}$ is the vector of signed separation distances between the pairs of cells associated with each constraint $\alpha$ at timestep $k+1$. Each component $\Phi_\alpha^{k+1}$ is computed as the minimum separation distance between the associated cells. We use the robust geometric algorithm described by~\cite{Yan2019, GeometricTools} to compute these distances efficiently.
+    \item \textbf{No-Overlap:} $\mathbf{\Phi}^{k+1} \geq \mathbf{0}$ with $\mathbf{\Phi}^{k+1} = [\dots, \Phi_\alpha^{k+1}, \dots]^\top$. Here, $\mathbf{\Phi}^{k+1} \in \mathbb{R}^{C}$ is the vector of signed separation distances between the pairs of cells associated with each constraint $\alpha$ at timestep $k+1$. Signed separation distances between cells are computed using the robust geometric algorithm described by~\cite{Yan2019, GeometricTools}.
           A positive value $\Phi_\alpha^{k+1}$ indicates that the cells in the next iteration are separated, while a negative value indicates overlap. This condition enforces that no overlaps occur after the update.
     \item \textbf{Complementarity Condition:}  $\boldsymbol{\gamma}^\top \mathbf{\Phi}^{k+1} = \mathbf{0}$ (often written as $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$). This condition enforces that if two cells are in contact in the next iteration (i.e., $\Phi_\alpha^{k+1} = 0$), then a force may act in the current iteration to prevent overlap.
           Conversely, if two cells are separated in the next iteration (i.e., $\Phi_\alpha^{k+1} > 0$), no force should act in the current iteration (i.e., $\gamma_\alpha = 0$) in order to avoid force application at a distance.
@@ -400,11 +399,12 @@ These conditions are often abbreviated as:
 \end{equation}
 
 
-The colony update rule and additional conditions combine to form a system where the future state $\mathbfcal{C}^{k+1}$ (and thus $\mathbf{\Phi}^{k+1}$) depends on $\boldsymbol{\gamma}$:
+The colony update rule and additional conditions combine to form a system where the future state $\mathbfcal{C}^{k+1}$ and $\boldsymbol{\ell}^{k+1}$, and thus $\mathbf{\Phi}^{k+1}$ depend on $\boldsymbol{\gamma}$:
 
 \begin{equation} \label{eq:colony_update_with_constraints}
     \begin{split}
-        \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}(\boldsymbol{\gamma}) \\
+        \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}(\boldsymbol{\gamma})  \\
+        \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\boldsymbol{\gamma}) \\
         \text{s.t.} \quad & \mathbf{0} \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}(\boldsymbol{\gamma}) \geq \mathbf{0}.
     \end{split}
 \end{equation}
@@ -499,7 +499,7 @@ Thus, the unique global minimizer $\boldsymbol{\gamma}^*$ resolves all contacts 
 
 \subsubsection{Numerical Solution}
 
-We solve the constrained optimization problem using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, implemented as in~\cite{Weady2024SM,Yan2019}. This method is well-suited to large-scale problems due to its computational efficiency and scalability. The solver iterates until a convergence criterion is met, yielding the optimal contact forces $\boldsymbol{\gamma}^*$. These are used to compute $\mathbfcal{F} = \mathbfcal{D}\boldsymbol{\gamma}^*$ and update the colony state via \autoref{eq:colony_update}.
+We solve the constrained optimization problem using the Barzilai-Borwein projected gradient descent method (BBPGD)~\cite{BBPGD}, implemented as in~\cite{Weady2024SM,Yan2019}. This method is well-suited to large-scale problems due to its computational efficiency and scalability. The solver iterates until convergence, yielding the optimal contact forces $\boldsymbol{\gamma}^*$, which are then used to compute $\mathbfcal{F}(\boldsymbol{\gamma}^*)$ and $\dot{\boldsymbol{\ell}}(\boldsymbol{\gamma}^*)$ for updating the colony state via \autoref{eq:colony_update}.
 
 Following Weady et al.~\cite{Weady2024SM}, we adopt a convergence criterion based on a residual that corresponds directly to physical overlap. The solver terminates when the residual falls below a user-specified tolerance of $\epsilon = 10^{-3}$, which ensures that the maximum overlap between any pair of cells is below 0.2\% of the cell diameter.
 
