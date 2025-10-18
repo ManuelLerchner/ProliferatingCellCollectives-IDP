@@ -35,6 +35,8 @@ Domain::Domain(SimulationParameters& params, bool preserve_existing, size_t iter
   step_start_time_ = MPI_Wtime();
   time_last_log_ = MPI_Wtime();
 
+  center_radius = 8;
+
   if (rank_ == 0) {
     vtk::ParameterLogger parameter_logger(output_dir, "parameters", true, iter);
     parameter_logger.log(params);
@@ -122,7 +124,6 @@ void Domain::run() {
 
     rebalance();
     assignGlobalIDs();
-    resizeDomain();
 
     auto update_ghosts_fn = [this]() {
       rebalance();
@@ -199,6 +200,45 @@ void Domain::run() {
   }
 }
 
+void Domain::groupParticlesForExchange(std::vector<std::vector<ParticleData>>& particles_to_send,
+                                       std::vector<Particle>& particles_to_keep) {
+  double angle_per_rank = 360.0 / size_;
+
+  for (auto& p : particle_manager_->local_particles) {
+    const auto& pos = p.getPosition();
+
+    // Calculate distance from center
+    double distance_from_center = std::sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+
+    // Center particles (within radius 5) go to rank 0
+    if (distance_from_center <= center_radius) {
+      if (rank_ == 0) {
+        // Rank 0 keeps its center particles locally
+        particles_to_keep.push_back(p);
+      } else {
+        // Other ranks send their center particles to rank 0
+        particles_to_send[0].push_back(p.getData());
+      }
+    } else {
+      // Regular angular partitioning for non-center particles
+      double angle_rad = std::atan2(pos[1], pos[0]);
+      double angle_deg = angle_rad * 180.0 / M_PI;
+      if (angle_deg < 0) {
+        angle_deg += 360.0;
+      }
+
+      int target_rank = static_cast<int>(floor(angle_deg / angle_per_rank));
+      target_rank = std::max(0, std::min(size_ - 1, target_rank));
+
+      if (target_rank == rank_) {
+        particles_to_keep.push_back(p);
+      } else {
+        particles_to_send[target_rank].push_back(p.getData());
+      }
+    }
+  }
+}
+
 void Domain::rebalance() {
   // 1. Determine which particles to send to which rank
   std::vector<std::vector<ParticleData>> particles_to_send(size_);
@@ -212,198 +252,151 @@ void Domain::rebalance() {
   updateParticlesAfterExchange(particles_to_keep, recv_buffer);
 }
 
+double calculateDistanceToAngularBoundary(const std::array<double, 3>& pos,
+                                          double radius, double particle_angle_deg,
+                                          double boundary_angle_min,
+                                          double boundary_angle_max) {
+  // Handle wraparound for angles near 0/360 boundary
+  auto normalizeAngleDiff = [](double angle_diff) {
+    while (angle_diff > 180.0) angle_diff -= 360.0;
+    while (angle_diff < -180.0) angle_diff += 360.0;
+    return angle_diff;
+  };
+
+  double diff_to_min = normalizeAngleDiff(particle_angle_deg - boundary_angle_min);
+  double diff_to_max = normalizeAngleDiff(boundary_angle_max - particle_angle_deg);
+
+  // Particle is between the two boundaries
+  if (diff_to_min >= 0 && diff_to_max >= 0) {
+    return 0.0;  // Inside the domain
+  }
+
+  // Find minimum angular distance to either boundary
+  double min_angle_diff = std::min(std::abs(diff_to_min), std::abs(diff_to_max));
+
+  // Convert angular distance to absolute distance (arc length at particle's radius)
+  double angle_rad = min_angle_diff * M_PI / 180.0;
+  double perpendicular_distance = radius * std::sin(angle_rad);
+
+  return perpendicular_distance;
+}
+
+std::vector<ParticleData> Domain::exchangeGhostParticlesAllToAll(
+    const std::vector<std::vector<ParticleData>>& particles_to_send) {
+  // Prepare send counts for all ranks
+  std::vector<int> send_counts(size_);
+  for (int i = 0; i < size_; ++i) {
+    send_counts[i] = particles_to_send[i].size();
+  }
+
+  // Exchange counts with all ranks
+  std::vector<int> recv_counts(size_);
+  MPI_Alltoall(send_counts.data(), 1, MPI_INT,
+               recv_counts.data(), 1, MPI_INT,
+               PETSC_COMM_WORLD);
+
+  // Calculate displacements
+  std::vector<int> send_displs(size_);
+  std::vector<int> recv_displs(size_);
+  int send_total = 0;
+  int recv_total = 0;
+
+  for (int i = 0; i < size_; ++i) {
+    send_displs[i] = send_total;
+    recv_displs[i] = recv_total;
+    send_total += send_counts[i];
+    recv_total += recv_counts[i];
+  }
+
+  // Pack send buffer
+  std::vector<ParticleData> send_buffer(send_total);
+  int offset = 0;
+  for (int i = 0; i < size_; ++i) {
+    std::copy(particles_to_send[i].begin(), particles_to_send[i].end(),
+              send_buffer.begin() + offset);
+    offset += send_counts[i];
+  }
+
+  // Allocate receive buffer
+  std::vector<ParticleData> recv_buffer(recv_total);
+
+  // Exchange particle data with all ranks
+  MPI_Alltoallv(send_buffer.data(), send_counts.data(), send_displs.data(), mpi_particle_type_,
+                recv_buffer.data(), recv_counts.data(), recv_displs.data(), mpi_particle_type_,
+                PETSC_COMM_WORLD);
+
+  return recv_buffer;
+}
+
 void Domain::exchangeGhostParticles() {
-  std::vector<ParticleData> particles_to_send_left;
-  std::vector<ParticleData> particles_to_send_right;
-  double buffer = params_.physics_config.l0 * 0.5;
+  double angle_per_rank = 360.0 / size_;
+  double cutoff_distance = 2.0;
+
+  std::vector<std::vector<ParticleData>> particles_to_send(size_);
+
+  // Pre-calculate neighbor ranks
+  int left_neighbor = (rank_ > 0) ? rank_ - 1 : size_ - 1;
+  int right_neighbor = (rank_ < size_ - 1) ? rank_ + 1 : 0;
 
   for (auto& p : particle_manager_->local_particles) {
     const auto& pos = p.getPosition();
     const auto& length = p.getLength();
-    double buffer = params_.physics_config.l0 * 0.1;
 
-    if (pos[0] - length - buffer < min_bounds_[0] && rank_ > 0) {
-      particles_to_send_left.push_back(p.getData());
+    double angle_rad = std::atan2(pos[1], pos[0]);
+    double angle_deg = angle_rad * 180.0 / M_PI;
+    if (angle_deg < 0) {
+      angle_deg += 360.0;
     }
-    if (pos[0] + length + buffer > max_bounds_[0] && rank_ < size_ - 1) {
-      particles_to_send_right.push_back(p.getData());
+
+    double radius = std::sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
+
+    // Determine which ranks need this particle as a ghost
+    std::unordered_set<int> target_ranks;
+
+    // Case 1: Center particles NEAR THE BOUNDARY on rank 0 go to all ranks
+    // Only send if they're close to the circular boundary
+    if (radius <= center_radius && rank_ == 0 &&
+        radius >= center_radius - cutoff_distance - length) {
+      for (int r = 0; r < size_; ++r) {
+        if (r != rank_) target_ranks.insert(r);
+      }
+    }
+    // Case 2: Particles near center boundary (on other ranks) go to rank 0
+    else if (rank_ != 0 && radius <= center_radius + cutoff_distance + length) {
+      target_ranks.insert(0);
+    }
+
+    // Case 3: Regular angular neighbors - ONLY check immediate neighbors
+    // Left neighbor
+    double left_angle_min = left_neighbor * angle_per_rank;
+    double left_angle_max = (left_neighbor + 1) * angle_per_rank;
+    double dist_to_left_boundary = calculateDistanceToAngularBoundary(
+        pos, radius, angle_deg, left_angle_min, left_angle_max);
+    if (dist_to_left_boundary < cutoff_distance + length) {
+      target_ranks.insert(left_neighbor);
+    }
+
+    // Right neighbor
+    double right_angle_min = right_neighbor * angle_per_rank;
+    double right_angle_max = (right_neighbor + 1) * angle_per_rank;
+    double dist_to_right_boundary = calculateDistanceToAngularBoundary(
+        pos, radius, angle_deg, right_angle_min, right_angle_max);
+    if (dist_to_right_boundary < cutoff_distance + length) {
+      target_ranks.insert(right_neighbor);
+    }
+
+    // Send to all target ranks
+    for (int target_rank : target_ranks) {
+      particles_to_send[target_rank].push_back(p.getData());
     }
   }
 
-  auto received_particles_data = exchangeParticleDataWithAdjacentRank(particles_to_send_left, particles_to_send_right);
+  // Exchange ghost particles with all ranks
+  auto received_particles_data = exchangeGhostParticlesAllToAll(particles_to_send);
 
   particle_manager_->ghost_particles.clear();
   for (const auto& pd : received_particles_data) {
     particle_manager_->ghost_particles.emplace_back(pd);
-  }
-}
-
-void Domain::resizeDomain() {
-  calculateGlobalBounds();
-
-  // Update local bounds
-  double slice_width = (global_max_bounds_[0] - global_min_bounds_[0]) / size_;
-
-  min_bounds_[0] = global_min_bounds_[0] + rank_ * slice_width;
-  double buffer = params_.physics_config.l0 * 0.5;
-  max_bounds_[0] = global_min_bounds_[0] + (rank_ + 1) * slice_width;
-  min_bounds_[1] = global_min_bounds_[1];
-  max_bounds_[1] = global_max_bounds_[1];
-  min_bounds_[2] = global_min_bounds_[2];
-  max_bounds_[2] = global_max_bounds_[2];
-
-  particle_manager_->updateDomainBounds(min_bounds_, max_bounds_);
-}
-
-void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s, vtk::SimulationStep step) {
-  double time_elapsed_seconds = simulation_time_seconds_;
-  double progress_percent = (colony_radius / params_.sim_config.end_radius) * 100.0;
-
-  std::string eta_str = "N/A";
-  double growth_rate_wall = 0.0;  // colony radius growth per real second
-
-  double current_wall_time = MPI_Wtime();
-  double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
-  double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
-
-  if (wall_time_since_last_check > 1 && sim_time_since_last_check > 1e-12) {
-    double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
-
-    // Exponential smoothing
-    double alpha = 0.1;
-    double smoothed_ratio = last_wall_per_sim_seconds_ * (1.0 - alpha) + current_ratio * alpha;
-
-    // Estimate growth rate per sim second
-    double delta_radius = colony_radius - last_eta_check_radius_;
-    double growth_rate_sim = delta_radius / sim_time_since_last_check;
-
-    // Estimate remaining sim time and convert to wall time
-    double remaining_sim_time = (params_.sim_config.end_radius - colony_radius) / growth_rate_sim;
-    double estimated_remaining_wall_time_seconds = remaining_sim_time * smoothed_ratio;
-
-    char buffer[100];
-    snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
-    eta_str = buffer;
-
-    // Colony growth per wall time
-    double raw_growth_rate = delta_radius / wall_time_since_last_check;
-    double smoothed_growth_rate = last_growth_rate_wall_ * (1.0 - alpha) + raw_growth_rate * alpha;
-    growth_rate_wall = smoothed_growth_rate;
-
-    // Update for next call (mark members as mutable to avoid const_cast)
-    last_wall_per_sim_seconds_ = smoothed_ratio;
-    last_eta_check_radius_ = colony_radius;
-    last_growth_rate_wall_ = smoothed_growth_rate;
-
-    last_eta_check_time_ = current_wall_time;
-    last_eta_check_sim_time_ = simulation_time_seconds_;
-
-    int total_ranks;
-    MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
-
-    PetscPrintf(PETSC_COMM_WORLD,
-                "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
-                "dt: %4.1es | CPU: %3.1fs | Particles: %d | Growth: %.4f/s | BBPGD iters: %ld | Residual: %.2e | Ranks %d\n",
-                colony_radius,
-                params_.sim_config.end_radius,
-                progress_percent,
-                time_elapsed_seconds,
-                eta_str.c_str(),
-                params_.sim_config.dt_s,
-                cpu_time_s,
-                global_particle_count,
-                growth_rate_wall,
-                step.bbpgd_iterations,
-                step.residual,
-                total_ranks);
-  }
-}
-
-std::pair<std::array<double, 3>, std::array<double, 3>> Domain::calculateLocalBoundingBox() const {
-  double local_min_x = std::numeric_limits<double>::max();
-  double local_max_x = std::numeric_limits<double>::lowest();
-  double local_min_y = std::numeric_limits<double>::max();
-  double local_max_y = std::numeric_limits<double>::lowest();
-  double local_min_z = std::numeric_limits<double>::max();
-  double local_max_z = std::numeric_limits<double>::lowest();
-
-  for (const auto& p : particle_manager_->local_particles) {
-    const auto& pos = p.getPosition();
-    local_min_x = std::min(local_min_x, pos[0]);
-    local_max_x = std::max(local_max_x, pos[0]);
-    local_min_y = std::min(local_min_y, pos[1]);
-    local_max_y = std::max(local_max_y, pos[1]);
-    local_min_z = std::min(local_min_z, pos[2]);
-    local_max_z = std::max(local_max_z, pos[2]);
-  }
-  return {{local_min_x, local_min_y, local_min_z}, {local_max_x, local_max_y, local_max_z}};
-}
-
-void Domain::calculateGlobalBounds() {
-  auto [local_min, local_max] = calculateLocalBoundingBox();
-
-  double global_min_x, global_max_x, global_min_y, global_max_y, global_min_z, global_max_z;
-  getGlobalMinMax(local_min[0], local_max[0], global_min_x, global_max_x);
-  getGlobalMinMax(local_min[1], local_max[1], global_min_y, global_max_y);
-  getGlobalMinMax(local_min[2], local_max[2], global_min_z, global_max_z);
-
-  // Handle case where no particles exist in the simulation yet
-  if (global_max_x < global_min_x) {
-    global_min_x = -1.0;
-    global_max_x = 1.0;
-    global_min_y = -1.0;
-    global_max_y = 1.0;
-    global_min_z = -1.0;
-    global_max_z = 1.0;
-  }
-
-  padGlobalBounds(global_min_x, global_max_x, global_min_y, global_max_y, global_min_z, global_max_z);
-
-  double padding = 2;
-  global_min_bounds_ = {global_min_x - padding, global_min_y - padding, global_min_z};
-  global_max_bounds_ = {global_max_x + padding, global_max_y + padding, global_max_z};
-}
-
-void Domain::padGlobalBounds(double& global_min_x, double& global_max_x, double& global_min_y, double& global_max_y,
-                             double& global_min_z, double& global_max_z) const {
-  const auto& sim_config_ = params_.sim_config;
-
-  if (global_max_x - global_min_x < size_ * sim_config_.min_box_size.x) {
-    double padding = (size_ * sim_config_.min_box_size.x - (global_max_x - global_min_x)) / 2;
-    global_min_x -= padding;
-    global_max_x += padding;
-  }
-  if (global_max_y - global_min_y < size_ * sim_config_.min_box_size.y) {
-    double padding = (size_ * sim_config_.min_box_size.y - (global_max_y - global_min_y)) / 2;
-    global_min_y -= padding;
-    global_max_y += padding;
-  }
-  if (global_max_z - global_min_z < size_ * sim_config_.min_box_size.z) {
-    double padding = (size_ * sim_config_.min_box_size.z - (global_max_z - global_min_z)) / 2;
-    global_min_z -= padding;
-    global_max_z += padding;
-  }
-}
-
-void Domain::groupParticlesForExchange(std::vector<std::vector<ParticleData>>& particles_to_send,
-                                       std::vector<Particle>& particles_to_keep) {
-  double slice_width = (global_max_bounds_[0] - global_min_bounds_[0]) / size_;
-
-  for (auto& p : particle_manager_->local_particles) {
-    const auto& pos = p.getPosition();
-    int target_rank = 0;
-    if (slice_width > 1e-9) {  // Avoid division by zero
-      target_rank = static_cast<int>(floor((pos[0] - global_min_bounds_[0]) / slice_width));
-    }
-
-    // Clamp target_rank to be within [0, size_ - 1]
-    target_rank = std::max(0, std::min(size_ - 1, target_rank));
-
-    if (target_rank == rank_) {
-      particles_to_keep.push_back(p);
-    } else {
-      particles_to_send[target_rank].push_back(p.getData());
-    }
   }
 }
 
@@ -481,8 +474,10 @@ std::vector<ParticleData> Domain::exchangeParticleDataWithAdjacentRank(
 
 void Domain::updateParticlesAfterExchange(std::vector<Particle>& particles_to_keep,
                                           const std::vector<ParticleData>& received_particles) {
+  // Clear current particles and start with the ones we decided to keep
   particle_manager_->local_particles = std::move(particles_to_keep);
 
+  // Add all received particles (including center particles sent to rank 0)
   for (auto& pd : received_particles) {
     particle_manager_->local_particles.emplace_back(pd);
   }
@@ -526,6 +521,70 @@ void Domain::assignGlobalIDsToNewParticles() {
   }
 }
 
+void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s, vtk::SimulationStep step) {
+  double time_elapsed_seconds = simulation_time_seconds_;
+  double progress_percent = (colony_radius / params_.sim_config.end_radius) * 100.0;
+
+  std::string eta_str = "N/A";
+  double growth_rate_wall = 0.0;  // colony radius growth per real second
+
+  double current_wall_time = MPI_Wtime();
+  double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
+  double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
+
+  if (wall_time_since_last_check > 1 && sim_time_since_last_check > 1e-12) {
+    double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
+
+    // Exponential smoothing
+    double alpha = 0.1;
+    double smoothed_ratio = last_wall_per_sim_seconds_ * (1.0 - alpha) + current_ratio * alpha;
+
+    // Estimate growth rate per sim second
+    double delta_radius = colony_radius - last_eta_check_radius_;
+    double growth_rate_sim = delta_radius / sim_time_since_last_check;
+
+    // Estimate remaining sim time and convert to wall time
+    double remaining_sim_time = (params_.sim_config.end_radius - colony_radius) / growth_rate_sim;
+    double estimated_remaining_wall_time_seconds = remaining_sim_time * smoothed_ratio;
+
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
+    eta_str = buffer;
+
+    // Colony growth per wall time
+    double raw_growth_rate = delta_radius / wall_time_since_last_check;
+    double smoothed_growth_rate = last_growth_rate_wall_ * (1.0 - alpha) + raw_growth_rate * alpha;
+    growth_rate_wall = smoothed_growth_rate;
+
+    // Update for next call (mark members as mutable to avoid const_cast)
+    last_wall_per_sim_seconds_ = smoothed_ratio;
+    last_eta_check_radius_ = colony_radius;
+    last_growth_rate_wall_ = smoothed_growth_rate;
+
+    last_eta_check_time_ = current_wall_time;
+    last_eta_check_sim_time_ = simulation_time_seconds_;
+
+    int total_ranks;
+    MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
+
+    PetscPrintf(PETSC_COMM_WORLD,
+                "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
+                "dt: %4.1es | CPU: %3.1fs | Particles: %d | Growth: %.4f/s | BBPGD iters: %ld | Residual: %.2e | Ranks %d\n",
+                colony_radius,
+                params_.sim_config.end_radius,
+                progress_percent,
+                time_elapsed_seconds,
+                eta_str.c_str(),
+                params_.sim_config.dt_s,
+                cpu_time_s,
+                global_particle_count,
+                growth_rate_wall,
+                step.bbpgd_iterations,
+                step.residual,
+                total_ranks);
+  }
+}
+
 Domain Domain::initializeFromVTK(SimulationParameters& params, const std::string& vtk_path, const std::string& mode) {
   std::filesystem::path path(vtk_path);
   std::string vtk_dir;
@@ -560,7 +619,6 @@ Domain Domain::initializeFromVTK(SimulationParameters& params, const std::string
 
   // Commit particles and update state
   domain.commitNewParticles();
-  domain.resizeDomain();
 
   // Exchange ghost particles to ensure proper initialization
   domain.rebalance();

@@ -8,11 +8,11 @@
 #include <cmath>
 #include <limits>
 #include <set>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-// Forward declarations
-class Particle;
+#include "simulation/Particle.h"
 
 struct CollisionPair {
   int gidI;
@@ -21,6 +21,17 @@ struct CollisionPair {
   bool is_localJ;
   int localIdxI;  // Index in local_particles or ghost_particles array
   int localIdxJ;  // Index in local_particles or ghost_particles array
+};
+
+// Hash function for 3D cell coordinates
+struct CellHash {
+  std::size_t operator()(const std::array<int, 3>& cell) const {
+    // Simple hash combination
+    std::size_t h1 = std::hash<int>{}(cell[0]);
+    std::size_t h2 = std::hash<int>{}(cell[1]);
+    std::size_t h3 = std::hash<int>{}(cell[2]);
+    return h1 ^ (h2 << 1) ^ (h3 << 2);
+  }
 };
 
 class SpatialGrid {
@@ -34,20 +45,20 @@ class SpatialGrid {
   double getCellSize() const;
   std::array<double, 3> getDomainMin() const;
   std::array<double, 3> getDomainMax() const;
-  std::array<size_t, 3> getGridDims() const;
 
  private:
   double cell_size_;
   std::array<double, 3> domain_min_, domain_max_;
-  std::array<size_t, 3> grid_dims_;
+
   struct ParticleInfo {
     int gid;
     bool is_local;
     int local_idx;
   };
-  std::vector<std::vector<ParticleInfo>> grid_cells_;
 
-  size_t getCellIndex(const std::array<double, 3>& position) const;
-  std::array<size_t, 3> getCellCoords(const std::array<double, 3>& position) const;
-  std::vector<size_t> getNeighborCells(size_t cell_idx) const;
+  // Use hashmap instead of vector - maps cell coordinates to particles
+  std::unordered_map<std::array<int, 3>, std::vector<ParticleInfo>, CellHash> grid_cells_;
+
+  std::array<int, 3> getCellCoords(const std::array<double, 3>& position) const;
+  std::vector<std::array<int, 3>> getNeighborCells(const std::array<int, 3>& cell_coords) const;
 };
