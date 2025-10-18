@@ -165,10 +165,6 @@ ParticleManager::SolverSolution ParticleManager::step(int i, std::function<void(
   throw std::runtime_error("Invalid mode: " + mode_);
 }
 
-void ParticleManager::updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds) {
-  collision_detector_.updateBounds(min_bounds, max_bounds);
-}
-
 void ParticleManager::printProgress(int current_iteration, int total_iterations) const {
   PetscPrintf(PETSC_COMM_WORLD, "\rProgress: %3d / %d (%5.1f%%) | Time: %3.1f min / %3.1f min | Particles: %4d",
               current_iteration, total_iterations,

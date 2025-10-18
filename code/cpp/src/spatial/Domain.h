@@ -24,14 +24,9 @@ class Domain {
 
  private:
   void rebalance();
+  std::vector<ParticleData> exchangeGhostParticlesAllToAll(const std::vector<std::vector<ParticleData>>& particles_to_send);
   void exchangeGhostParticles();
-  void resizeDomain();
   void printProgress(int current_iteration, double colony_radius, double cpu_time_s, vtk::SimulationStep step);
-
-  std::pair<std::array<double, 3>, std::array<double, 3>> calculateLocalBoundingBox() const;
-  void calculateGlobalBounds();
-  void padGlobalBounds(double& global_min_x, double& global_max_x, double& global_min_y, double& global_max_y,
-                       double& global_min_z, double& global_max_z) const;
 
   void groupParticlesForExchange(std::vector<std::vector<ParticleData>>& particles_to_send,
                                  std::vector<Particle>& particles_to_keep);
@@ -61,6 +56,8 @@ class Domain {
   int rank_;
   int size_;
   int global_particle_count = 0;
+
+  double center_radius = 0;
 
   double simulation_time_seconds_ = 0.0;
   double simulation_time_last_log_ = 0.0;

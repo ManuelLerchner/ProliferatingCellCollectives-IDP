@@ -14,89 +14,40 @@
 // SpatialGrid Implementation
 SpatialGrid::SpatialGrid(double cell_size, const std::array<double, 3>& domain_min, const std::array<double, 3>& domain_max)
     : cell_size_(cell_size), domain_min_(domain_min), domain_max_(domain_max) {
-  for (int i = 0; i < 3; ++i) {
-    if (domain_max[i] < domain_min[i]) {
-      grid_dims_[i] = 1;
-    } else {
-      grid_dims_[i] = static_cast<size_t>(std::ceil((domain_max[i] - domain_min[i]) / cell_size));
-    }
-  }
-
-  size_t total_cells = grid_dims_[0] * grid_dims_[1] * grid_dims_[2];
-  grid_cells_.resize(total_cells);
+  // No need to pre-allocate cells - hashmap will grow as needed
 }
 
 void SpatialGrid::clear() {
-  for (auto& cell : grid_cells_) {
-    cell.clear();
-  }
+  grid_cells_.clear();
 }
 
 void SpatialGrid::insertParticle(int particle_idx, const std::array<double, 3>& position, double length, double diameter, bool is_local, int local_idx) {
-  size_t cell_idx = getCellIndex(position);
-  if (cell_idx >= 0 && cell_idx < grid_cells_.size()) {
-    grid_cells_[cell_idx].push_back({particle_idx, is_local, local_idx});
-  }
+  auto cell_coords = getCellCoords(position);
+  grid_cells_[cell_coords].push_back({particle_idx, is_local, local_idx});
 }
 
-size_t SpatialGrid::getCellIndex(const std::array<double, 3>& position) const {
-  auto coords = getCellCoords(position);
-
-  // Check bounds
+std::array<int, 3> SpatialGrid::getCellCoords(const std::array<double, 3>& position) const {
+  std::array<int, 3> coords;
   for (int i = 0; i < 3; ++i) {
-    if (coords[i] >= grid_dims_[i]) {  // coords are unsigned, so only check upper bound
-      std::cout << "Particle out of bounds: " << position[0] << " " << position[1] << " " << position[2] << std::endl;
-      std::cout << "Cell index: " << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
-      std::cout << "Grid dims: " << grid_dims_[0] << " " << grid_dims_[1] << " " << grid_dims_[2] << std::endl;
-      throw std::runtime_error("Particle out of bounds");
-    }
-  }
-
-  return coords[0] + coords[1] * grid_dims_[0] + coords[2] * grid_dims_[0] * grid_dims_[1];
-}
-
-std::array<size_t, 3> SpatialGrid::getCellCoords(const std::array<double, 3>& position) const {
-  std::array<size_t, 3> coords;
-  for (int i = 0; i < 3; ++i) {
-    double pos = position[i] - domain_min_[i];
-    if (pos < 0) {
-      // This case should be handled by the bounds check in getCellIndex,
-      // but as a safeguard, we can treat it as out of bounds.
-      // Returning a large value will fail the bounds check.
-      coords[i] = std::numeric_limits<size_t>::max();
-    } else {
-      coords[i] = static_cast<size_t>(pos / cell_size_);
-    }
+    // Use floor to handle negative coordinates properly
+    coords[i] = static_cast<int>(std::floor((position[i] - domain_min_[i]) / cell_size_));
   }
   return coords;
 }
 
-std::vector<size_t> SpatialGrid::getNeighborCells(size_t cell_idx) const {
-  std::vector<size_t> neighbors;
-
-  if (cell_idx >= grid_cells_.size()) {
-    return neighbors;
-  }
-
-  // Convert linear index to 3D coordinates
-  size_t z = cell_idx / (grid_dims_[0] * grid_dims_[1]);
-  size_t y = (cell_idx % (grid_dims_[0] * grid_dims_[1])) / grid_dims_[0];
-  size_t x = cell_idx % grid_dims_[0];
+std::vector<std::array<int, 3>> SpatialGrid::getNeighborCells(const std::array<int, 3>& cell_coords) const {
+  std::vector<std::array<int, 3>> neighbors;
+  neighbors.reserve(27);  // 3x3x3 cube
 
   // Check all 27 neighboring cells (including self)
   for (int dz = -1; dz <= 1; ++dz) {
     for (int dy = -1; dy <= 1; ++dy) {
       for (int dx = -1; dx <= 1; ++dx) {
-        long long nx = static_cast<long long>(x) + dx;
-        long long ny = static_cast<long long>(y) + dy;
-        long long nz = static_cast<long long>(z) + dz;
-
-        if (nx >= 0 && nx < grid_dims_[0] &&
-            ny >= 0 && ny < grid_dims_[1] &&
-            nz >= 0 && nz < grid_dims_[2]) {
-          size_t neighbor_idx = nx + ny * grid_dims_[0] + nz * grid_dims_[0] * grid_dims_[1];
-          neighbors.push_back(neighbor_idx);
-        }
+        std::array<int, 3> neighbor = {
+            cell_coords[0] + dx,
+            cell_coords[1] + dy,
+            cell_coords[2] + dz};
+        neighbors.push_back(neighbor);
       }
     }
   }
@@ -120,22 +71,33 @@ std::vector<CollisionPair> SpatialGrid::findPotentialCollisions(const std::vecto
     insertParticle(p.getGID(), p.getPosition(), p.getLength(), p.getDiameter(), false, i);
   }
 
-  for (size_t cell_idx = 0; cell_idx < grid_cells_.size(); ++cell_idx) {
-    auto neighbor_indices = getNeighborCells(cell_idx);
-    for (size_t neighbor_idx : neighbor_indices) {
-      if (neighbor_idx < cell_idx) {
+  // Track processed cell pairs to avoid duplicates
+  std::set<std::pair<std::array<int, 3>, std::array<int, 3>>> processed_pairs;
+
+  // Iterate through all occupied cells
+  for (const auto& [cell_coords, cell_particles] : grid_cells_) {
+    auto neighbor_cells = getNeighborCells(cell_coords);
+
+    for (const auto& neighbor_coords : neighbor_cells) {
+      // Skip if this cell pair was already processed
+      auto cell_pair = std::minmax(cell_coords, neighbor_coords);
+      if (!processed_pairs.insert(cell_pair).second) {
         continue;
       }
 
-      const auto& cell1 = grid_cells_[cell_idx];
-      const auto& cell2 = grid_cells_[neighbor_idx];
+      // Check if neighbor cell exists in hashmap
+      auto neighbor_it = grid_cells_.find(neighbor_coords);
+      if (neighbor_it == grid_cells_.end()) {
+        continue;  // No particles in this neighbor cell
+      }
+
+      const auto& cell1 = cell_particles;
+      const auto& cell2 = neighbor_it->second;
+      bool same_cell = (cell_coords == neighbor_coords);
 
       for (size_t i = 0; i < cell1.size(); ++i) {
-        for (size_t j = 0; j < cell2.size(); ++j) {
-          if (cell_idx == neighbor_idx && i >= j) {
-            continue;
-          }
-
+        size_t j_start = same_cell ? (i + 1) : 0;
+        for (size_t j = j_start; j < cell2.size(); ++j) {
           const auto& p1_info = cell1[i];
           const auto& p2_info = cell2[j];
 
@@ -168,8 +130,4 @@ std::array<double, 3> SpatialGrid::getDomainMin() const {
 
 std::array<double, 3> SpatialGrid::getDomainMax() const {
   return domain_max_;
-}
-
-std::array<size_t, 3> SpatialGrid::getGridDims() const {
-  return grid_dims_;
 }

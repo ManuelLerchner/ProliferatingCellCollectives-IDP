@@ -50,7 +50,6 @@ class ParticleManager {
   SolverSolution step(int i, std::function<void()> exchangeGhostParticles);
 
   void redistributeParticles();
-  void updateDomainBounds(const std::array<double, 3>& min_bounds, const std::array<double, 3>& max_bounds);
 
   std::vector<Particle> local_particles;
   std::vector<Particle> ghost_particles;
