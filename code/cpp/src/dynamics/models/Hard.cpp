@@ -104,11 +104,21 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     p.reset();
   }
 
+  std::optional<std::shared_ptr<vtk::BBPGDLogger>> bbpgd_logger;
+
+  if (iter % 10 == 0 && params.sim_config.log_bbgd_trace) {
+    bbpgd_logger = std::make_shared<vtk::BBPGDLogger>("logs", "bbpgdtrace", true);
+  }
+
   while (constraint_iterations < params.solver_config.max_recursive_iterations) {
+    if (bbpgd_logger.has_value()) {
+      (*bbpgd_logger)->set_recursive_iteration(constraint_iterations);
+    }
+
     // Use a larger tolerance for initial collision detection
     exchangeGhostParticles();
 
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, 0.05);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, constraint_iterations == 0 ? .25 : 0.0);
 
     all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
 
@@ -139,10 +149,8 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     // Create gradient object
     HardModelGradient hardgradient(D_PREV, M, L_PREV, U_ext, PHI, gamma_old, l, ldot, params, dt);
 
-    bool log_bbpgd = (constraint_iterations == 0 && iter % 100 == 0);
-
     // Solver
-    auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, log_bbpgd);
+    auto bbpgd_result_recursive = BBPGD(hardgradient, GAMMA, params.solver_config.tolerance, params.solver_config.max_bbpgd_iterations, bbpgd_logger);
 
     res = bbpgd_result_recursive.residual;
     total_bbpgd_iterations += bbpgd_result_recursive.bbpgd_iterations;
@@ -171,6 +179,10 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4ld | Memory: %4.2f MB",
                 constraint_iterations, globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(new_constraints.size(), MPI_SUM), logged_overlap, res, bbpgd_result_recursive.bbpgd_iterations, memory_usage / 1024 / 1024);
+  }
+
+  if (bbpgd_logger.has_value()) {
+    (*bbpgd_logger)->log();
   }
 
   particle_manager.grow(dt);

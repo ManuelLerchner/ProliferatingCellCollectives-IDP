@@ -11,6 +11,7 @@ struct SimulationConfig {
   double end_radius;
   double log_every_sim_time_delta = 0;
   double log_every_colony_radius_delta = 0;
+  bool log_bbgd_trace = false;
   Vec3d min_box_size;
 };
 

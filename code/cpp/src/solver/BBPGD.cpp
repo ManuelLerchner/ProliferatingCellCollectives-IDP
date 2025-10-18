@@ -34,18 +34,11 @@ BBPGDResult BBPGD(
     VecWrapper& g0,  // in-out parameter
     double allowed_residual,
     size_t max_bbpgd_iterations,
-    bool log_bbpdg) {
-  std::optional<vtk::BBPGDLogger> bbpgd_logger;
-
-  if (log_bbpdg) {
-    bbpgd_logger = vtk::BBPGDLogger("logs", "bbpgdtrace", true);
-  }
-
+    std::optional<std::shared_ptr<vtk::BBPGDLogger>> bbpgd_logger) {
   auto& gamma_prev = g0;
   auto gamma_i = VecWrapper::Like(gamma_prev);
 
   auto g_prev = VecWrapper::Like(gamma_prev);
-  auto g_i = VecWrapper::Like(gamma_prev);
 
   auto delta_gamma = VecWrapper::Like(gamma_prev);
   auto delta_phi = VecWrapper::Like(gamma_prev);
@@ -58,12 +51,17 @@ BBPGDResult BBPGD(
   double res = G.residual(g_prev, gamma_prev);
   double alpha = 1.0 / res;
 
-  if (res <= allowed_residual) {
-    return {.bbpgd_iterations = 0, .residual = res};
+  PetscInt total_constraints;
+  VecGetSize(gamma_i, &total_constraints);
+
+  if (bbpgd_logger.has_value()) {
+    auto [linear, quad, growth, total] = G.energy(gamma_prev);
+
+    (*bbpgd_logger)->collect({.step = 0, .residual = res, .step_size = alpha, .linear = linear, .quadratic = quad, .growth = growth, .total = total, .total_constraints = static_cast<size_t>(total_constraints)});
   }
 
   size_t iteration = 1;
-  for (; iteration < max_bbpgd_iterations; iteration++) {
+  while (iteration < max_bbpgd_iterations) {
     // Step 6: γ_next := max(γ_curr − α*g_prev, 0)
     VecWAXPY(gamma_i, -alpha, g_prev, gamma_prev);
     VecPointwiseMax(gamma_i, gamma_i, zero_vec);
@@ -72,20 +70,13 @@ BBPGDResult BBPGD(
     auto& g_i = G.gradient(gamma_i);
 
     // Step 8: res_next := res(γ_next)
-    if (iteration % 10 == 0) {
+    if (iteration % 10 == 0 || bbpgd_logger) {
       res = G.residual(g_i, gamma_i);
 
-      if (bbpgd_logger) {
+      if (bbpgd_logger.has_value()) {
         auto [linear, quad, growth, total] = G.energy(gamma_i);
 
-        bbpgd_logger->collect({.step = iteration,
-                               .residual = res,
-                               .step_size = alpha,
-                               .linear = linear,
-                               .quadratic = quad,
-                               .growth = growth,
-                               .total = total});
-        bbpgd_logger->log();
+        (*bbpgd_logger)->collect({.step = iteration, .residual = res, .step_size = alpha, .linear = linear, .quadratic = quad, .growth = growth, .total = total, .total_constraints = static_cast<size_t>(total_constraints)});
       }
 
       // Step 9-11: Check convergence every 10 iterations
@@ -121,6 +112,7 @@ BBPGDResult BBPGD(
     // Prepare for next iteration by swapping buffers
     std::swap(gamma_prev, gamma_i);
     std::swap(g_prev, g_i);
+    iteration++;
   }
 
   if (iteration == max_bbpgd_iterations) {
