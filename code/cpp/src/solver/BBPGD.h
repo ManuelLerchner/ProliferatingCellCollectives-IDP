@@ -28,4 +28,4 @@ BBPGDResult BBPGD(
     VecWrapper& gamma,  // in-out parameter
     double allowed_residual,
     size_t max_bbpgd_iterations,
-    bool log_bbpdg);
+    std::optional<std::shared_ptr<vtk::BBPGDLogger>> bbpgd_logger);

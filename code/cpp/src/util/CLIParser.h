@@ -25,6 +25,9 @@ void printHelp(const SimulationParameters& params) {
               "Log every this many seconds of simulation time (0 to disable)",
               params.sim_config.log_every_colony_radius_delta);
 
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-log_bbgd_trace",
+              "Enable logging of BBPGD trace data", params.sim_config.log_bbgd_trace ? "true" : "false");
+
   // Physics Configuration
   PetscPrintf(PETSC_COMM_WORLD, "\nPhysics Configuration:\n");
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-xi", "Viscosity parameter",
@@ -82,10 +85,10 @@ void getOption(const char* name, T& value) {
   if (optionSet) {
     if constexpr (std::is_floating_point_v<T>)
       PetscPrintf(PETSC_COMM_WORLD, "Set %s = %g\n", name, value);
-    else if constexpr (std::is_integral_v<T>)
-      PetscPrintf(PETSC_COMM_WORLD, "Set %s = %ld\n", name, value);
     else if constexpr (std::is_same_v<T, PetscBool>)
       PetscPrintf(PETSC_COMM_WORLD, "Set %s = %s\n", name, value ? "true" : "false");
+    else if constexpr (std::is_integral_v<T>)
+      PetscPrintf(PETSC_COMM_WORLD, "Set %s = %ld\n", name, value);
   }
 }
 
@@ -161,6 +164,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .end_radius = 50,
       .log_every_sim_time_delta = 100000,
       .log_every_colony_radius_delta = 0.5,
+      .log_bbgd_trace = false,
       .min_box_size = {2.0, 2.0, 0},
   };
 
@@ -197,6 +201,7 @@ SimulationParameters parseCommandLineOrDefaults() {
   getOption("-end_radius", params.sim_config.end_radius);
   getOption("-log_every_colony_radius_delta", params.sim_config.log_every_colony_radius_delta);
   getOption("-log_every_sim_time_delta", params.sim_config.log_every_sim_time_delta);
+  getOption("-log_bbgd_trace", params.sim_config.log_bbgd_trace);
 
   getOption("-xi", params.physics_config.xi);
   getOption("-tau", params.physics_config.TAU);

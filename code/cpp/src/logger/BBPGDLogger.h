@@ -14,6 +14,8 @@ struct BBPGDStep {
   double quadratic;
   double growth;
   double total;
+  size_t recursive_iteration;
+  size_t total_constraints;
 };
 
 class BBPGDLogger {
@@ -23,13 +25,18 @@ class BBPGDLogger {
               size_t step = 0)
       : logger_(outputDirectory, baseFilename, true, false, step) {}
 
-  void collect(const BBPGDStep& step);
+  void collect(BBPGDStep step);
 
   void log();
+
+  void set_recursive_iteration(size_t iteration) {
+    recursive_iteration = iteration;
+  }
 
  private:
   VTKDataLogger<BBPGDStep> logger_;
   std::vector<BBPGDStep> steps_;
+  size_t recursive_iteration = 0;
 };
 
 }  // namespace vtk
