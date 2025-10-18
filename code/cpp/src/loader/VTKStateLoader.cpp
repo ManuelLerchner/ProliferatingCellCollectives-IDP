@@ -1,6 +1,7 @@
 #include "VTKStateLoader.h"
 
 #include <algorithm>
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -249,12 +250,13 @@ std::map<std::string, VTUDataArray> VTKStateLoader::readVTUFile(const std::strin
           std::string value;
 
           while (iss >> value) {
-            try {
-              array_data.data.push_back(std::stod(value));
-            } catch (const std::exception& e) {
-              // Skip invalid values
-              throw std::runtime_error("Invalid value: " + value);
-              continue;
+            double val;
+            auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), val);
+
+            if (ec == std::errc()) {
+              array_data.data.push_back(val);
+            } else {
+              throw std::runtime_error("Conversion error");
             }
           }
 

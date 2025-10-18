@@ -10,7 +10,6 @@ void BBPGDLogger::collect(BBPGDStep step) {
 }
 
 void BBPGDLogger::log() {
-  MPI_Barrier(PETSC_COMM_WORLD);
 
   for (const auto& step : steps_) {
     logger_.addFieldData("step", step.step);
