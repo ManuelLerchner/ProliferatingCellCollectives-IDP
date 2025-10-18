@@ -48,10 +48,6 @@ class Particle {
 
   std::optional<Particle> divide(PetscInt new_gID);
 
-  // Validation methods
-  bool isValid() const;
-  void validateAndWarn() const;
-
   const std::array<double, POSITION_SIZE>& getPosition() const {
     return data_.position;
   }
