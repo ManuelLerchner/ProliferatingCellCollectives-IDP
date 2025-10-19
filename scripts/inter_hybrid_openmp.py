@@ -23,7 +23,7 @@ def run_simulation(config, mode, LAMBDA, thr, proc):
     args += f" -end_radius {END_RADIUS}"
 
     process = subprocess.run(
-        f"export OMP_NUM_THREADS={thr} && make -j && mpirun -np {proc} ./cellcollectives -mode {mode} {args}", shell=True, cwd=BIN_FOLDER)
+        f"export OMP_NUM_THREADS={thr} && make -j && mpirun -np {proc} ./cellcollectives -mode {mode} -log_every_colony_radius_delta 5 {args}", shell=True, cwd=BIN_FOLDER)
 
     target_folder = f"{BIN_FOLDER}/hybrid/vtk_output_{mode}/{thr}/{proc}"
 
@@ -38,10 +38,13 @@ max_threads = os.cpu_count()
 
 for mode in ["hard"]:
     for LAMBDA in [1e-3]:
-        for proc in (range(max_threads, 0, -4)):
-            for thr in (range(max_threads, 0, -4)):
+        for p in reversed(range(0, 10, 1)):
+            for t in reversed(range(0, 10, 1)):
+                proc = 2 ** p
+                thr = 2 ** t
+
                 total = thr * proc
-                if total > max_threads:
+                if total > max_threads or total < 1:
                     continue
 
                 print(
