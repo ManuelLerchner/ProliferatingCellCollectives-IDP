@@ -190,9 +190,9 @@ void Domain::run() {
 
     if (log_due_to_colony_radius || log_due_to_sim_time || iter == 0 || colony_radius >= params_.sim_config.end_radius) {
       particle_logger_->log(particle_manager_->local_particles);
-      ghost_particle_logger_->log(particle_manager_->ghost_particles);
+      // ghost_particle_logger_->log(particle_manager_->ghost_particles);
       // constraint_logger_->log(solver_solution.constraints);
-      domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
+      // domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
       simulation_logger_->log(step_data);
 
       colony_radius_last_log_ = colony_radius;
