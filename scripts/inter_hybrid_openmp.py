@@ -34,12 +34,14 @@ def run_simulation(config, mode, LAMBDA, thr, proc):
                     target_folder)
 
 
+max_threads = os.cpu_count()
+
 for mode in ["hard"]:
     for LAMBDA in [1e-3]:
-        for proc in reversed(range(1, 21)):
-            for thr in reversed(range(1, 21)):
+        for proc in (range(max_threads, 0, -4)):
+            for thr in (range(max_threads, 0, -4)):
                 total = thr * proc
-                if total > 18:
+                if total > max_threads:
                     continue
 
                 print(
