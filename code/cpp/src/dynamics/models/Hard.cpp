@@ -118,7 +118,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
     // Use a larger tolerance for initial collision detection
     exchangeGhostParticles();
 
-    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, constraint_iterations == 0 ? .25 : 0.0);
+    auto new_constraints = collision_detector.detectCollisions(particle_manager, constraint_iterations, constraint_iterations == 0 ? .25 : params.solver_config.tolerance);
 
     all_constraints_set.insert(all_constraints_set.end(), new_constraints.begin(), new_constraints.end());
 

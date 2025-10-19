@@ -4,7 +4,6 @@ import subprocess
 import os
 from time import sleep
 import datetime
-import pytz
 
 SCRIPT_TEMPLATE = """#!/bin/bash
 #SBATCH -J {{MODE}}_{{NUM_RANKS}}_hardscaling
