@@ -334,27 +334,19 @@ void Domain::exchangeGhostParticles() {
 
   std::vector<std::vector<ParticleData>> particles_to_send(size_);
 
-  // Pre-calculate neighbor ranks
-  int left_neighbor = (rank_ > 0) ? rank_ - 1 : size_ - 1;
-  int right_neighbor = (rank_ < size_ - 1) ? rank_ + 1 : 0;
-
   for (auto& p : particle_manager_->local_particles) {
     const auto& pos = p.getPosition();
     const auto& length = p.getLength();
 
     double angle_rad = std::atan2(pos[1], pos[0]);
     double angle_deg = angle_rad * 180.0 / M_PI;
-    if (angle_deg < 0) {
-      angle_deg += 360.0;
-    }
+    if (angle_deg < 0) angle_deg += 360.0;
 
     double radius = std::sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
 
-    // Determine which ranks need this particle as a ghost
     std::unordered_set<int> target_ranks;
 
-    // Case 1: Center particles NEAR THE BOUNDARY on rank 0 go to all ranks
-    // Only send if they're close to the circular boundary
+    // Case 1: Center particles near the boundary on rank 0
     if (radius <= center_radius && rank_ == 0 &&
         radius >= center_radius - cutoff_distance - length) {
       for (int r = 0; r < size_; ++r) {
@@ -366,23 +358,24 @@ void Domain::exchangeGhostParticles() {
       target_ranks.insert(0);
     }
 
-    // Case 3: Regular angular neighbors - ONLY check immediate neighbors
-    // Left neighbor
-    double left_angle_min = left_neighbor * angle_per_rank;
-    double left_angle_max = (left_neighbor + 1) * angle_per_rank;
-    double dist_to_left_boundary = calculateDistanceToAngularBoundary(
-        pos, radius, angle_deg, left_angle_min, left_angle_max);
-    if (dist_to_left_boundary < cutoff_distance + length) {
-      target_ranks.insert(left_neighbor);
-    }
+    // Case 3: Check ±10 neighboring ranks
+    for (int direction : {1, -1}) {  // 1 = clockwise, -1 = counter-clockwise
+      for (int offset = 1; offset <= 10; ++offset) {
+        int neighbor_rank = (rank_ + direction * offset + size_) % size_;
 
-    // Right neighbor
-    double right_angle_min = right_neighbor * angle_per_rank;
-    double right_angle_max = (right_neighbor + 1) * angle_per_rank;
-    double dist_to_right_boundary = calculateDistanceToAngularBoundary(
-        pos, radius, angle_deg, right_angle_min, right_angle_max);
-    if (dist_to_right_boundary < cutoff_distance + length) {
-      target_ranks.insert(right_neighbor);
+        double neighbor_angle_min = neighbor_rank * angle_per_rank;
+        double neighbor_angle_max = (neighbor_rank + 1) * angle_per_rank;
+
+        double dist_to_boundary = calculateDistanceToAngularBoundary(
+            pos, radius, angle_deg, neighbor_angle_min, neighbor_angle_max);
+
+        if (dist_to_boundary < cutoff_distance + length) {
+          target_ranks.insert(neighbor_rank);
+        } else {
+          // As soon as we find a rank in this direction that is not close, break
+          break;
+        }
+      }
     }
 
     // Send to all target ranks
