@@ -1,10 +1,14 @@
 #include "Domain.h"
 
 #include <mpi.h>
+#include <omp.h>
 #include <petsc.h>
 
 #include <algorithm>
+#include <chrono>
+#include <ctime>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <numeric>
 
@@ -25,6 +29,7 @@ Domain::Domain(SimulationParameters& params, bool preserve_existing, size_t iter
 
   std::string output_dir = "./vtk_output_" + mode;
   particle_logger_ = std::make_unique<vtk::ParticleLogger>(output_dir, "particles", preserve_existing, iter);
+  ghost_particle_logger_ = std::make_unique<vtk::ParticleLogger>(output_dir, "ghost_particles", preserve_existing, iter);
   constraint_logger_ = std::make_unique<vtk::ConstraintLogger>(output_dir, "constraints", preserve_existing, iter);
   domain_logger_ = std::make_unique<vtk::DomainLogger>(output_dir, "domain", preserve_existing, iter);
   simulation_logger_ = std::make_unique<vtk::SimulationLogger>(output_dir, "simulation", preserve_existing, iter);
@@ -185,6 +190,7 @@ void Domain::run() {
 
     if (log_due_to_colony_radius || log_due_to_sim_time || iter == 0 || colony_radius >= params_.sim_config.end_radius) {
       particle_logger_->log(particle_manager_->local_particles);
+      ghost_particle_logger_->log(particle_manager_->ghost_particles);
       // constraint_logger_->log(solver_solution.constraints);
       domain_logger_->log(std::make_pair(min_bounds_, max_bounds_));
       simulation_logger_->log(step_data);
@@ -192,6 +198,8 @@ void Domain::run() {
       colony_radius_last_log_ = colony_radius;
       simulation_time_last_log_ = simulation_time_seconds_;
       time_last_log_ = MPI_Wtime();
+
+      PetscPrintf(PETSC_COMM_WORLD, "  Logged data at Colony radius = %.3f, Simulation time = %.3f \n", colony_radius, simulation_time_seconds_);
     }
 
     printProgress(iter + 1, colony_radius, wall_time, step_data);
@@ -330,13 +338,12 @@ std::vector<ParticleData> Domain::exchangeGhostParticlesAllToAll(
 
 void Domain::exchangeGhostParticles() {
   double angle_per_rank = 360.0 / size_;
-  double cutoff_distance = 2.0;
+  double buffer = 2.5;
 
   std::vector<std::vector<ParticleData>> particles_to_send(size_);
 
   for (auto& p : particle_manager_->local_particles) {
     const auto& pos = p.getPosition();
-    const auto& length = p.getLength();
 
     double angle_rad = std::atan2(pos[1], pos[0]);
     double angle_deg = angle_rad * 180.0 / M_PI;
@@ -348,32 +355,34 @@ void Domain::exchangeGhostParticles() {
 
     // Case 1: Center particles near the boundary on rank 0
     if (radius <= center_radius && rank_ == 0 &&
-        radius >= center_radius - cutoff_distance - length) {
+        radius >= center_radius - buffer) {
       for (int r = 0; r < size_; ++r) {
         if (r != rank_) target_ranks.insert(r);
       }
     }
     // Case 2: Particles near center boundary (on other ranks) go to rank 0
-    else if (rank_ != 0 && radius <= center_radius + cutoff_distance + length) {
+    else if (rank_ != 0 && radius <= center_radius + buffer) {
       target_ranks.insert(0);
     }
 
     // Case 3: Check ±10 neighboring ranks
-    for (int direction : {1, -1}) {  // 1 = clockwise, -1 = counter-clockwise
-      for (int offset = 1; offset <= 10; ++offset) {
-        int neighbor_rank = (rank_ + direction * offset + size_) % size_;
+    if (radius >= center_radius) {
+      for (int direction : {1, -1}) {  // 1 = clockwise, -1 = counter-clockwise
+        for (int offset = 1; offset <= size_; ++offset) {
+          int neighbor_rank = ((rank_ + direction * offset) % size_ + size_) % size_;
 
-        double neighbor_angle_min = neighbor_rank * angle_per_rank;
-        double neighbor_angle_max = (neighbor_rank + 1) * angle_per_rank;
+          double neighbor_angle_min = neighbor_rank * angle_per_rank;
+          double neighbor_angle_max = (neighbor_rank + 1) * angle_per_rank;
 
-        double dist_to_boundary = calculateDistanceToAngularBoundary(
-            pos, radius, angle_deg, neighbor_angle_min, neighbor_angle_max);
+          double dist_to_boundary = calculateDistanceToAngularBoundary(
+              pos, radius, angle_deg, neighbor_angle_min, neighbor_angle_max);
 
-        if (dist_to_boundary < cutoff_distance + length) {
-          target_ranks.insert(neighbor_rank);
-        } else {
-          // As soon as we find a rank in this direction that is not close, break
-          break;
+          if (dist_to_boundary < buffer) {
+            target_ranks.insert(neighbor_rank);
+          } else {
+            // As soon as we find a rank in this direction that is not close, break
+            break;
+          }
         }
       }
     }
@@ -515,67 +524,92 @@ void Domain::assignGlobalIDsToNewParticles() {
 }
 
 void Domain::printProgress(int current_iteration, double colony_radius, double cpu_time_s, vtk::SimulationStep step) {
+  bool should_log = MPI_Wtime() - t_last_log > 1.0;
+  if (should_log) {
+    t_last_log = MPI_Wtime();
+  } else {
+    return;
+  }
+
   double time_elapsed_seconds = simulation_time_seconds_;
   double progress_percent = (colony_radius / params_.sim_config.end_radius) * 100.0;
 
-  std::string eta_str = "N/A";
-  double growth_rate_wall = 0.0;  // colony radius growth per real second
+  // Exponential model parameters
+  constexpr double a = 490;     // seconds
+  constexpr double b = 0.0247;  // per radius unit
 
-  double current_wall_time = MPI_Wtime();
-  double wall_time_since_last_check = current_wall_time - last_eta_check_time_;
-  double sim_time_since_last_check = simulation_time_seconds_ - last_eta_check_sim_time_;
+  double predicted_total_wall_time = a * std::exp(b * params_.sim_config.end_radius);
+  double estimated_remaining_wall_time_seconds = predicted_total_wall_time - MPI_Wtime();
+  if (estimated_remaining_wall_time_seconds < 0.0)
+    estimated_remaining_wall_time_seconds = 0.0;
 
-  if (wall_time_since_last_check > 1 && sim_time_since_last_check > 1e-12) {
-    double current_ratio = wall_time_since_last_check / sim_time_since_last_check;
-
-    // Exponential smoothing
-    double alpha = 0.1;
-    double smoothed_ratio = last_wall_per_sim_seconds_ * (1.0 - alpha) + current_ratio * alpha;
-
-    // Estimate growth rate per sim second
-    double delta_radius = colony_radius - last_eta_check_radius_;
-    double growth_rate_sim = delta_radius / sim_time_since_last_check;
-
-    // Estimate remaining sim time and convert to wall time
-    double remaining_sim_time = (params_.sim_config.end_radius - colony_radius) / growth_rate_sim;
-    double estimated_remaining_wall_time_seconds = remaining_sim_time * smoothed_ratio;
-
+  auto formatTime = [](double seconds) -> std::string {
     char buffer[100];
-    snprintf(buffer, sizeof(buffer), "%.1f min", estimated_remaining_wall_time_seconds / 60.0);
-    eta_str = buffer;
+    if (seconds < 60.0)
+      snprintf(buffer, sizeof(buffer), "%6.1f s", seconds);
+    else if (seconds < 3600.0)
+      snprintf(buffer, sizeof(buffer), "%6.1f min", seconds / 60.0);
+    else if (seconds < 86400.0)
+      snprintf(buffer, sizeof(buffer), "%6.1f h", seconds / 3600.0);
+    else
+      snprintf(buffer, sizeof(buffer), "%6.1f d", seconds / 86400.0);
+    return std::string(buffer);
+  };
 
-    // Colony growth per wall time
-    double raw_growth_rate = delta_radius / wall_time_since_last_check;
-    double smoothed_growth_rate = last_growth_rate_wall_ * (1.0 - alpha) + raw_growth_rate * alpha;
-    growth_rate_wall = smoothed_growth_rate;
+  // Compute ETA and format CPU time
+  std::string eta_str = formatTime(estimated_remaining_wall_time_seconds);
+  std::string cpu_str = formatTime(cpu_time_s);
 
-    // Update for next call (mark members as mutable to avoid const_cast)
-    last_wall_per_sim_seconds_ = smoothed_ratio;
-    last_eta_check_radius_ = colony_radius;
-    last_growth_rate_wall_ = smoothed_growth_rate;
+  // ANSI colors
+  const char* RED = "\033[31m";
+  const char* GREEN = "\033[32m";
+  const char* YELLOW = "\033[33m";
+  const char* BLUE = "\033[34m";
+  const char* MAGENTA = "\033[35m";
+  const char* CYAN = "\033[36m";
+  const char* WHITE = "\033[37m";
+  const char* RESET = "\033[0m";
 
-    last_eta_check_time_ = current_wall_time;
-    last_eta_check_sim_time_ = simulation_time_seconds_;
+  // Progress color: green → yellow → red
+  const char* progress_color = (progress_percent < 50.0 ? GREEN : (progress_percent < 80.0 ? YELLOW : RED));
 
-    int total_ranks;
-    MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
+  int total_ranks;
+  MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
 
-    PetscPrintf(PETSC_COMM_WORLD,
-                "\n Colony radius: %.3f / %.1f (%4.1f%%) | Time: %3.1f | ETA: %s | "
-                "dt: %4.1es | CPU: %3.1fs | Particles: %d | Growth: %.4f/s | BBPGD iters: %ld | Residual: %.2e | Ranks %d\n",
-                colony_radius,
-                params_.sim_config.end_radius,
-                progress_percent,
-                time_elapsed_seconds,
-                eta_str.c_str(),
-                params_.sim_config.dt_s,
-                cpu_time_s,
-                global_particle_count,
-                growth_rate_wall,
-                step.bbpgd_iterations,
-                step.residual,
-                total_ranks);
-  }
+  int nthreads = omp_get_max_threads();
+
+  // current system time
+
+  auto now = std::chrono::system_clock::now();
+  std::time_t t = std::chrono::system_clock::to_time_t(now);
+
+  std::tm tm = *std::localtime(&t);
+
+  std::ostringstream time_oss;
+  time_oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+
+  PetscPrintf(PETSC_COMM_WORLD,
+              "%s[%s]%s | "
+              "Radius: %s%.3f%s / %s%.1f%s (%s%.1f%%%s) | "
+              "Runtime: %s%s%s | "
+              "ETA: %s%s%s | "
+              "dt: %s%4.2e%s | "
+              "Particles: %s%d%s | "
+              "ReLCP iters: %s%d%s |"
+              "BBPGD iters: %s%zu%s | Residual: %s%.2e%s | Ranks: %s%d%s | OMP: %s%d%s\n",
+              BLUE, time_oss.str().c_str(), RESET,
+              CYAN, colony_radius, RESET,
+              CYAN, params_.sim_config.end_radius, RESET,
+              progress_color, progress_percent, RESET,
+              YELLOW, cpu_str.c_str(), RESET,
+              YELLOW, eta_str.c_str(), RESET,
+              MAGENTA, params_.sim_config.dt_s, RESET,
+              CYAN, global_particle_count, RESET,
+              GREEN, step.recursive_iterations, RESET,
+              GREEN, step.bbpgd_iterations, RESET,
+              RED, step.residual, RESET,
+              MAGENTA, total_ranks, RESET,
+              CYAN, nthreads, RESET);
 }
 
 Domain Domain::initializeFromVTK(SimulationParameters& params, const std::string& vtk_path, const std::string& mode) {

@@ -1,3 +1,4 @@
+#pragma once
 
 #include "logger/ConstraintLogger.h"
 #include "logger/ParticleLogger.h"

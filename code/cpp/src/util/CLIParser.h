@@ -1,5 +1,6 @@
 #pragma once
 
+#include <omp.h>
 #include <petsc.h>
 
 #include <stdexcept>
@@ -160,7 +161,7 @@ SimulationParameters parseCommandLineOrDefaults() {
 
   // Default configs
   params.sim_config = {
-      .dt_s = 1e-6,
+      .dt_s = 1e-2,
       .end_radius = 50,
       .log_every_sim_time_delta = 100000,
       .log_every_colony_radius_delta = 0.5,

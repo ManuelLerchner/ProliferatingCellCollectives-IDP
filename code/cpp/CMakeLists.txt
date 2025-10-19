@@ -14,7 +14,7 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fs
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=undefined -fsanitize=address -fsanitize=leak ")
 
 
-set(CMAKE_CXX_FLAGS  "-O3 -ffast-math -DNDEBUG -std=c++20 -march=native -fpic -ftree-vectorize -flto -funroll-loops -falign-functions=32 -fassociative-math -freciprocal-math ")
+set(CMAKE_CXX_FLAGS  "-O3 -ffast-math -DNDEBUG -march=native -fpic -flto=auto -ftree-vectorize -flto -funroll-loops -falign-functions=32 -fassociative-math -freciprocal-math ")
 
 # let ccmake and cmake-gui offer the default build type options
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release;RelWithDebInfo;MinSizeRel")

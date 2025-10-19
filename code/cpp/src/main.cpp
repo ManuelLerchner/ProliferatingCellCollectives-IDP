@@ -1,10 +1,14 @@
 #include <mpi.h>
+#include <omp.h>
 #include <petsc.h>
 #include <petscconf.h>
+#include <petscsys.h>
 
 #include <filesystem>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <thread>
 #include <type_traits>
 
 #include "loader/VTKStateLoader.h"
@@ -38,12 +42,29 @@ std::optional<Domain> createDomain(SimulationParameters& params) {
 int main(int argc, char** argv) {
   PetscInitialize(&argc, &argv, 0, 0);
   {
-    PetscLogDefaultBegin(); 
-    PetscMemorySetGetMaximumUsage(); 
+    PetscLogDefaultBegin();
+    PetscMemorySetGetMaximumUsage();
 
     int total_ranks;
     MPI_Comm_size(PETSC_COMM_WORLD, &total_ranks);
-    PetscPrintf(PETSC_COMM_WORLD, "Running simulation with %d ranks\n", total_ranks);
+
+    // Get maximum available CPUs
+    int max_cpus = std::thread::hardware_concurrency();
+
+    int nthreads = omp_get_max_threads();
+
+    // Check if requested threads exceed available CPUs
+    if (nthreads * total_ranks > max_cpus) {
+      PetscPrintf(PETSC_COMM_WORLD,
+                  "Error: total requested threads (%d ranks * %d threads = %d) exceed system CPU count (%d)\n",
+                  total_ranks, nthreads, nthreads * total_ranks, max_cpus);
+      PetscPrintf(PETSC_COMM_WORLD, "Requested threads exceed available CPU cores");
+      exit(EXIT_FAILURE);
+    }
+
+    PetscPrintf(PETSC_COMM_WORLD,
+                "Starting simulation with %d MPI ranks and %d OpenMP threads per rank (total %d threads)\n",
+                total_ranks, nthreads, nthreads * total_ranks);
 
     auto params = parseCommandLineOrDefaults();
     dumpParameters(params);

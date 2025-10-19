@@ -25,7 +25,8 @@ VecWrapper getLengthVector(const std::vector<Particle>& local_particles) {
   VecSetSizes(l, local_particles.size(), PETSC_DETERMINE);
   VecSetFromOptions(l);
 
-  // Set values using global indices
+// Set values using global indices
+#pragma omp parallel for
   for (int i = 0; i < local_particles.size(); i++) {
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLength(), INSERT_VALUES));
   }
@@ -44,6 +45,7 @@ VecWrapper getLdotVector(const std::vector<Particle>& local_particles) {
   VecSetFromOptions(l);
 
   // Set values using global indices
+#pragma omp parallel for
   for (int i = 0; i < local_particles.size(); i++) {
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(l, local_particles[i].getGID(), local_particles[i].getLdot(), INSERT_VALUES));
   }
@@ -121,6 +123,7 @@ void calculate_jacobian_local(
 
   preallocate(D, local_constraints, 6);
 
+#pragma omp parallel for
   for (int c_local_idx = 0; c_local_idx < local_constraints.size(); ++c_local_idx) {
     const auto& constraint = local_constraints[c_local_idx];
 
@@ -152,6 +155,7 @@ void calculate_jacobian_local(
 }
 
 void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
+#pragma omp parallel for
   for (int i = 0; i < local_constraints.size(); ++i) {
     PetscInt c_global_idx = col_offset + i;
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(phi, c_global_idx, local_constraints[i].signed_distance, INSERT_VALUES));
@@ -161,6 +165,7 @@ void create_phi_vector_local(VecWrapper& phi, const std::vector<Constraint>& loc
 }
 
 void create_gamma_vector_local(VecWrapper& gamma, const std::vector<Constraint>& local_constraints, PetscInt col_offset) {
+#pragma omp parallel for
   for (int i = 0; i < local_constraints.size(); ++i) {
     PetscInt c_global_idx = col_offset + i;
     PetscCallAbort(PETSC_COMM_WORLD, VecSetValue(gamma, c_global_idx, local_constraints[i].gamma, INSERT_VALUES));
@@ -176,6 +181,7 @@ void calculate_stress_matrix_local(MatWrapper& S, const std::vector<Constraint>&
 
   preallocate(S, local_constraints, 1);
 
+#pragma omp parallel for
   for (PetscInt c_idx = 0; c_idx < local_constraints.size(); ++c_idx) {
     const auto& constraint = local_constraints[c_idx];
     PetscInt c_global_idx = offset + c_idx;
@@ -196,6 +202,7 @@ MatWrapper calculate_MobilityMatrix(const std::vector<Particle>& local_particles
   MatMPIAIJSetPreallocation(M, 1, NULL, 0, NULL);
   MatSeqAIJSetPreallocation(M, 1, NULL);
 
+#pragma omp parallel for
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
     double inv_len = 1.0 / (particle.getLength() * xi);
@@ -237,6 +244,7 @@ MatWrapper calculate_QuaternionMap(const std::vector<Particle>& local_particles)
   MatMPIAIJSetPreallocation(G, 0, d_nnz.data(), 0, o_nnz.data());
   MatSeqAIJSetPreallocation(G, 0, d_nnz.data());
 
+#pragma omp parallel for
   for (PetscInt p_idx = 0; p_idx < local_num_particles; ++p_idx) {
     const auto& particle = local_particles[p_idx];
     auto [s, wx, wy, wz] = particle.getQuaternion();

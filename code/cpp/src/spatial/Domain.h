@@ -44,6 +44,7 @@ class Domain {
 
   std::unique_ptr<ParticleManager> particle_manager_;
   std::unique_ptr<vtk::ParticleLogger> particle_logger_;
+  std::unique_ptr<vtk::ParticleLogger> ghost_particle_logger_;
   std::unique_ptr<vtk::ConstraintLogger> constraint_logger_;
   std::unique_ptr<vtk::DomainLogger> domain_logger_;
   std::unique_ptr<vtk::SimulationLogger> simulation_logger_;
@@ -71,6 +72,8 @@ class Domain {
   double last_wall_per_sim_seconds_ = 0.0;
   double last_eta_check_radius_ = 0.0;
   double last_growth_rate_wall_ = 0.0;
+
+  double t_last_log = 0.0;
 
   std::array<double, 3> min_bounds_ = {0, 0, 0};
   std::array<double, 3> max_bounds_ = {0, 0, 0};
