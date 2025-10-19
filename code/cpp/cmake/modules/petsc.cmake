@@ -33,8 +33,8 @@ if(NOT PETSC_ALREADY_BUILT)
         GIT_TAG release
         SOURCE_DIR "${PETSC_BUILD_DIR}"
         PREFIX "petsc"
-        CONFIGURE_COMMAND ./configure --with-debugging=$<IF:$<CONFIG:Debug>,1,0> --download-fblaslapack=1
-        BUILD_COMMAND make all check
+        CONFIGURE_COMMAND ./configure --with-debugging=$<IF:$<CONFIG:Debug>,1,0> --with-openmp=1 --with-openmp-kernels=1 --with-fc=0 --download-f2cblaslapack --with-shared-libraries=1
+        BUILD_COMMAND make all
         INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
         LOG_DOWNLOAD ON

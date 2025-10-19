@@ -87,37 +87,28 @@ HardModelGradient::HardModelGradient(
       dt_(dt) {}
 
 VecWrapper& HardModelGradient::gradient(const VecWrapper& gamma_curr) {
-#pragma omp sections
-  {
-#pragma omp section
-    {
-      // --- MOVEMENT PART ---
-      // gamma_diff = gamma_curr - gamma_old
-      VecWAXPY(workspaces_.gamma_diff_workspace, -1.0, gamma_old_, gamma_curr);
+  // --- MOVEMENT PART ---
+  // gamma_diff = gamma_curr - gamma_old
+  VecWAXPY(workspaces_.gamma_diff_workspace, -1.0, gamma_old_, gamma_curr);
 
-      // phi_dot_movement = D * M * D^T * gamma_diff
-      estimate_phi_dot_movement_inplace(
-          D_PREV_, M_, U_ext_, workspaces_.gamma_diff_workspace,
-          workspaces_.F_g_workspace, workspaces_.U_c_workspace,
-          workspaces_.U_total_workspace, workspaces_.phi_dot_movement_workspace);
-    }
+  // phi_dot_movement = D * M * D^T * gamma_diff
+  estimate_phi_dot_movement_inplace(
+      D_PREV_, M_, U_ext_, workspaces_.gamma_diff_workspace,
+      workspaces_.F_g_workspace, workspaces_.U_c_workspace,
+      workspaces_.U_total_workspace, workspaces_.phi_dot_movement_workspace);
 
-#pragma omp section
-    {
-      // --- GROWTH PART ---
-      // ldot_curr = growth_rate(gamma_curr)
-      calculate_ldot_inplace(
-          L_PREV_, l_, gamma_curr, params_.physics_config.getLambdaDimensionless(),
-          params_.physics_config.TAU, workspaces_.ldot_curr_workspace,
-          workspaces_.stress_curr_workspace, workspaces_.impedance_curr_workspace);
+  // --- GROWTH PART ---
+  // ldot_curr = growth_rate(gamma_curr)
+  calculate_ldot_inplace(
+      L_PREV_, l_, gamma_curr, params_.physics_config.getLambdaDimensionless(),
+      params_.physics_config.TAU, workspaces_.ldot_curr_workspace,
+      workspaces_.stress_curr_workspace, workspaces_.impedance_curr_workspace);
 
-      // ldot_diff = ldot_curr - ldot_prev
-      VecWAXPY(workspaces_.ldot_diff_workspace, -1.0, ldot_prev_, workspaces_.ldot_curr_workspace);
+  // ldot_diff = ldot_curr - ldot_prev
+  VecWAXPY(workspaces_.ldot_diff_workspace, -1.0, ldot_prev_, workspaces_.ldot_curr_workspace);
 
-      // phi_dot_growth = -L^T * ldot_diff
-      estimate_phi_dot_growth_inplace(L_PREV_, workspaces_.ldot_diff_workspace, workspaces_.phi_dot_growth_result);
-    }
-  }
+  // phi_dot_growth = -L^T * ldot_diff
+  estimate_phi_dot_growth_inplace(L_PREV_, workspaces_.ldot_diff_workspace, workspaces_.phi_dot_growth_result);
 
   // Start with the base violation: phi_next_out = phi
   PetscCallAbort(PETSC_COMM_WORLD, VecCopy(PHI_, workspaces_.phi_next_out));
@@ -173,7 +164,7 @@ std::tuple<double, double, double, double> HardModelGradient::energy(const VecWr
   //         E(\boldsymbol{\gamma}) =
   //         \boldsymbol{\gamma}^\top\mathbf{\Phi}^k
   //          & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M} \mathbfcal{D} \boldsymbol{\gamma} \\
-//          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
+  //          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
   //         \left( \frac{\boldsymbol{\ell}}{\tau} e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right).
   //     \end{aligned}
   // \end{equation}

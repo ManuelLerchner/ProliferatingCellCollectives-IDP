@@ -176,9 +176,6 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
     PetscLogDouble memory_usage;
     PetscCallAbort(PETSC_COMM_WORLD, PetscMemoryGetCurrentUsage(&memory_usage));
-
-    PetscPrintf(PETSC_COMM_WORLD, "\r  Solver Iteration: %4d | Constraints: %6ld (New: %3ld) | Overlap: %8.2e | Residual: %8.2e | BBPGD Iters: %4ld | Memory: %4.2f MB",
-                constraint_iterations, globalReduce<size_t>(all_constraints_set.size(), MPI_SUM), globalReduce<size_t>(new_constraints.size(), MPI_SUM), logged_overlap, res, bbpgd_result_recursive.bbpgd_iterations, memory_usage / 1024 / 1024);
   }
 
   if (bbpgd_logger.has_value()) {
