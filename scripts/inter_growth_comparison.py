@@ -24,7 +24,7 @@ def run_simulation(config, mode, LAMBDA):
     args += f" -end_radius {END_RADIUS}"
 
     process = subprocess.run(
-        f"make -j && srun ./cellcollectives -mode {mode} {args}", shell=True, cwd=BIN_FOLDER)
+        f"export OMP_NUM_THREADS=1 &&make -j && srun ./cellcollectives -mode {mode} {args}", shell=True, cwd=BIN_FOLDER)
 
     # copy vtk_output_{mode} folder to growth_comparison_data/vtk_output_{mode}_{lambda}
     # delete old folder if it exists
@@ -36,8 +36,8 @@ def run_simulation(config, mode, LAMBDA):
                     f"{BIN_FOLDER}/growth_comparison_data/vtk_output_{mode}_{LAMBDA:1e}/")
 
 
-for mode in ["hard","soft"]:
-    for LAMBDA in [1e-2,1e-3,1e-4]:
+for mode in ["hard", "soft"]:
+    for LAMBDA in [1e-2, 1e-3, 1e-4]:
         config = base_physics_config.copy()
         config["LAMBDA"] = LAMBDA
         run_simulation(config, mode, LAMBDA)

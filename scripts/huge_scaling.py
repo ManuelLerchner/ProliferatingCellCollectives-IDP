@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import subprocess
 import os
 from time import sleep
@@ -34,17 +35,17 @@ cd $OUTPUT_DIR
 
 make -j
 
+export OMP_NUM_THREADS=1
 mpirun -n {{NUM_RANKS}} ../../../../cellcollectives -mode {{MODE}} -end_radius {{END_RADIUS}} -LAMBDA {{LAMBDA}} -log_every_colony_radius_delta 5
 """
 
 BIN_FOLDER = "../code/cpp/build/src"
-END_RADIUS = 1000
+END_RADIUS = 10000
 
 LAMBDAS = [1e-3]  # adjust if you want multiple lambdas
 MPI_RANKS = [112]
 MODES = ["hard", "soft"]
 
-import datetime
 time = datetime.datetime.now().timestamp() * 1000
 
 
