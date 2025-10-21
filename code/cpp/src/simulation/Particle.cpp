@@ -42,8 +42,8 @@ void Particle::updatePosition(const PetscScalar* dC, int offset, double dt) {
   // Validate after position update
   double move_maginitude = std::sqrt(dt * dt * (PetscRealPart(dC[offset + 0]) * PetscRealPart(dC[offset + 0]) + PetscRealPart(dC[offset + 1]) * PetscRealPart(dC[offset + 1]) + PetscRealPart(dC[offset + 2]) * PetscRealPart(dC[offset + 2])));
 
-  //  particlescan only move 5% of their length in a single step
-  if (move_maginitude > 0.05 * data_.l0) {
+  //  particlescan only move 50% of their length in a single step
+  if (move_maginitude > 0.5 * data_.l0) {
     PetscPrintf(PETSC_COMM_WORLD, "WARNING: Particle %d moved an unusually large distance: %g (length=%g)\n", data_.gID, move_maginitude, data_.length);
   }
 }

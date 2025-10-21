@@ -106,7 +106,7 @@ void Domain::adaptDt() {
   }
 
   // CFL condition
-  double cfl = 0.5 * params_.solver_config.tolerance;
+  double cfl = params_.solver_config.cfl_factor * params_.solver_config.tolerance;
   double optional_cfl_cap_dt_local = cfl / global_median_velocity;
 
   // Smooth change to avoid oscillations
@@ -534,30 +534,68 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
   double time_elapsed_seconds = simulation_time_seconds_;
   double progress_percent = (colony_radius / params_.sim_config.end_radius) * 100.0;
 
-  // Exponential model parameters
-  constexpr double a = 490;     // seconds
-  constexpr double b = 0.0247;  // per radius unit
+  // Static storage for fitting data
+  progress_data.emplace_back(colony_radius, MPI_Wtime() - start_time_);
 
-  double predicted_total_wall_time = a * std::exp(b * params_.sim_config.end_radius);
-  double estimated_remaining_wall_time_seconds = predicted_total_wall_time - MPI_Wtime();
-  if (estimated_remaining_wall_time_seconds < 0.0)
-    estimated_remaining_wall_time_seconds = 0.0;
+  // Remove old points if we exceed the window
+  size_t window_size = 10;
+  while (progress_data.size() > window_size) {
+    progress_data.erase(progress_data.begin());  // pop from front
+  }
 
+  // --- Exponential model fit: time = a * exp(b * radius)
+  double estimated_remaining_wall_time_seconds = -1.0;
+  bool fit_valid = false;
+
+  if (progress_data.size() >= 5) {
+    // Linear regression on ln(time) = ln(a) + b * radius
+    double sum_x = 0.0, sum_y = 0.0, sum_x2 = 0.0, sum_xy = 0.0;
+    int n = progress_data.size();
+
+    for (const auto& [radius, time_val] : progress_data) {
+      double x = radius;
+      double y = time_val;
+      sum_x += x;
+      sum_y += y;
+      sum_x2 += x * x;
+      sum_xy += x * y;
+    }
+
+    double denom = n * sum_x2 - sum_x * sum_x;
+    if (std::fabs(denom) > 1e-9) {
+      double m = (n * sum_xy - sum_x * sum_y) / denom;  // slope
+      double c = (sum_y - m * sum_x) / n;               // intercept
+
+      double predicted_total_time = m * params_.sim_config.end_radius + c;
+      estimated_remaining_wall_time_seconds = std::max(predicted_total_time - (MPI_Wtime() - start_time_), 0.0);
+
+      fit_valid = true;
+    }
+  }
+
+  // --- Format time helper
   auto formatTime = [](double seconds) -> std::string {
-    char buffer[100];
+    std::ostringstream oss;
+    bool negative = seconds < 0.0;
+    seconds = std::fabs(seconds);
+
+    oss << (negative ? "-" : " ");
+    oss << std::fixed << std::setprecision(1);
+
     if (seconds < 60.0)
-      snprintf(buffer, sizeof(buffer), "%6.1f s", seconds);
+      oss << std::setw(6) << seconds << " s";
     else if (seconds < 3600.0)
-      snprintf(buffer, sizeof(buffer), "%6.1f min", seconds / 60.0);
+      oss << std::setw(6) << seconds / 60.0 << " min";
     else if (seconds < 86400.0)
-      snprintf(buffer, sizeof(buffer), "%6.1f h", seconds / 3600.0);
+      oss << std::setw(6) << seconds / 3600.0 << " h";
     else
-      snprintf(buffer, sizeof(buffer), "%6.1f d", seconds / 86400.0);
-    return std::string(buffer);
+      oss << std::setw(6) << seconds / 86400.0 << " d";
+
+    return oss.str();
   };
 
   // Compute ETA and format CPU time
-  std::string eta_str = formatTime(estimated_remaining_wall_time_seconds);
+  std::string eta_str = fit_valid ? formatTime(estimated_remaining_wall_time_seconds) : "   N/A";
   std::string cpu_str = formatTime(cpu_time_s);
 
   // ANSI colors
@@ -567,10 +605,9 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
   const char* BLUE = "\033[34m";
   const char* MAGENTA = "\033[35m";
   const char* CYAN = "\033[36m";
-  const char* WHITE = "\033[37m";
   const char* RESET = "\033[0m";
 
-  // Progress color: green → yellow → red
+  // Progress color
   const char* progress_color = (progress_percent < 50.0 ? GREEN : (progress_percent < 80.0 ? YELLOW : RED));
 
   int total_ranks;
@@ -578,11 +615,9 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
 
   int nthreads = omp_get_max_threads();
 
-  // current system time
-
+  // Current system time
   auto now = std::chrono::system_clock::now();
   std::time_t t = std::chrono::system_clock::to_time_t(now);
-
   std::tm tm = *std::localtime(&t);
 
   std::ostringstream time_oss;
@@ -595,7 +630,7 @@ void Domain::printProgress(int current_iteration, double colony_radius, double c
               "ETA: %s%s%s | "
               "dt: %s%4.2e%s | "
               "Particles: %s%d%s | "
-              "ReLCP iters: %s%d%s |"
+              "ReLCP iters: %s%d%s | "
               "BBPGD iters: %s%zu%s | Residual: %s%.2e%s | Ranks: %s%d%s | OMP: %s%d%s\n",
               BLUE, time_oss.str().c_str(), RESET,
               CYAN, colony_radius, RESET,

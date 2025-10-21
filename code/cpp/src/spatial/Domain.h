@@ -74,6 +74,8 @@ class Domain {
   double last_growth_rate_wall_ = 0.0;
 
   double t_last_log = 0.0;
+  std::vector<std::pair<double, double>> eta_fit_data_;
+  std::vector<std::pair<double, double>> progress_data;  // {radius, wall_time_since_start}
 
   std::array<double, 3> min_bounds_ = {0, 0, 0};
   std::array<double, 3> max_bounds_ = {0, 0, 0};
