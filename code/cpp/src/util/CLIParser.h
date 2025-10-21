@@ -24,7 +24,9 @@ void printHelp(const SimulationParameters& params) {
               params.sim_config.log_every_colony_radius_delta);
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-log_every_sim_time_delta",
               "Log every this many seconds of simulation time (0 to disable)",
-              params.sim_config.log_every_colony_radius_delta);
+              params.sim_config.log_every_sim_time_delta);
+  PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %g]\n", "-cfl_factor",
+              "CFL factor for adaptive time stepping", params.solver_config.cfl_factor);
 
   PetscPrintf(PETSC_COMM_WORLD, "  %-25s %-50s [default: %s]\n", "-log_bbgd_trace",
               "Enable logging of BBPGD trace data", params.sim_config.log_bbgd_trace ? "true" : "false");
@@ -116,6 +118,8 @@ void dumpParameters(const SimulationParameters& params) {
   printParam("End radius", params.sim_config.end_radius);
   printParam("Log every colony radius delta", params.sim_config.log_every_colony_radius_delta);
   printParam("Log every sim time delta", params.sim_config.log_every_colony_radius_delta);
+  printParam("Log BBPGD trace", (bool)params.sim_config.log_bbgd_trace);
+  printParam("CFL factor", params.solver_config.cfl_factor);
   PetscPrintf(PETSC_COMM_WORLD, "Min box size             : [%.3f, %.3f, %.3f]\n",
               params.sim_config.min_box_size.x,
               params.sim_config.min_box_size.y,
@@ -186,6 +190,7 @@ SimulationParameters parseCommandLineOrDefaults() {
       .linked_cell_size = 2.5,
       .growth_factor = 1.5,
       .particle_preallocation_factor = 20,
+      .cfl_factor = 0.5,
   };
 
   // Check for help flag
@@ -202,6 +207,7 @@ SimulationParameters parseCommandLineOrDefaults() {
   getOption("-end_radius", params.sim_config.end_radius);
   getOption("-log_every_colony_radius_delta", params.sim_config.log_every_colony_radius_delta);
   getOption("-log_every_sim_time_delta", params.sim_config.log_every_sim_time_delta);
+  getOption("-cfl_factor", params.solver_config.cfl_factor);
   getOption("-log_bbgd_trace", params.sim_config.log_bbgd_trace);
 
   getOption("-xi", params.physics_config.xi);

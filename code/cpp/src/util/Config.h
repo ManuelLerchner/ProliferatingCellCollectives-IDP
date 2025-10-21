@@ -15,8 +15,8 @@ struct SimulationConfig {
   Vec3d min_box_size;
 };
 
+// General parameters
 struct PhysicsConfig {
-  // General parameters
   double xi;           // Drag coefficient
   double TAU;          // Growth time constant
   double l0;           // Initial length
@@ -40,6 +40,7 @@ struct SolverConfig {
   double linked_cell_size;
   double growth_factor;
   double particle_preallocation_factor;
+  double cfl_factor;
 
   int getMinPreallocationSize(int n) const {
     return std::max(1, static_cast<int>(n * particle_preallocation_factor));
