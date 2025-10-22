@@ -1,0 +1,182 @@
+\usepackage{ifthen}
+\usepackage{tabularx}
+
+%%%%%%%%%%%
+\newcommand{\setlang}[1]{
+	\ifthenelse{\equal{#1}{de}}{\usepackage[ngerman]{babel}}{\usepackage[american]{babel}}
+	\newcommand{\lang}{#1}
+	\newcommand\TitlePicture{
+	}
+	\newcommand\BackgroundPicture{
+	}
+}
+\newcommand{\type}[1]{\newcommand{\inserttype}{ \ifthenelse{\equal{\lang}{de}}
+		{
+			\ifthenelse{\equal{#1}{Mf}}{Masterarbeit Abschlussvortrag}
+			{
+				\ifthenelse{\equal{#1}{Bf}}{Bachelorarbeit Abschlussvortrag}
+				{
+					\ifthenelse{\equal{#1}{Df}}{Diplomarbeit Abschlussvortrag}
+					{
+						\ifthenelse{\equal{#1}{Sf}}{Studienarbeit Abschlussvortrag}
+						{
+							\ifthenelse{\equal{#1}{Mm}}{Masterarbeit Zwischenvortrag}
+							{
+								\ifthenelse{\equal{#1}{Bm}}{Bachelorarbeit Zwischenvortrag}
+								{
+									\ifthenelse{\equal{#1}{Dm}}{Diplomarbeit Zwischenvortrag}
+									{
+										\ifthenelse{\equal{#1}{Sm}}{Studienarbeit Zwischenvortrag}
+										{
+											#1
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		%english
+		{
+			\ifthenelse{\equal{#1}{Mf}}{Master Thesis Final Presentation}
+			{
+				\ifthenelse{\equal{#1}{Bf}}{Bachelor Thesis Final Presentation}
+				{
+					\ifthenelse{\equal{#1}{Df}}{Diplomarbeit Final Presentation}
+					{
+						\ifthenelse{\equal{#1}{Sf}}{IDP Project Final Presentation}
+						{
+							\ifthenelse{\equal{#1}{Mm}}{Master Thesis Midterm Presentation}
+							{
+								\ifthenelse{\equal{#1}{Bm}}{Bachelor Thesis Midterm Presentation}
+								{
+									\ifthenelse{\equal{#1}{Dm}}{Diplomarbeit  Midterm Presentation}
+									{
+										\ifthenelse{\equal{#1}{Sm}}{Studienarbeit  Midterm Presentation}
+										{
+											#1
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		} }}
+\newcommand{\email}[1]{\newcommand{\insertemail}{#1}}
+\newcommand{\advisorOne}[1]{\newcommand{\insertadvisorOne}{#1}}
+\newcommand{\advisorTwo}[1]{\newcommand{\insertadvisorTwo}{#1}}
+
+\renewcommand{\maketitle}{\frame[plain]{\titlepage}}
+
+
+\newcommand{\Blob}{\rule[.1ex]{1ex}{1ex}}
+\newcommand{\blob}{\rule[.3ex]{.7ex}{.7ex}}
+%%%%%%%%%%%
+
+\usetheme{Rochester}
+
+%\RequirePackage{pgf}
+\setbeamertemplate{blocks}[rounded][shadow=true]
+\setbeamercovered{transparent}
+
+\definecolor{tum-color}{rgb}{0,0.396,0.741}
+\definecolor{structure}{cmy}{1,0.43,0}
+\definecolor{beamerstructure}{cmy}{1,0.43,0}
+\setbeamercolor*{Title bar}{fg=black}
+\setbeamercolor*{frametitle}{parent=Title bar}
+
+\setbeamercolor{background canvas}{bg=}
+\setbeamercovered{transparent}
+\setbeamertemplate{boxes}[rounded,shadow=true]
+%\setbeamertemplate{itemize item}{$\blacktriangleright$}
+%\setbeamertemplate{itemize subitem}{$\bullet$}
+%\setbeamertemplate{itemize subsubitem}{$\triangleright$}
+\setbeamertemplate{itemize item}{$\blob$}
+\setbeamertemplate{itemize subitem}{$\blob$}
+\setbeamertemplate{itemize subsubitem}{$\blob$}
+\setbeamertemplate{enumerate item}{\textbf{\insertenumlabel.}}
+
+
+\beamer@headheight=0.7\paperwidth
+
+%\usecolortheme[name=tum-color]{structure}
+%\usebeamercolor{structure}
+
+\beamerboxesdeclarecolorscheme{title}{tum-color}{tum-color}
+
+\setbeamerfont{section in head/foot}{size=\scriptsize,series=\normalfont}
+\setbeamerfont{frametitle}{size=\large,series=\bf}
+
+\setbeamertemplate{title page}
+{
+	\vspace{0.15cm}
+	\begin{tabularx}{\textwidth}[t]{lXr}
+		\includegraphics[scale=0.15]{figures/chair.png}
+		 &  & \includegraphics[scale=0.15]{figures/tum.png}
+	\end{tabularx}
+
+	\parbox{\textwidth}{\vspace{0.7mm}%
+		\textcolor{beamer@blendedblue}{\hrule}} % Obere (blaue, dünne) Linie
+
+	\begin{center}
+		\vspace{2ex}
+		{\bf\small\inserttype}\\
+		\vspace{5ex}
+		{\large\inserttitle}
+	\end{center}
+	\vspace{6ex}
+	\begin{flushright}
+		{\bf\small \insertauthor}\\
+		{\small \insertemail}\\
+		\medskip
+		\vspace{3ex}
+		\begin{tabular}{r}
+			\ifthenelse{\equal{\lang}{de}}{Betreuer:}{Advisor:} \\
+			{\bf\small \insertadvisorOne}                       \\
+			{\bf\small \insertadvisorTwo }
+		\end{tabular}
+
+	\end{flushright}
+}
+
+\setbeamertemplate{frametitle}
+{
+	\vspace{12mm}
+	\usebeamerfont*{frametitle}\insertframetitle
+}
+
+\defbeamertemplate*{headline}{ldv}
+{%
+	% Box on top of each slide
+	%Logo der Uni:
+	\vspace{0.15cm}
+	\begin{tabularx}{\paperwidth}[t]{lXr}
+		\includegraphics[scale=0.15]{figures/chair.png}
+		 &  & \includegraphics[scale=0.15]{figures/tum.png}
+	\end{tabularx}
+	\parbox{\paperwidth}{\vspace{0.7mm}%
+		\textcolor{beamer@blendedblue}{\line(1,0){364}}} % Obere (blaue, dünne) Linie
+}
+
+\setbeamertemplate{footline}
+{
+	\usebeamerfont*{section in head/foot}
+	\begin{beamercolorbox}[wd=\paperwidth,ht=3ex,dp=3ex,leftskip=.5em,rightskip=.5em]{background canvas}
+
+		\hfill
+		\insertframenumber \ / \inserttotalframenumber
+		\hspace{2mm}
+	\end{beamercolorbox}
+}
+
+
+\usecolortheme[named=tum-color]{structure}
+\usebeamercolor{structure}
+
+\beamertemplatenavigationsymbolsempty
+\beamertemplateshadowblocks
+\beamerboxesdeclarecolorscheme{block}{structure!75!black}{structure!10}
