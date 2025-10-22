@@ -117,6 +117,7 @@ BBPGDResult BBPGD(
 
   if (iteration == max_bbpgd_iterations) {
     PetscPrintf(PETSC_COMM_WORLD, "\n  BBPGD did not converge after %ld iterations. Residual: %f", iteration, res);
+    throw std::runtime_error("BBPGD did not converge");
   }
 
   // Return the result in the input parameter

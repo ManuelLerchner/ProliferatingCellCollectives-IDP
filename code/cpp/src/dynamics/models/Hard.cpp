@@ -186,6 +186,7 @@ ParticleManager::SolverSolution solveHardModel(ParticleManager& particle_manager
 
   if (constraint_iterations == params.solver_config.max_recursive_iterations) {
     PetscPrintf(PETSC_COMM_WORLD, "\n  Warning: Maximum number of constraint iterations reached (%ld). Solution may not be fully converged.\n", params.solver_config.max_recursive_iterations);
+    throw std::runtime_error("Maximum number of constraint iterations reached");
   }
 
   return {.constraints = all_constraints_set, .constraint_iterations = constraint_iterations, .bbpgd_iterations = total_bbpgd_iterations, .residual = res, .max_overlap = max_overlap};
