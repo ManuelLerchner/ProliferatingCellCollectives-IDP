@@ -460,16 +460,17 @@ Substituting the approximation of $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ fro
 
 \subsubsection{Energy Minimization Solution}
 
-To solve this nonlinear complementarity problem efficiently, we reframe it as an optimization problem using a special energy function $E(\boldsymbol{\gamma})$ whose minimization resolves the contact forces~\cite{CellModellerMaths}. Physically, $E(\boldsymbol{\gamma})$ represents the work done by the contact forces and the system's internal energy:
+To solve this nonlinear complementarity problem efficiently, we reframe it as an optimization problem using a special energy function $E(\boldsymbol{\gamma})$ whose minimization under non-negativity constraints resolves the contact forces~\cite{CellModellerMaths}. Physically, $E(\boldsymbol{\gamma})$ represents the work done by the contact forces and the system's internal energy:
 
 \begin{equation} \label{eq:energy_function}
     \small
     \begin{aligned}
-        E(\boldsymbol{\gamma}) =
-        \boldsymbol{\gamma}^\top\mathbf{\Phi}^k
-         & + \frac{\Delta t}{2} \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} \\
+        \min_{\boldsymbol{\gamma} \geq \mathbf{0}}
+        E(\boldsymbol{\gamma})
+        =   \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \;  \boldsymbol{\gamma}^\top \mathbf{\Phi}^k
+         & +  \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma} \\
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-        \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right).
+        \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
     \end{aligned}
 \end{equation}
 
@@ -542,13 +543,13 @@ The adaptive timestep strategy (outlined in \autoref{alg:adaptive_dt}) is based 
     \text{CFL} = \frac{u \, \Delta t}{\Delta x} \leq C_{\text{max}}.
 \end{equation}
 
-For our cell-based system, we define a characteristic velocity scale $u_m$ as the median of all cell velocities (including growth rates) and a characteristic spatial scale $\Delta x$ as the solver tolerance $\varepsilon = 10^{-3}$, which controls the maximum allowable displacement per step. Enforcing that cells move no more than half this tolerance yields:
+For our cell-based system, we define a characteristic velocity scale $u_m$ as the median of all cell velocities (including growth rates) and a characteristic spatial scale $\Delta x$ as the solver tolerance $\varepsilon = 10^{-3}$, which controls the maximum allowable displacement per step. Enforcing that cells move no more than a fraction of $\varepsilon$ per timestep leads to the following expression for the adaptive timestep:
 
 \begin{equation} \label{eq:cfl_dt}
-    \Delta t = \frac{0.5 \, \varepsilon}{u_m}.
+    \Delta t = \frac{c \cdot\, \varepsilon}{u_m}
 \end{equation}
 
-Choosing $\Delta t$ like this, ensures that most cells move less than half the solver tolerance in each timestep, preventing excessive overlaps that could destabilize the simulation.
+where $c$ is a user-defined CFL number (we use $c = 0.5$, ensuring cells move at most half the tolerance per step). Choosing $\Delta t$ like this, ensures that most cells move less than half the solver tolerance in each timestep, preventing excessive overlaps that could destabilize the simulation.
 
 \begin{algorithm}[H]
     \caption{Adaptive Timestep Control}
@@ -848,6 +849,76 @@ Another key factor is the computational load from collision handling (see \autor
     \label{fig:comparison_metrics}
 \end{figure}
 
+\subsection{Impact of Adaptive Timestep on BBPGD Performance}
+\label{sec:cfl_analysis}
+
+The efficiency of the BBPGD solver depends strongly on the chosen timestep size, which governs both the number of BBPGD solver iterations per timestep and the total number of timesteps required. This trade-off gives rise to a characteristic U-shaped runtime curve with respect to the CFL number, as shown in \autoref{fig:cfl_vs_runtime}, motivating the use of adaptive timestepping strategies.
+
+As shown in \autoref{fig:cfl_vs_runtime}, the total runtime to reach a colony radius of 100 on 112 CPU cores exhibits a pronounced minimum at CFL $\approx 2$, corresponding to cells moving roughly twice the solver tolerance $\epsilon$ per timestep.
+
+The U-shaped trend arises from competing effects. At small CFL values (CFL $\ll 1$), each timestep requires very few solver iterations due to highly accurate constraint linearization (\autoref{eq:phi_expanded}) and small overlaps, but the simulation remains inefficient overall because a large number of timesteps is required.
+
+Conversely, at large CFL values (CFL $\gg 3$), the linearization assumptions break down as cells move too far per step, causing the approximation of $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ to deviate from actual separations. This substantially increases the number of solver iterations required to reach feasibility, and in extreme cases (CFL $> 3.7$), the solver may fail to converge entirely, as indicated by the red shaded region in \autoref{fig:cfl_vs_runtime}.
+
+The optimal operating point at CFL $\approx 2$ balances these effects: timesteps are large enough to minimize the total number of timestep yet small enough to maintain linearization accuracy and solver stability.
+
+The figure also shows the average number of solver iterations per timestep, which increases approximately linearly with CFL at low values, following $\text{iterations} \approx 1800 \cdot \text{CFL}$. At the optimal CFL factor of 2, the solver requires around 3600 iterations per physical step on average, after which iteration counts rise sharply, reflecting the deteriorating accuracy of the linearized constraints.
+
+\vfill
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/bbpgd/cfl_vs_runtime_and_constraints.png}
+    \caption{Total runtime to reach a colony radius of 100 versus CFL number on 112 cores. The red region indicates CFL values where the ReLCP procedure fails to converge.}
+    \label{fig:cfl_vs_runtime}
+\end{figure}
+
+\newpage
+
+\subsection{Insights into BBPGD Iterations}
+
+This section examines the performance of the Barzilai-Borwein projected gradient descent (BBPGD) algorithm used in the hard collision model to solve the constrained optimization problem. Since the BBPGD algorithm is the most computationally demanding part of the simulation, understanding its efficiency and convergence is important. In densely packed systems, where numerous contact constraints must be satisfied, BBPGD and its associated matrix-vector operations account for roughly 85\% of the total simulation time and therefore largely determine overall performance.
+
+A key metric is the number of BBPGD iterations required per simulation step and how this quantity scales with system size. \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that iteration count remains mostly on the order of $\mathcal{O}(1000)$, with occasional peaks reaching $\mathcal{O}(5000)$ during critical moments such as large-scale rearrangements or near jamming transitions. This count includes additional BBPGD calls from the ReLCP~\cite{Weady2024SM} procedure, which requires up to 11 iterations to fully resolve remaining overlaps. The typical order of magnitude for the BBPGD iteration count is consistent with related studies~\cite{Yan2019}, though our model's collision-growth coupling introduces additional complexity.
+
+The convergence behavior of a single BBPGD solve during a representative timestep is illustrated in \autoref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\epsilon = 10^{-3}$ after approximately 280 iterations. The residual exhibits a highly oscillatory pattern, a well-known characteristic of BBPGD resulting from adaptive step-size selection~\cite{BBPGD,Schneider2021}.
+
+Since the ReLCP procedure~\cite{Weady2024SM} is also employed, each simulation step may involve multiple BBPGD solves until all overlaps are resolved. The overall energy evolution during the convergence process is shown in \autoref{fig:bbpgd_energy}, demonstrating that the solver consistently makes progress until all current overlaps are eliminated. Once this state is reached, new contacts are detected, the systems energy increases, and the process repeats. The system converges to a feasible, overlap-free configuration within six ReLCP iterations, requiring a total of 960 BBPGD iterations.
+
+The plot also shows the total amount of constraints being resolved during the BBPGD iterations, which decreases as the solver progresses. For a colony of size $R \approx 100$ with 36244 cells, approximately 100,000 new constraints are generated per ReLCP iteration, reaching a maximum of around 600,000 constraints in the final phase.
+
+There remains considerable potential to further improve the performance of BBPGD. As demonstrated in \autoref{sec:cfl_analysis}, the timestep size critically influences solver efficiency. Future work could investigate more advanced adaptive schemes that directly leverage solver feedback, for instance by adjusting $\Delta t$ based on the number of BBPGD iterations or the ReLCP convergence rate. Moreover, warm-start techniques that initialize the solver with multipliers from previous timesteps could help reduce iteration counts, particularly in later stages where colony configurations evolve more gradually and inter-cell forces remain relatively stable between steps.
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_num_particles_vs_bbpgd_steps.png}
+        \caption{Number of BBPGD iterations per timestep as a function of particle count. Iterations remain roughly $\mathcal{O}(1000)$ on average, with occasional spikes up to $\mathcal{O}(5000)$.}
+        \label{fig:bbpgd_iterations_per_step_vs_num_particles}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_residual.png}
+        \caption{BBPGD residuals over iterations for a single timestep. The solver converges to tolerance $\epsilon = 10^{-3}$ within approximately 280 iterations, showing highly oscillatory behavior. The residual directly represents the current maximum overlap between any two cells in the colony.}
+        \label{fig:bbpgd_residual}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_total_energy.png}
+        \caption{System energy (\autoref{eq:energy_function}) throughout the ReLCP procedure during a single timestep. The energy consistently decreases as BBPGD iterations progress. After each set of constraints is resolved, new overlaps are detected, and the process repeats until a feasible configuration is reached within six ReLCP iterations.}
+        \label{fig:bbpgd_energy}
+    \end{subfigure}
+
+    \caption{BBPGD convergence analysis for a typical timestep in a colony of size $R \approx 100$ with 36244 cells. (a) BBPGD iterations per timestep versus number of particles. (b) Residuals over iterations. (c) System energy over iterations.}
+    \label{fig:bbpgd_analysis}
+\end{figure}
+
+
 \subsection{Maximum Attainable Colony Size}
 \label{sec:maximum_colony_size}
 
@@ -878,48 +949,6 @@ A representative snapshot of the colony at its maximum size for the hard model i
     \end{subfigure}
 
     \caption{Large-scale colony growth comparison. (a) Colony radius versus wall time. (b) Average cell length versus radius at maximum colony size.}
-\end{figure}
-
-
-\subsection{Insights into BBPGD Iterations}
-
-This section examines the performance of the Barzilai-Borwein projected gradient descent (BBPGD) algorithm used in the hard collision model to solve the constrained optimization problem. Since the BBPGD algorithm is the most computationally demanding part of the simulation, understanding its efficiency and convergence is important. In densely packed systems, where numerous contact constraints must be satisfied, BBPGD and its associated matrix-vector operations account for roughly 85\% of the total simulation time and therefore largely determine overall performance.
-
-A key metric is the number of BBPGD iterations required per simulation step and how this quantity scales with system size. \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that iteration count remains mostly on the order of $\mathcal{O}(1000)$, with occasional peaks reaching $\mathcal{O}(5000)$ during critical moments such as large-scale rearrangements or near jamming transitions. This count includes additional BBPGD calls from the ReLCP~\cite{Weady2024SM} procedure, which requires up to 11 iterations to fully resolve remaining overlaps. The typical order of magnitude for the BBPGD iteration count is consistent with related studies~\cite{Yan2019}, though our model's collision-growth coupling introduces additional complexity.
-
-The convergence behavior within a single, typical timestep is illustrated in \autoref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\epsilon = 10^{-3}$ within approximately 2500 iterations while continuously reducing system energy (\autoref{fig:bbpgd_energy}) as defined in \autoref{eq:energy_function}. Energy decreases monotonically, confirming BBPGD convergence under the projected gradient framework. The residual exhibits a highly oscillatory pattern, which is a well-known characteristic of BBPGD caused by adaptive step size selection~\cite{BBPGD,Schneider2021}.
-
-There are several opportunities to optimize the current implementation. It remains unclear whether the interaction between adaptive timestepping (\autoref{alg:adaptive_dt}) and the BBPGD solver is fully optimal. Future work could explore more advanced adaptive timestepping strategies that directly incorporate solver feedback, such as adjusting $\Delta t$ based on the number of BBPGD iterations or the observed rate of change in the colony's energy. Similarly, warm-start strategies that use information from previous timesteps could significantly speed up BBPGD convergence, especially in later stages where the colony evolves more slowly and forces should remain similar between steps.
-
-Another promising direction is to study the trade-off between timestep size and solver effort. Smaller timesteps yield simpler, faster-converging BBPGD subproblems, which may actually reduce overall runtime despite increasing the number of steps. A systematic analysis of this trade-off could inform timestep selection strategies that balance per-step computational cost with total simulation efficiency.
-
-\newpage
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_num_particles_vs_bbpgd_steps.png}
-    \caption{Number of BBPGD iterations per timestep as a function of particle count. Iterations remain roughly $\mathcal{O}(1000)$ on average, with occasional spikes up to $\mathcal{O}(5000)$.}
-    \label{fig:bbpgd_iterations_per_step_vs_num_particles}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_residual.png}
-        \caption{BBPGD residuals over iterations for a single timestep. The solver converges to tolerance $\epsilon = 10^{-3}$ within approximately 2500 iterations, showing highly oscillatory behavior. The residual directly represents the current maximum overlap between any two cells in the colony.}
-        \label{fig:bbpgd_residual}
-    \end{subfigure}
-
-    \begin{subfigure}[b]{\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/bbpgd_total_energy.png}
-        \caption{System energy (\autoref{eq:energy_function}) throughout the convergence process. Energy decreases monotonically, suggesting stable gradient descent behavior.}
-        \label{fig:bbpgd_energy}
-    \end{subfigure}
-
-    \caption{BBPGD convergence analysis for a typical timestep. (a) Residuals over iterations. (b) System energy over iterations.}
-    \label{fig:bbpgd_analysis}
 \end{figure}
 
 \clearpage

@@ -39,7 +39,7 @@ max_threads = os.cpu_count()
 for mode in ["hard"]:
     for proc in [18]:
         for thr in [1]:
-            for cfl_factor in ([3.05, 3.1]):
+            for cfl_factor in ([0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]):
 
                 print(
                     f"Running simulation with CFL_FACTOR={cfl_factor}, mode={mode}, thr={thr}, proc={proc}")
