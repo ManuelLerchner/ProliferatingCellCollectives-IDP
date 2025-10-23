@@ -43,7 +43,6 @@
 % Text and formatting
 \usepackage{textcomp}
 \usepackage{url}
-\usepackage{enumitem}
 \usepackage{caption} 
 \usepackage{tcolorbox}
 \usepackage{empheq}
@@ -54,6 +53,8 @@
 
 % TikZ for diagrams
 \usepackage{tikz}
+
+\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
 
 \setbeamertemplate{caption}{\raggedright\insertcaption\par}
 \setbeamertemplate{bibliography item}[online]
@@ -184,32 +185,36 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Overdamped Dynamics}
+    \frametitle{Equations of Motion and Growth}
 
     \begin{itemize}
-        \item Low Reynolds number: viscous forces dominate
         \item Overdamped Langevin equation:
+              \begin{itemize}
+                  \item Neglect inertia due to viscous environment
+                  \item Cell velocities proportional to net forces
+              \end{itemize}
     \end{itemize}
 
     \vspace{0.2cm}
 
     \begin{equation*}
-        \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_{j \neq i} \mathbf{F}_{ij}, \quad
+        \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_{j \neq i} \mathbf{F}_{ij}, \qquad
         \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_{j \neq i} \mathbf{r}_{ij} \times \mathbf{F}_{ij}
     \end{equation*}
 
     \begin{itemize}
         \item Stress-sensitive growth:
+              \begin{itemize}
+                  \item $\lambda$: stress sensitivity parameter
+                  \item $\sigma_i$: compressive stress on cell $i$
+              \end{itemize}
     \end{itemize}
+
+    \vspace{0.2cm}
 
     \begin{equation*}
-        \dot{\ell}_i = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i}
+        \dot{\ell}_i = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i},  \qquad  \sigma_i = \sum_{j \neq i} \tfrac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
     \end{equation*}
-
-    \begin{itemize}
-        \item $\lambda$: stress sensitivity parameter
-        \item $\sigma_i$: compressive stress on cell $i$
-    \end{itemize}
 
 \end{frame}
 
@@ -223,13 +228,17 @@
         \item Colony update rule:
     \end{itemize}
 
-    \begin{equation*}
-        \mathbfcal{C}^{k+1} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}
-    \end{equation*}
+    \begin{equation} \label{eq:colony_update}
+        \begin{aligned}
+            \mathbfcal{C}^{k+1}     & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F} \\
+            \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\mathbfcal{F})
+        \end{aligned}
+    \end{equation}
+
 
     \begin{itemize}
         \item Both models use identical framework
-        \item \textbf{Key difference:} How to compute $\mathbfcal{F}$?
+        \item \textbf{Key difference:} How to compute $\mathbfcal{F} \in \mathbb{R}^{6N}$?
               \begin{itemize}
                   \item Soft: Local pairwise forces
                   \item Hard: Global constraint solving
@@ -249,75 +258,131 @@
         \mathbf{F}^{\text{elastic}}_{ij} = k_{cc} \sqrt{d} \, \delta^{3/2} \, \hat{\mathbf{n}}
     \end{equation*}
 
-    \begin{itemize}
-        \item Advantages:
-              \begin{itemize}
-                  \item \cmark \; Simple, local calculations
-                  \item \cmark \; Embarrassingly parallel
-                  \item \cmark \; Low per-step cost
-              \end{itemize}
-        \item Disadvantages:
-              \begin{itemize}
-                  \item \xmark \; Numerically stiff ($\Delta t \sim 10^{-5}$ h)
-                  \item \xmark \; Allows cell overlap
-                  \item \xmark \; Effective cell size reduced
-              \end{itemize}
-    \end{itemize}
+
+    \vspace{0.2cm}
+
+
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Advantages:}
+            \begin{itemize}
+                \item \cmark \; Simple, local calculations
+                \item \cmark \; Embarrassingly parallel
+                \item \cmark \; Low per-step cost
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Disadvantages:}
+            \begin{itemize}
+                \item \xmark \; Numerically stiff ($\Delta t \sim 10^{-5}$ h)
+                \item \xmark \; Allows cell overlap
+                \item \xmark \; Effective cell size reduced
+            \end{itemize}
+        \end{column}
+    \end{columns}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Hard Collision Model}
+    \frametitle{Hard Collision Model: Overview}
 
     \begin{itemize}
-        \item Constraint-based approach
-        \item Enforces: $\mathbf{0} \leq \boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1} \geq \mathbf{0}$
+        \item Define gap function for each contact $c$:
+              \begin{equation*}
+                  \boldsymbol{\Phi}^k_c = \text{"signed distance at contact } c \text{ at time } k  \text{"}
+              \end{equation*}
+
+        \item Express contact forces and stresses based on multipliers $\boldsymbol{\gamma}$:
+        \item $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ and $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ represent "normalized" contributions
               \begin{itemize}
-                  \item $\boldsymbol{\gamma}$: contact forces (unknowns)
-                  \item $\mathbf{\Phi}^{k+1}$: separation distances
+                  \item Contact: $\mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D} \boldsymbol{\gamma}$
+                  \item Stress: $\boldsymbol{\sigma}(\boldsymbol{\gamma}) = \mathbfcal{L} \boldsymbol{\gamma}$
               \end{itemize}
-        \item Solved via energy minimization:
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \begin{itemize}
+        \item Three physical requirements:
+              \begin{enumerate}
+                  \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq \mathbf{0}$ Forces only push cells apart
+                  \item \textbf{No-Overlap:} $\boldsymbol{\Phi}^{k+1} \geq \mathbf{0}$ No overlap
+                  \item \textbf{Complementarity:} $\boldsymbol{\gamma}^\top \boldsymbol{\Phi}^{k+1} = \mathbf{0}$ No force at a distance
+              \end{enumerate}
+    \end{itemize}
+
+    \begin{center}
+        Combined: $\mathbf{0} \leq \boldsymbol{\gamma} \perp \boldsymbol{\Phi}^{k+1} \geq \mathbf{0}$
+    \end{center}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Hard Collision Model: Solution Strategy}
+    \begin{itemize}
+        \item Colony update with unknown forces:
+              \begin{equation}
+                  \begin{split}
+                      \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}(\boldsymbol{\gamma})  \\
+                      \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\boldsymbol{\gamma}) \\
+                      \text{s.t.} \quad & \mathbf{0} \leq \boldsymbol{\gamma} \perp \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}) \geq \mathbf{0}.
+                  \end{split}
+              \end{equation}
+        \item Challenge: $\boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma})$ depends on unknown forces!
+        \item Solution: Linearize around current state
     \end{itemize}
 
     \begin{equation*}
         \small
-        \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \boldsymbol{\gamma}^\top \mathbf{\Phi}^k + \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma} + \dots
+        \boldsymbol{\Phi}^{k+1} \approx \boldsymbol{\Phi}^k + \Delta t
+        \left(
+        \underbrace{\mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} \vphantom{\mathbfcal{L}^\top \left(\frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)}}_{\text{Motion}}
+        -
+        \underbrace{\mathbfcal{L}^\top \left(\frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right) \vphantom{\mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma}}}_{\text{Growth}}
+        \right)
     \end{equation*}
-
-    \begin{itemize}
-        \item Advantages:
-              \begin{itemize}
-                  \item \cmark \; Strict non-overlap
-                  \item \cmark \; Larger timesteps ($\Delta t \sim 3 \times 10^{-4}$ h)
-              \end{itemize}
-        \item Disadvantages:
-              \begin{itemize}
-                  \item \xmark \; High per-step cost (global solver)
-                  \item \xmark \; Complex implementation
-              \end{itemize}
-    \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Adaptive Timestepping}
+    \frametitle{Hard Collision Model: Implementation}
+
 
     \begin{itemize}
-        \item CFL-based adaptive timestep:
+        \item LCP reformulated as energy minimization:
+              \begin{equation*}
+                  \small
+                  \min_{\boldsymbol{\gamma} \geq \mathbf{0}} E(\boldsymbol{\gamma}) = \boldsymbol{\gamma}^\top \boldsymbol{\Phi}^k + \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma} + \mathbf{1}^\top \frac{\Delta t}{\lambda}
+                  \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
+              \end{equation*}
+        \item Key property: $\nabla E(\boldsymbol{\gamma}^*) = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*)$
+        \item Minimum satisfies all three constraints automatically!
+        \item Solve via BBPGD (Barzilai-Borwein Projected Gradient Descent)
     \end{itemize}
 
-    \begin{equation*}
-        \Delta t = \frac{0.5 \, \varepsilon}{u_m}
-    \end{equation*}
+    \vspace{0.3cm}
 
-    \begin{itemize}
-        \item $u_m$: median cell velocity
-        \item $\varepsilon = 10^{-3}$: solver tolerance
-        \item Ensures stable simulation throughout
-        \item Dynamically adjusts to colony state
-    \end{itemize}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Advantages:}
+            \begin{itemize}
+                \item \cmark \; Strict non-overlap
+                \item \cmark \; 30$\times$ larger timesteps
+                \item \cmark \; Accurate stress
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Disadvantages:}
+            \begin{itemize}
+                \item \xmark \; Global solver
+                \item \xmark \; High per-step cost
+                \item \xmark \; Complex implementation
+            \end{itemize}
+        \end{column}
+    \end{columns}
 
 \end{frame}
+
+
 
 \section{Pattern Formation}
 
@@ -448,6 +513,26 @@
 \end{frame}
 
 \section{Performance Analysis}
+
+\begin{frame}
+    \frametitle{Adaptive Timestepping}
+
+    \begin{itemize}
+        \item CFL-based adaptive timestep:
+    \end{itemize}
+
+    \begin{equation*}
+        \Delta t = \frac{0.5 \, \varepsilon}{u_m}
+    \end{equation*}
+
+    \begin{itemize}
+        \item $u_m$: median cell velocity
+        \item $\varepsilon = 10^{-3}$: solver tolerance
+        \item Ensures stable simulation throughout
+        \item Dynamically adjusts to colony state
+    \end{itemize}
+
+\end{frame}
 
 \begin{frame}
     \frametitle{Critical Timestep Comparison}
