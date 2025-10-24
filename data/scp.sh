@@ -1,4 +1,4 @@
-FOLDER=/dss/dsshome1/01/ge47wer3/build/src/cfl/
+FOLDER=/dss/dsshome1/01/ge47wer3/build/src/strong_scaling/
 # FOLDER=/dss/dsshome1/01/ge47wer3/build/src/lambda_grow/
 CURR_TIME=$(date +"%Y%m%d_%H%M%S")/
 
