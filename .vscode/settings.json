@@ -78,7 +78,8 @@
     "regex": "cpp",
     "strstream": "cpp",
     "span": "cpp",
-    "typeindex": "cpp"
+    "typeindex": "cpp",
+    "charconv": "cpp"
   },
   "cmake.sourceDirectory": "/home/manuel/MicrobeGrowthSim-IDP/code/cpp"
 }
