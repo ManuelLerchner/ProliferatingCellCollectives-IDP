@@ -104,17 +104,17 @@
 \maketitle
 
 \begin{abstract}
-    This work extends the hard (constraint-based) collision model introduced by Weady et al.~\cite{Weady2024} by systematically comparing it with a soft (potential-based) approach for simulating proliferating cell collectives. Both models are implemented within a unified computational framework, enabling direct benchmarking of bacterial colony growth.
+    This work extends the hard (constraint-based) collision model introduced by Weady et al.~\cite{Weady2024} by systematically comparing it with a soft (potential-based) approach for simulating proliferating cell collectives within a unified computational framework. Both models successfully reproduce experimentally observed concentric ring patterns and microdomain formation in small bacterial colonies, indicating that these macroscopic patterns are robust to the specific details of collision resolution.
 
-    Our results show that both approaches reproduce key experimentally observed patterns, including concentric rings and microdomain formation, but they involve distinct trade-offs. The hard model permits timesteps roughly 30 times larger than the soft model and achieves runtimes up to 9.36$\times$ faster. In contrast, the soft model suffers from numerical stiffness and allows unphysical cell overlap, producing packing fractions exceeding 5 in colony centers compared to the hard model's realistic 0.9.
+    At the microscopic scale, the models differ significantly. The hard model enforces strict non-overlap, maintaining realistic packing fractions around 0.9 and producing accurate stress distributions and microdomain structures. The soft model allows substantial, unphysical overlap, with packing fractions exceeding 5 in colony centers, resulting in distorted microdomains and elongated, unrealistic cell bundles. These artifacts limit its applicability for detailed analyses of cell-scale organization or mechanical stresses.
 
-    We also introduce an adaptive timestepping algorithm based on the Courant-Friedrichs-Lewy condition to dynamically select stable timesteps. Benchmarking reveals the hard model consistently outperforms the soft model across all colony sizes, successfully simulating colonies up to $R \approx 260$ with approximately 301,116 cells while maintaining physical accuracy.
+    Performance benchmarks show the hard model consistently outperforms the soft model, achieving up to 9.36 times faster runtimes on 112 cores due to timesteps that can be chosen roughly 30 times larger while maintaining numerical stability, along with better parallel scaling. Adaptive timestepping based on the Courant-Friedrichs-Lewy condition proves essential, for both models, to efficiently handle the rapidly changing configurations during colony growth.
 
-    Despite microscopic differences in packing and stress, both models produce similar macroscopic patterns at small scales, indicating that colony-level behavior exhibits some robustness to the collision resolution method. However, the soft model's severe overcrowding and distorted stress distributions make it unsuitable for quantitative analysis or large-scale simulations. We find that the hard model is strongly preferred for nearly all applications, offering both superior computational performance and physically meaningful results.
+    Overall, the hard model is strongly preferred for nearly all applications, while the soft model is limited to exploratory studies of very small colonies focused on macroscopic pattern formation rather than cell-scale details.
 \end{abstract}
 
 \begin{IEEEkeywords}
-    collision models, constraint-based simulation, potential-based repulsion, bacterial colony growth, proliferating cell collectives, adaptive timestepping, pattern formation, computational performance, stress-sensitive growth, microdomain formation
+    collision models, constraint-based simulation, potential-based repulsion, bacterial colony growth, proliferating cell collectives, adaptive timestepping, pattern formation, computational performance, stress-sensitive growth, microdomain formation, non-overlapping particle simulations, large-scale colony simulation, parallel computing, computational biology
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -154,6 +154,8 @@ In computational biology, agent-based models (ABMs) represent individual cells a
 
         The main drawback is computational cost and added complexity. Enforcing global non-overlap constraints requires iterative solvers operating on large coupled systems of equations, which creates a significant bottleneck. Modern implementations, however, can efficiently reduce the numerical stiffness associated with soft models, enabling much larger timesteps while maintaining geometric fidelity~\cite{Yan2019}. Nonetheless, the fundamental trade-off remains: higher cost per timestep due to constraint solving, but fewer timesteps required overall.
 \end{description}
+
+\newpage
 
 \subsection{The Benchmarking Gap}
 
