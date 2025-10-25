@@ -33,7 +33,6 @@
 \usepackage{empheq}
 \usepackage{varwidth}
 \usepackage{balance}
-\usepackage{todonotes}
 \usepackage{flushend} 
 \usepackage{stfloats}
 
@@ -179,15 +178,16 @@ At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \
 \end{equation}
 
 Here, $\mathbf{u}_i$ and $\boldsymbol{\omega}_i$ are the translational and angular velocities of cell $i$, $\mathbf{F}_{ij}$ is the force exerted on cell $i$ by cell $j$, $\zeta$ is the drag coefficient, and $\mathbf{r}_{ij}$ is the lever arm from the cell center to the contact point. \autoref{fig:spherocylinder_model} illustrates the model and the forces and torques during collision.
-\subsection{Cell Growth and Division}
+
+\subsection{Stress-Dependent Growth}
 
 Bacterial cells grow along their longitudinal axis according to the following model, adapted from~\cite{Weady2024SM}:
 
 \begin{equation} \label{eq:growth}
-    \dot{\ell}_i = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i}
+    \dot{\ell}_i = \frac{\ell_i}{\tau} e^{-\lambda^{'} \sigma_i}
 \end{equation}
 
-where $\tau$ is a characteristic timescale, $\sigma_i$ is the compressive stress along cell $i$'s main axis, and $\lambda$ is a stress sensitivity parameter. As the compressive stress increases, the effective growth rate $\dot{\ell}_i$ decreases toward zero, leading to slower elongation. When $\sigma_i = 0$, the cell grows exponentially with a rate determined solely by $\tau$.
+where $\tau$ is a characteristic timescale, $\sigma_i$ is the compressive stress along cell $i$'s main axis, and $\lambda^{'}$ is a stress sensitivity parameter. As the compressive stress increases, the effective growth rate $\dot{\ell}_i$ decreases toward zero, leading to slower elongation. When $\sigma_i = 0$, the cell grows exponentially with a rate determined solely by $\tau$.
 
 The stress on cell $i$ is computed by projecting contact forces onto the cell's longitudinal axis $\hat{\mathbf{t}}_i$:
 
@@ -195,7 +195,9 @@ The stress on cell $i$ is computed by projecting contact forces onto the cell's 
     \sigma_i = \sum_{j \neq i} \frac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
 \end{equation}
 
-In our simulations, the initial cell is initialized with length $\ell = 1$ and diameter $d = 0.5$. Cell division occurs when a cell reaches a critical length $\ell_{\text{crit}} = 2$, producing two daughter cells with lengths randomly sampled from $\left[0.98\,\frac{\ell_{\text{crit}}}{2},\, 1.02\,\frac{\ell_{\text{crit}}}{2}\right]$ to prevent artificial synchronization of division events~\cite{You2018}.
+Similar to \cite{Weady2024SM}, we nondimensionalize lengths by $\ell_0$, time by $\tau$, and stress by $\tau / (\zeta \ell_0^2)$, leaving the dimensionless growth sensitivity $\lambda = (\tau / \zeta \ell_0^2)\lambda^{'}$ as the only free parameter. Therefore we set $\ell_0 = 1$, $d = 0.5$, $\tau = 1$, and $\zeta = 1$.
+
+Cells divide at a critical length $\ell_{\text{crit}} = 2 \ell_0$, producing two daughters with lengths sampled from $\left[0.98 \ell_0, 1.02 \ell_0 \right]$ to avoid synchronized divisions~\cite{You2018}.
 
 \subsection{Rotational Diffusion}
 
@@ -264,9 +266,13 @@ To account for Brownian motion and other sources of random fluctuations, we appl
 
         \draw[<->,thick,dashed] ($(right_daughter) + (-2.3-\R-\R,-\R)$) -- ($(right_daughter) + (-2.3-\R-\R,\R)$) node[midway,left] {$d$};
 
-        \draw[<->,thick,dashed] ($(left_daughter) + (-1,-0.8)$) -- ($(left_daughter) + (1,-0.8)$) node[midway,below] {$\frac{\ell_{\text{crit}}}{2}$};
+        \draw[<->,thick,dashed] ($(left_daughter) + (-1,-0.8)$) -- ($(left_daughter) + (1,-0.8)$) node[midway,below] {
+            $\ell_{\text{daughter 1}}$
+        };
 
-        \draw[<->,thick,dashed] ($(right_daughter) + (-1,-0.8)$) -- ($(right_daughter) + (1,-0.8)$) node[midway,below] {$\frac{\ell_{\text{crit}}}{2}$};
+        \draw[<->,thick,dashed] ($(right_daughter) + (-1,-0.8)$) -- ($(right_daughter) + (1,-0.8)$) node[midway,below] {
+            $\ell_{\text{daughter 2}}$
+        };
 
 
 
@@ -282,7 +288,7 @@ To account for Brownian motion and other sources of random fluctuations, we appl
         node[midway, above] {$\boldsymbol{\omega}_j$};
 
     \end{tikzpicture}
-    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange), and also produce translational displacements of the cells. Cell division occurs when a cell reaches critical length $\ell_{\text{crit}} = 2$.}
+    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange), and also produce translational displacements of the cells. Cell division occurs when a cell reaches critical length $\ell_{\text{crit}}$.}
     \label{fig:spherocylinder_model}
 
 \end{figure}
@@ -350,7 +356,7 @@ The total force and torque on cell $n$ are computed by summing contributions fro
 
 \subsubsection{Model Parameters and Numerical Stability}
 
-The elastic constant is defined as $k_{cc} = \frac{Y}{\zeta}$, where $Y$ is the cell's Young's modulus and $\zeta$ is the fluid drag coefficient. Using typical bacterial parameters ($Y \approx 4$ MPa and $\zeta \approx 200$ Pa$\cdot$h)~\cite{You2018, Blanchard2015}, we set $k_{cc} = 20000$ h$^{-1}$. This value is sufficiently large to prevent significant overlap between cells. However, the steep, nonlinear nature of the Hertzian force law creates numerical stiffness: cells can undergo rapid acceleration when overlap occurs, potentially causing large position changes within a single timestep. To maintain stability, an extremely small timestep ($\Delta t \sim 10^{-5}$ h) is required~\cite{Khan_2024, You2018, Blanchard2015}. This timestep restriction is a well-known limitation of soft collision models and creates a significant computational bottleneck for large colonies.
+The elastic constant is defined as $k_{cc} = \frac{Y}{\zeta}$, where $Y$ is the cell's Young's modulus and $\zeta$ is the fluid drag coefficient. Using typical bacterial parameters ($Y \approx 4$ MPa and $\zeta \approx 200$ Pa$\cdot$h)~\cite{You2018, Blanchard2015}, we set $k_{cc} = 20000$ h$^{-1}$. This value is sufficiently large to prevent significant overlap between cells. However, the steep, nonlinear nature of the Hertzian force law creates numerical stiffness: cells can undergo rapid acceleration when overlap occurs, potentially causing large position changes within a single timestep. To maintain stability, an extremely small timestep ($\Delta t \sim 10^{-5}$) is required~\cite{Khan_2024, You2018, Blanchard2015}. This timestep restriction is a well-known limitation of soft collision models and creates a significant computational bottleneck for large colonies.
 
 \begin{figure}[H]
     \centering
@@ -421,8 +427,8 @@ The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a no
 
 \noindent Combining these two effects leads to the following approximation for $\mathbf{\Phi}^{k+1}$:
 
+{\small
 \begin{equation}\label{eq:phi_expanded}
-    \small
     \begin{split}
         \mathbf{\Phi}^{k+1}(\boldsymbol{\gamma}) & \approx \mathbf{\Phi}^k + \Delta t \left( \dot{\mathbf{\Phi}}_{\text{motion}} + \dot{\mathbf{\Phi}}_{\text{growth}} \right)\\
         & = \mathbf{\Phi}^k + \Delta t \left( (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}^k - (\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}} \right)\\
@@ -433,6 +439,7 @@ The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a no
         & \overset{\ddagger}{=} \mathbf{\Phi}^k + \Delta t \left( \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^\top \left(\frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)\right)
     \end{split}
 \end{equation}
+}
 
 \noindent where $\odot$ denotes the element-wise product.
 
@@ -444,8 +451,8 @@ Similarly, in $(\ddagger)$, the previously defined $\mathbfcal{L}$, which encode
 
 Substituting the approximation of $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ from \autoref{eq:phi_expanded} into the constraint conditions of \autoref{eq:colony_update_with_constraints} yields a nonlinear complementarity problem (NCP) for $\boldsymbol{\gamma}$ which no longer depends on the unknown future states $\mathbfcal{C}^{k+1}(\boldsymbol{\gamma})$ and $\boldsymbol{\ell}^{k+1}(\boldsymbol{\gamma})$:
 
+{\small
 \begin{empheq}[box=\fbox]{equation} \label{eq:ncp_boxed}
-    \small
     \begin{aligned}
          & \text{Find } \boldsymbol{\gamma} \ \text{such that} \\
          & \mathbf{0} \leq \boldsymbol{\gamma} \perp
@@ -458,32 +465,35 @@ Substituting the approximation of $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ fro
             \right) \right) \ge \mathbf{0}.
     \end{aligned}
 \end{empheq}
+}
 
 
 \subsubsection{Energy Minimization Solution}
 
 To solve this nonlinear complementarity problem efficiently, we reframe it as an optimization problem using a special energy function $E(\boldsymbol{\gamma})$ whose minimization under non-negativity constraints resolves the contact forces~\cite{CellModellerMaths}. Physically, $E(\boldsymbol{\gamma})$ represents the work done by the contact forces and the system's internal energy:
 
+{\small
 \begin{equation} \label{eq:energy_function}
-    \small
     \begin{aligned}
         \min_{\boldsymbol{\gamma} \geq \mathbf{0}}
         E(\boldsymbol{\gamma})
-        =   \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \;  \boldsymbol{\gamma}^\top \mathbf{\Phi}^k
+        = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \boldsymbol{\gamma}^\top \mathbf{\Phi}^k
          & +  \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma} \\
          & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
         \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
     \end{aligned}
 \end{equation}
+}
 
 By construction, the gradient of this energy equals the linearized separation distances $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ from \autoref{eq:phi_expanded}:
+{\small
 \begin{equation}
-    \small
     \begin{split}
         \nabla_{\boldsymbol{\gamma}} E & = \boldsymbol{\Phi}^k + \Delta t \left( \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} - \mathbfcal{L}^\top \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)  \right) \\
         & = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma})
     \end{split}
 \end{equation}
+}
 
 Because $E(\boldsymbol{\gamma})$ is convex, the constrained optimization problem has a unique global minimizer over the feasible region $\boldsymbol{\gamma} \geq \mathbf{0}$. We compute this minimum using a projected gradient method, which iteratively takes steps in the direction of the negative gradient and projects the result onto the feasible region to ensure repulsive forces.
 
@@ -511,7 +521,7 @@ A fundamental limitation of the linearization is that orthogonal motions, specif
 
 To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recursively generated linear complementarity problem (ReLCP) method. After each BBPGD convergence, ReLCP identifies any remaining overlaps by examining all pairwise cell distances, generates new constraints for these violations, and re-solves the complementarity problem with the augmented constraint set. This process iterates until all cell overlaps fall below the tolerance $\epsilon$. This hierarchical approach ensures that the non-overlap condition is strictly enforced, even in the presence of complex contact geometries and coupled motions (see \autoref{fig:bbpgd_residual}). The iterative refinement procedure typically converges within a small number of iterations, making it computationally tractable for most simulations~\cite{Weady2024SM}.
 
-Nevertheless, this approach still requires a sufficiently small timestep, $\Delta t \sim 2 \cdot 10^{-3}$ h (see \autoref{fig:cfl_vs_runtime}), to prevent excessive cell motion~\cite{Yan2022}. If cells move too far in a single timestep, new overlaps can form that the linearization does not capture, preventing constraint resolution. In practice, this can cause the BBPGD method to fail to converge or the ReLCP solver to be unable to resolve all overlaps within a reasonable number of iterations, leading to simulation failure.
+Nevertheless, this approach still requires a sufficiently small timestep, $\Delta t \sim 2 \cdot 10^{-3}$ (see \autoref{fig:cfl_vs_runtime}), to prevent excessive cell motion~\cite{Yan2022}. If cells move too far in a single timestep, new overlaps can form that the linearization does not capture, preventing constraint resolution. In practice, this can cause the BBPGD method to fail to converge or the ReLCP solver to be unable to resolve all overlaps within a reasonable number of iterations, leading to simulation failure.
 
 Despite this computational restriction, the hard model's timestep requirement is less severe than the soft model's, though it still represents a significant computational bottleneck for large colonies with millions of cells.
 
@@ -679,7 +689,7 @@ A direct consequence of the overcrowded interior in the soft model is its effect
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_colony_radius.png}
+        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time_vs_colony_radius.png}
         \caption{Simulation time vs. colony radius. Both models exhibit similar growth dynamics, though the soft model is slightly slower due to allowable cell overlap.}
         \label{fig:sim_time_vs_colony_radius}
     \end{subfigure}
@@ -831,14 +841,14 @@ As described in the previous section, tiny timesteps cause each rank to advance 
 
 In contrast, the hard model maintains a mostly constant timestep that is significantly larger than that of the soft model. This allows each rank to advance particles substantially between communication steps, effectively amortizing the cost of MPI exchanges over more computational work. Consequently, the hard model sustains a favorable computation-to-communication ratio, explaining its better scaling at moderate to high core counts.
 
-As shown in \autoref{fig:simulation_time_vs_dt}, the hard model stabilizes around $\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h, while the soft model steadily decreases to $\Delta t_{\text{soft}} \approx 10^{-5}$ h. The ratio $\Delta t_{\text{hard}}/\Delta t_{\text{soft}} \approx 35$ indicates that the hard model can take roughly 35 times larger steps than the soft model in dense colonies, requiring far fewer steps to simulate the same physical time. Notably, for the hard model with $\lambda = 10^{-2}$, the critical timestep even increases over time as interior cell growth slows (see \autoref{fig:radial_distribution_growth_rate}) and the overall median velocity $u_m$ decreases.
+As shown in \autoref{fig:simulation_time_vs_dt}, the hard model stabilizes around $\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$, while the soft model steadily decreases to $\Delta t_{\text{soft}} \approx 10^{-5}$. The ratio $\Delta t_{\text{hard}}/\Delta t_{\text{soft}} \approx 35$ indicates that the hard model can take roughly 35 times larger steps than the soft model in dense colonies, requiring far fewer steps to simulate the same physical time. Notably, for the hard model with $\lambda = 10^{-2}$, the critical timestep even increases over time as interior cell growth slows (see \autoref{fig:radial_distribution_growth_rate}) and the overall median velocity $u_m$ decreases.
 
 Using adaptive timestepping provides both stability and efficiency by adjusting the timestep to the colony's current dynamics. A fixed timestep cannot achieve this balance: steps that are too small waste computational effort when interactions are sparse, while steps that are too large can lead to numerical instability in dense regions. This adaptivity enables long-term simulations to proceed efficiently without compromising accuracy or stability.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time [s]_vs_dt.png}
-    \caption{Adaptive timestep $\Delta t$ for both collision models. The soft model requires a drastic reduction of $\Delta t$ ($\Delta t_{\text{soft}} \approx 10^{-5}$ h) to maintain stability, whereas the hard model maintains a significantly larger timestep ($\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h), allowing more computation per communication step.}
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time_vs_dt.png}
+    \caption{Adaptive timestep $\Delta t$ for both collision models. The soft model requires a drastic reduction of $\Delta t$ ($\Delta t_{\text{soft}} \approx 10^{-5}$) to maintain stability, whereas the hard model maintains a significantly larger timestep ($\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$), allowing more computation per communication step.}
     \label{fig:simulation_time_vs_dt}
 \end{figure}
 
@@ -970,7 +980,7 @@ Both models successfully reproduce the concentric ring patterns and microdomain 
 
 At the microscopic level, however, the models differ significantly. The hard model enforces strict non-overlap, maintaining a realistic packing fraction of about 0.9 and producing reliable stress distributions and microdomain structures. In contrast, the soft model allows significant, unphysical overlap, with packing fractions exceeding 5 in colony centers. This leads to distorted microdomain morphology and elongated, unrealistic cell bundles, particularly in large colonies or under low stress-sensitivity conditions. These artifacts limit the soft model's applicability for detailed analyses of cell-scale organization or mechanical stress distributions.
 
-Performance benchmarking shows that the hard model consistently outperforms the soft model across all colony sizes, achieving up to 9.36$\times$ faster runtimes on 112 cores. This advantage arises from its ability to use timesteps roughly 30 times larger ($\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ h vs. $\Delta t_{\text{soft}} \approx 10^{-5}$ h), which amortizes communication costs over more computational work. The hard model also exhibits better parallel scaling, maintaining reasonable speedup up to 64 cores, whereas the soft model scales poorly beyond 32 cores. Within a fixed 24-hour computational budget on 112 cores, the hard model simulated colonies up to $R \approx 260$ with approximately 301,116 cells while preserving physical accuracy.
+Performance benchmarking shows that the hard model consistently outperforms the soft model across all colony sizes, achieving up to 9.36$\times$ faster runtimes on 112 cores. This advantage arises from its ability to use timesteps roughly 30 times larger ($\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$ vs. $\Delta t_{\text{soft}} \approx 10^{-5}$), which amortizes communication costs over more computational work. The hard model also exhibits better parallel scaling, maintaining reasonable speedup up to 64 cores, whereas the soft model scales poorly beyond 32 cores. Within a fixed 24-hour computational budget on 112 cores, the hard model simulated colonies up to $R \approx 260$ with approximately 301,116 cells while preserving physical accuracy.
 
 The use of an adaptive timestepping algorithm based on the Courant-Friedrichs-Lewy condition proved essential for numerical stability, dynamically selecting timesteps suited to the colony state. For the hard model, an optimal CFL factor of approximately 2 was identified, balancing solver iterations per step against the total number of steps and minimizing runtime.
 
