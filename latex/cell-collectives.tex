@@ -919,25 +919,22 @@ There remains considerable potential to further improve the performance of BBPGD
 \subsection{Maximum Attainable Colony Size}
 \label{sec:maximum_colony_size}
 
-In this section, we explore the largest colony sizes that can be simulated within a fixed computational budget of 24 hours on 112 CPU cores of the \texttt{CoolMUC-4} cluster, using a stress sensitivity of $\lambda = 10^{-3}$ to promote the emergence of characteristic radial wave patterns. At these extreme scales, only the hard model is considered, as the soft model suffers from severe overcrowding and excessive cell overlap, which renders its results physically unreliable.
+In this section, we explore the largest colony sizes that can be simulated within a fixed computational budget of 24 hours on 112 CPU cores of the \texttt{CoolMUC-4} cluster, using a stress sensitivity of $\lambda = 10^{-3}$. At these extreme scales, only the hard model is considered, as the soft model suffers from severe overcrowding and excessive cell overlap, which renders its results physically unreliable.
 
 \autoref{fig:huge_colony_hard} shows a representative snapshot of the hard model colony at its maximum simulated size of $R = 260$, corresponding to approximately 301{,}116 distinct bacterial cells. The colony displays well-defined concentric density bands and a smooth outer boundary, demonstrating that the solver, contact-handling scheme, and domain decomposition remain stable and physically consistent even at this extreme scale.
 
-The computational cost of reaching such large colonies is illustrated in \autoref{fig:huge_wall_time_vs_radius_with_fit}. The wall time increases exponentially with colony radius, following approximately
-\[
-    T_\text{wall}\,[\mathrm{s}] \approx 241\, e^{0.0227R}.
-\]
+The computational cost of reaching such colony sizes is summarized in \autoref{fig:huge_wall_time_vs_radius_with_fit}. The wall time grows rapidly with colony radius and closely follows a fifth-degree polynomial fit given by $T_\text{wall}\,[\mathrm{h}] \approx 1.94\cdot10^{-11}\,R^{5} + 0.37$. Since the number of particles scales approximately as $N \propto R^{2}$, this implies a total runtime scaling of $T_\text{wall}\,[\mathrm{h}] \propto N^{2.5}$.
 
-The solver workload is illustrated in \autoref{fig:huge_bbpgd_iterations_per_step_vs_num_particles}, which displays the number of BBPGD iterations per timestep. At this scale, each timestep requires resolving about 5{,}131{,}551 contact constraints, distributed across 8 ReLCP phases. The number of BBPGD iterations grows roughly linearly with the number of particles, following $\text{Iter}_{\text{BBPGD}} \approx 0.0267N$, although two pronounced spikes of up to 25{,}000 iterations occur during the simulation.
+The solver workload is illustrated in \autoref{fig:huge_bbpgd_iterations_per_step_vs_num_particles}, which displays the number of BBPGD iterations per timestep. At this scale, each timestep requires resolving about 5{,}131{,}551 contact constraints, distributed across 8 ReLCP phases. The number of BBPGD iterations grows roughly linearly with the number of particles, although two pronounced spikes of up to 25{,}000 iterations occur during the simulation.
 
-\autoref{fig:huge_mode_length_wavelengths} presents the radial distribution of the average cell length at $R = 260$. Clear wave-like patterns with a characteristic wavelength of $\lambda \approx 25$ are observed, corresponding to the radial ring spacing visible in \autoref{fig:huge_colony_hard}.
+\autoref{fig:huge_mode_length_wavelengths} presents the radial distribution of the average cell length at $R = 260$. Clear wave-like patterns with a characteristic wavelength of $\lambda \approx 25$ are observed, corresponding to the ring spacing visible in \autoref{fig:huge_colony_hard}.
 
 Finally, \autoref{fig:huge_combined_stress_shared} shows the corresponding radial stress distribution. In contrast to the results in \autoref{fig:radial_distribution_stress}, the simulated stress profile closely follows the analytical prediction of Weady et al.~\cite{Weady2024SM}, indicating that at this scale, the continuum assumptions are well satisfied and discretization noise is largely suppressed.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/huge/huge_wall_time_vs_radius_with_fit.png}
-    \caption{Wall time as a function of colony radius. The runtime increases exponentially with system size.}
+    \caption{Wall time as a function of colony radius. The wall time roughly follows $T_\text{wall}\,[\mathrm{h}] \approx 1.94\cdot10^{-11}\,R^{5} + 0.37$.}
     \label{fig:huge_wall_time_vs_radius_with_fit}
 \end{figure}
 
