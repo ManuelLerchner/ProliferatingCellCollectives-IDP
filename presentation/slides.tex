@@ -1,7 +1,4 @@
-\documentclass[
-	10pt,
-	t
-]{beamer}
+\documentclass[10pt,t]{beamer}
 
 \usetheme{lmtslides}
 \usepackage{eso-pic}
@@ -21,26 +18,15 @@
 \usepackage{appendixnumberbeamer}
 \usepackage{subcaption}
 \usepackage{amssymb,amsmath,mleftright,mathtools}
-
-% Core packages
 \usepackage{cite}
 \usepackage[T1]{fontenc}
 \usepackage{hyperref}
-
-% Math packages
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{array,booktabs}
-
-% Graphics and layout
-\usepackage{graphicx}
-
-% Algorithm and code
 \usepackage{algorithm}
 \usepackage{algpseudocode} 
 \usepackage{algorithmicx}
 \usepackage{listings}
-
-% Text and formatting
 \usepackage{textcomp}
 \usepackage{url}
 \usepackage{caption} 
@@ -50,9 +36,33 @@
 \usepackage{balance}
 \usepackage{flushend} 
 \usepackage{stfloats}
+\usepackage{multimedia} % For embedding videos
+\usepackage{emoji}
 
 % TikZ for diagrams
 \usepackage{tikz}
+\usetikzlibrary{arrows.meta,shapes,positioning}
+\usetikzlibrary{calc,angles,quotes}
+
+% --- Macro for drawing a 2D spherocylinder ---
+% #1 = center coordinate
+% #2 = rotation angle
+% #3 = half-length
+% #4 = radius
+
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+
+\newcommand{\drawSpherocyl}[4]{
+    \begin{scope}[shift={(#1)},rotate=#2]
+        \draw[line width=1pt,rounded corners=6pt] (-#3 + #4,#4) -- (#3 - #4,#4);
+        \draw[line width=1pt,rounded corners=6pt] (-#3 + #4,-#4) -- (#3 - #4,-#4);
+        \draw[line width=1pt,rounded corners=6pt] (#3 - #4,-#4) arc[start angle=-90,end angle=90,radius=#4];
+        \draw[line width=1pt,rounded corners=6pt] (-#3 + #4,#4) arc[start angle=90,end angle=270,radius=#4];
+        \fill [black] (#1) circle (2pt);
+    \end{scope}
+}
+
+
 
 \DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
 
@@ -82,7 +92,7 @@
 \AtBeginSection[]
 {
     \begin{frame}
-        \frametitle{Table of Contents}
+        \frametitle{Outline}
         \tableofcontents[currentsection,currentsubsection]
     \end{frame}
 }
@@ -93,667 +103,941 @@
 
 \setcounter{framenumber}{0}
 
-\section{Introduction}
+% ============================================================
+% SECTION 1: MOTIVATION & CONTEXT
+% ============================================================
+
+\section{Motivation}
 
 \begin{frame}
-    \frametitle{Biological Motivation}
-
-    \begin{itemize}
-        \item Bacterial colonies exhibit complex emergent patterns
-              \begin{itemize}
-                  \item Concentric rings
-                  \item Microdomain formation
-                  \item Stress-dependent growth
-              \end{itemize}
-        \item Observed in \textit{E. coli}, \textit{Bacillus subtilis}, fungi
-    \end{itemize}
-
-    \vspace{0.3cm}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.7\textwidth]{figures/figures_paper/real-bacteria/Exserohilum turcicum.png}
-        \caption{\scriptsize{\textit{Exserohilum turcicum} showing concentric rings}}
-    \end{figure}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{The Challenge}
-
-    \begin{itemize}
-        \item How to simulate dense, proliferating cell collectives?
-              \begin{itemize}
-                  \item Large number of cells (100,000+)
-                  \item Continuous growth and division
-                  \item Complex mechanical interactions
-              \end{itemize}
-        \item Two fundamental approaches exist:
-              \begin{itemize}
-                  \item \textbf{Soft Model:} Potential-based repulsion
-                  \item \textbf{Hard Model:} Constraint-based rigid bodies
-              \end{itemize}
-        \item \textbf{Question:} Which approach is better?
-    \end{itemize}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Research Gap}
-
-    \begin{itemize}
-        \item Both approaches widely used in literature
-        \item But: No systematic comparison exists!
-              \begin{itemize}
-                  \item Previous work validates against experiments
-                  \item No rigorous computational benchmarking
-                  \item Unclear performance trade-offs
-              \end{itemize}
-        \item This work:
-              \begin{itemize}
-                  \item Unified framework implementing both models
-                  \item Direct performance comparison
-                  \item Analysis of biological fidelity vs. efficiency
-              \end{itemize}
-    \end{itemize}
-
-\end{frame}
-
-\section{Cell Mechanics}
-
-\begin{frame}
-    \frametitle{Spherocylinder Model}
-
-    \begin{itemize}
-        \item Cells modeled as rigid spherocylinders
-              \begin{itemize}
-                  \item Length $\ell$ (variable, grows over time)
-                  \item Diameter $d = 0.5$ (fixed)
-                  \item Position $\mathbf{x}$ and orientation $\mathbf{q}$ (quaternion)
-              \end{itemize}
-        \item Division when $\ell = \ell_{\text{crit}} = 2$
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.8\textwidth]{figures/spherocylinder_model.png}
-        \caption{\scriptsize{Spherocylinder geometry and collision forces}}
-    \end{figure}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Equations of Motion and Growth}
-
-    \begin{itemize}
-        \item Overdamped Langevin equation:
-              \begin{itemize}
-                  \item Neglect inertia due to viscous environment
-                  \item Cell velocities proportional to net forces
-              \end{itemize}
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \begin{equation*}
-        \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_{j \neq i} \mathbf{F}_{ij}, \qquad
-        \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_{j \neq i} \mathbf{r}_{ij} \times \mathbf{F}_{ij}
-    \end{equation*}
-
-    \begin{itemize}
-        \item Stress-sensitive growth:
-              \begin{itemize}
-                  \item $\lambda$: stress sensitivity parameter
-                  \item $\sigma_i$: compressive stress on cell $i$
-              \end{itemize}
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \begin{equation*}
-        \dot{\ell}_i = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i},  \qquad  \sigma_i = \sum_{j \neq i} \tfrac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
-    \end{equation*}
-
-\end{frame}
-
-\section{Implementation}
-
-\begin{frame}
-    \frametitle{Unified Computational Framework}
-
-    \begin{itemize}
-        \item Global colony state: $\mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}$
-        \item Colony update rule:
-    \end{itemize}
-
-    \begin{equation} \label{eq:colony_update}
-        \begin{aligned}
-            \mathbfcal{C}^{k+1}     & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{U} = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F} \\
-            \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\mathbfcal{F})
-        \end{aligned}
-    \end{equation}
-
-
-    \begin{itemize}
-        \item Both models use identical framework
-        \item \textbf{Key difference:} How to compute $\mathbfcal{F} \in \mathbb{R}^{6N}$?
-              \begin{itemize}
-                  \item Soft: Local pairwise forces
-                  \item Hard: Global constraint solving
-              \end{itemize}
-    \end{itemize}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Soft Collision Model}
-
-    \begin{itemize}
-        \item Hertzian contact model:
-    \end{itemize}
-
-    \begin{equation*}
-        \mathbf{F}^{\text{elastic}}_{ij} = k_{cc} \sqrt{d} \, \delta^{3/2} \, \hat{\mathbf{n}}
-    \end{equation*}
-
-
-    \vspace{0.2cm}
-
+    \frametitle{Computational Biology: A Growing Field}
 
     \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{Advantages:}
+        \begin{column}{0.58\textwidth}
+            \textbf{Why simulate biological systems?}
             \begin{itemize}
-                \item \cmark \; Simple, local calculations
-                \item \cmark \; Embarrassingly parallel
-                \item \cmark \; Low per-step cost
+                \item Link micro-to macroscopic behavior
+                \item Test hypotheses in silico
+                \item Guide experimental design
+                \item Often just look beautiful
+            \end{itemize}
+
+            \vspace{0.3cm}
+
+            \textbf{The computational challenge:}
+            \begin{itemize}
+                \item Large system sizes
+                \item Complex interactions
+                \item Long timescales
             \end{itemize}
         \end{column}
+
         \begin{column}{0.5\textwidth}
-            \textbf{Disadvantages:}
-            \begin{itemize}
-                \item \xmark \; Numerically stiff ($\Delta t \sim 10^{-5}$ h)
-                \item \xmark \; Allows cell overlap
-                \item \xmark \; Effective cell size reduced
-            \end{itemize}
+            \centering
+            \begin{figure}
+                \centering
+                \includegraphics[width=\textwidth]{figures/figures_paper/real-bacteria/Exserohilum turcicum.png}
+                \caption*{\scriptsize{Real fungal colony showing ring patterns~\cite{Bankole2023}.}}
+            \end{figure}
         \end{column}
     \end{columns}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Hard Collision Model: Overview}
+    \frametitle{The Performance Gap in Biological Modeling}
 
+    \begin{block}{Common Practice: Focus on Biological Insight}
+        \begin{itemize}
+            \item Pick a model that \textit{can} reproduce qualitative behavior.
+            \item Tune parameters until the output ``looks right''.
+            \item Publish biological findings.
+            \item \textbf{Runtime? Scaling?, Source Code?} Often unreported.
+        \end{itemize}
+    \end{block}
+
+    \vspace{0.1cm}
+
+    \begin{alertblock}{The Neglected Computational Core}
+        \begin{itemize}
+            \item \textbf{Algorithmic Efficiency:} Can we optimize further?
+            \item \textbf{Performance Scaling:} How does it handle larger systems?
+            \item \textbf{Speed vs. Accuracy:} What are the concrete trade-offs?
+            \item \textbf{Model Comparisons:} Are different methods equivalent?
+        \end{itemize}
+    \end{alertblock}
+\end{frame}
+
+\begin{frame}
+    \frametitle{This Work: Comparing Collision Models}
+
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \textbf{Research Questions:}
+            \begin{enumerate}
+                \item Do different collision models produce the same biological patterns?
+                      \begin{itemize}
+                          \item Ring formation
+                          \item Microdomain structure
+                          \item Cell density
+                      \end{itemize}
+                \item Which model is faster?
+                \item Which approach scales better?
+                \item When should each be used?
+            \end{enumerate}
+        \end{column}
+
+        \begin{column}{0.4\textwidth}
+
+            \vspace{-0.8cm}
+            \begin{figure}
+                \centering
+                \begin{subfigure}{0.63\textwidth}
+                    \centering
+                    \includegraphics[width=\textwidth]{figures/figures_paper/comparison_plots/density_hard.jpeg}
+                    \caption{{Model 1}}
+                \end{subfigure}
+                \vfill
+                \begin{subfigure}{0.63\textwidth}
+                    \centering
+                    \includegraphics[width=\textwidth]{figures/figures_paper/comparison_plots/density_soft.jpeg}
+                    \caption{{Model 2}}
+                \end{subfigure}
+            \end{figure}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+% ============================================================
+% SECTION 2: BIOLOGICAL SYSTEM
+% ============================================================
+
+\section{The Biological System}
+
+\begin{frame}
+    \frametitle{Core Biological Mechanism}
+
+    \begin{center}
+        \begin{tikzpicture}[node distance=3cm, auto]
+            \tikzstyle{block} = [rectangle, draw, fill=blue!20, text width=6em, text centered, rounded corners, minimum height=3em]
+            \tikzstyle{arrow} = [thick,->,>=stealth]
+            \tikzstyle{redarrow} = [line width=2pt, red, ->,>=stealth]
+
+            \node [block] (growth) {Cell Growth and Division};
+            \node [block, right of=growth] (collision) {Collisions};
+            \node [block, below of=collision] (stress) {Mechanical Stress};
+            \node [block, left of=stress] (inhibit) {Growth Inhibition};
+
+            \draw [arrow] (growth) -- (collision);
+            \draw [redarrow] (collision) -- (stress);
+            \draw [arrow] (stress) -- (inhibit);
+            \draw [arrow] (inhibit) -- (growth);
+        \end{tikzpicture}
+    \end{center}
+
+    \vspace{0.2cm}
+
+    \begin{itemize}
+        \item We compare two methods to turn collisions into forces.
+    \end{itemize}
+
+\end{frame}
+
+% ============================================================
+% SECTION 3: MATHEMATICAL MODEL
+% ============================================================
+
+\section{Mathematical Framework}
+
+\begin{frame}
+    \frametitle{Cell Representation}
+
+    \begin{itemize}
+        \item Length $\ell(t)$ grows over time
+        \item Diameter $d = 0.5$ fixed
+        \item Position $\mathbf{x} \in \mathbb{R}^3$, Orientation $\mathbf{q} \in \mathbb{R}^4$
+        \item Divide at $\ell_\text{crit} = 2 \ell_0$
+        \item Contacts produce forces $\mathbf{F}_{ij}$ and torques
+    \end{itemize}
+
+    \vspace{.7cm}
+
+    \begin{center}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.6\textwidth]{figures/spherocylinder_model.png}
+        \end{figure}
+    \end{center}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Equations of Motion}
+
+    \textbf{Overdamped dynamics (Re $\ll$ 1):}
+    \begin{itemize}
+        \item Viscous forces dominate, inertia negligible
+        \item Cells behave like ``swimmers in honey''
+    \end{itemize}
+
+    \textbf{Translational motion:}
+    \begin{equation*}
+        \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_{j \neq i} \mathbf{F}_{ij}
+    \end{equation*}
+
+    \textbf{Rotational motion:}
+    \begin{equation*}
+        \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_{j \neq i} \mathbf{r}_{ij} \times \mathbf{F}_{ij}
+    \end{equation*}
+
+    \vspace{0.5cm}
+
+    \begin{center}
+        \textit{Velocity instantly proportional to force}
+    \end{center}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Growth Model}
+
+    \textbf{Stress-dependent growth:}
+    \begin{itemize}
+        \item Exponential growth
+        \item Inhibited by longitudinal stress
+    \end{itemize}
+
+    \textbf{Growth rate:}
+    \begin{equation*}
+        \dot{\ell}_i   = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i}
+    \end{equation*}
+
+    \textbf{Longitudinal stress:}
+
+    \begin{equation*}
+        \sigma_i  = \sum_{j \neq i} \tfrac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
+    \end{equation*}
+
+    \vspace{0.1cm}
+
+    \begin{center}
+        \begin{tikzpicture}[line cap=round,line join=round,>=Stealth, scale=0.7]
+            % --- Variables ---
+            \coordinate (xi) at (0.8,-0.5);
+            \coordinate (xj) at (2.68,-1.0);
+
+            \def\R{0.5}
+
+            \drawSpherocyl{xi}{-10}{1.4}{\R}
+            \drawSpherocyl{xj}{60}{1.3}{\R}
+
+            \coordinate (contact) at  (2.09,-0.92);
+
+            % Collision point
+            \fill[black] (contact) circle (2pt) node[above right] {};
+
+            % Force vector
+            \draw[->,thick,red] (contact) -- ++($.9*(-0.86,0.5)$) node[pos=1,below] {$\mathbf{F}_{ij}$};
+
+            % Force vector
+            \draw[->,thick,red] (contact) -- ++($.9*(0.86,-0.5)$) node[pos=0.5,below] {$\mathbf{F}_{ji}$};
+
+            % Orientation vectors t_hat
+            \draw[->,thick,blue] (xi) -- ++($-0.8*(cos{-10},sin{-10})$) node[pos=1.2] {$\hat{\mathbf{t}}_i$};
+            \draw[->,thick,blue] (xj) -- ++($0.8*(cos{60},sin{60})$) node[pos=1.2] {$\hat{\mathbf{t}}_j$};
+
+        \end{tikzpicture}
+    \end{center}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Numerical Integration Framework}
+
+    \textbf{Colony state vector:}
+    \begin{equation*}
+        \mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}
+    \end{equation*}
+
+    \textbf{Total Force vector:}
+    \begin{equation*}
+        \mathbfcal{F}  = [\dots, \mathbf{f}_n^\top,\;\boldsymbol{\tau}_n^\top,\;\dots]^\top \in \mathbb{R}^{6N}
+    \end{equation*}
+
+    \vspace{0.8cm}
+
+    \textbf{Euler integration:}
+    \begin{equation*}
+        \begin{aligned}
+            \mathbfcal{C}^{k+1}     & = \mathbfcal{C}^k + \Delta t \, \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F} \\
+            \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\mathbfcal{F})
+        \end{aligned}
+    \end{equation*}
+
+    \vspace{0.1cm}
+
+    \begin{center}
+        \colorbox{yellow!30}{
+            \textbf{How to compute forces $\mathbfcal{F}$?}
+        }
+    \end{center}
+
+\end{frame}
+
+% ============================================================
+% SECTION 4: COLLISION MODELS
+% ============================================================
+
+\section{Collision Models}
+
+\begin{frame}
+    \frametitle{Two Paradigms}
+
+    \vspace{-0.5cm}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Soft Model}
+                \textbf{Potential-based}
+
+                \begin{itemize}
+                    \item Local pairwise forces
+                    \item Allows overlap
+                    \item Simple calculation
+                    \item Similar to MD simulations
+                \end{itemize}
+
+                \begin{equation*}
+                    \begin{align}
+                                  & \mathbf{F}_{ij} = k \delta^{3/2} \hat{\mathbf{n}} \\
+                        \text{  } &
+                    \end{align}
+                \end{equation*}
+                \vfill
+            \end{block}
+        \end{column}
+
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Hard Model \cite{Weady2024}}
+                \textbf{Constraint-based}
+
+                \begin{itemize}
+                    \item Global optimization
+                    \item Strict non-overlap
+                    \item Complex solver
+                    \item Based on Contact Mechanics
+                \end{itemize}
+
+                \begin{equation*}
+                    \begin{align}
+                                     & \mathbf{F}_{ij} = \gamma_{ij} \hat{\mathbf{n}}                              \\
+                        \text{s.t. } & \mathbf{0} \leq \boldsymbol{\gamma} \perp \boldsymbol{\Phi} \geq \mathbf{0}
+                    \end{align}
+                \end{equation*}
+                \vfill
+            \end{block}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Soft Model: Hertzian Contact}
+
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{equation*}
+                \mathbf{F}_{ij} = k_{cc} \sqrt{d} \, \delta^{3/2} \, \hat{\mathbf{n}}
+            \end{equation*}
+
+            \vspace{0.3cm}
+
+            \textbf{Characteristics:}
+            \begin{itemize}
+                \item[$+$] Embarrassingly parallel
+                \item[$+$] Simple implementation
+                \item[$+$] Local calculations
+                \item[$-$] Numerically stiff
+                \item[$-$] Tiny timesteps ($10^{-5}$)
+                \item[$-$] Allows overlap
+            \end{itemize}
+        \end{column}
+
+        \begin{column}{0.5\textwidth}
+            \begin{figure}
+                \centering
+                \includegraphics[width=\textwidth]{figures/figures_paper/hertzian_contact_model.png}
+                \caption*{\scriptsize{Force increases with overlap}}
+            \end{figure}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Hard Model: Constraint Framework}
+
+    \textbf{Key idea: Introduce non-overlap constraints}
     \begin{itemize}
         \item Define gap function for each contact $c$:
               \begin{equation*}
                   \boldsymbol{\Phi}^k_c = \text{"signed distance at contact } c \text{ at time } k  \text{"}
               \end{equation*}
 
-        \item Express contact forces and stresses based on multipliers $\boldsymbol{\gamma}$:
-        \item $\mathbfcal{D} \in \mathbb{R}^{6N \times C}$ and $\mathbfcal{L} \in \mathbb{R}^{N \times C}$ represent "normalized" contributions
+        \item Express forces based on lagrange multipliers $\boldsymbol{\gamma}$:
               \begin{itemize}
                   \item Contact: $\mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D} \boldsymbol{\gamma}$
                   \item Stress: $\boldsymbol{\sigma}(\boldsymbol{\gamma}) = \mathbfcal{L} \boldsymbol{\gamma}$
               \end{itemize}
     \end{itemize}
 
-    \vspace{0.2cm}
+    \vspace{0.3cm}
 
-    \begin{itemize}
-        \item Three physical requirements:
-              \begin{enumerate}
-                  \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq \mathbf{0}$ Forces only push cells apart
-                  \item \textbf{No-Overlap:} $\boldsymbol{\Phi}^{k+1} \geq \mathbf{0}$ No overlap
-                  \item \textbf{Complementarity:} $\boldsymbol{\gamma}^\top \boldsymbol{\Phi}^{k+1} = \mathbf{0}$ No force at a distance
-              \end{enumerate}
-    \end{itemize}
+    \textbf{Physical requirements:}
+    \begin{enumerate}
+        \item {Repulsive Forces:} \hspace{2.42cm}  $\boldsymbol{\gamma} \geq \mathbf{0}$
+        \item {No overlap in next step:} \hspace{1cm} $\boldsymbol{\Phi}^{k+1} \geq \mathbf{0}$
+        \item {No force at distance:} \hspace{1cm} $\boldsymbol{\gamma}^\top \boldsymbol{\Phi}^{k+1} = 0$
+    \end{enumerate}
 
-    \begin{center}
-        Combined: $\mathbf{0} \leq \boldsymbol{\gamma} \perp \boldsymbol{\Phi}^{k+1} \geq \mathbf{0}$
-    \end{center}
 \end{frame}
 
-\begin{frame}
-    \frametitle{Hard Collision Model: Solution Strategy}
-    \begin{itemize}
-        \item Colony update with unknown forces:
-              \begin{equation}
-                  \begin{split}
-                      \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}(\boldsymbol{\gamma})  \\
-                      \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\boldsymbol{\gamma}) \\
-                      \text{s.t.} \quad & \mathbf{0} \leq \boldsymbol{\gamma} \perp \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}) \geq \mathbf{0}.
-                  \end{split}
-              \end{equation}
-        \item Challenge: $\boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma})$ depends on unknown forces!
-        \item Solution: Linearize around current state
-    \end{itemize}
 
-    \begin{equation*}
-        \small
-        \boldsymbol{\Phi}^{k+1} \approx \boldsymbol{\Phi}^k + \Delta t
-        \left(
-        \underbrace{\mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma} \vphantom{\mathbfcal{L}^\top \left(\frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)}}_{\text{Motion}}
-        -
-        \underbrace{\mathbfcal{L}^\top \left(\frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right) \vphantom{\mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D} \boldsymbol{\gamma}}}_{\text{Growth}}
-        \right)
+\begin{frame}
+    \frametitle{Hard Model: Mathematical Formulation}
+
+    \textbf{Update equations with constraints:}
+    \begin{equation} \label{eq:colony_update_with_constraints}
+        \begin{split}
+            \mathbfcal{C}^{k+1} & = \mathbfcal{C}^k + \Delta t \mathbfcal{G}^k \mathbfcal{M}^k \mathbfcal{F}(\boldsymbol{\gamma})  \\
+            \boldsymbol{\ell}^{k+1} & = \boldsymbol{\ell}^k + \Delta t \, \dot{\boldsymbol{\ell}}(\boldsymbol{\gamma}) \\
+            \text{s.t.} \quad & \mathbf{0} \leq \boldsymbol{\gamma} \perp \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}) \geq \mathbf{0}.
+        \end{split}
+    \end{equation}
+
+    \textbf{Reformulate as energy minimization:}
+    \begin{equation*} \label{eq:energy_function}
+        \min_{\boldsymbol{\gamma} \geq \mathbf{0}}
+        E(\boldsymbol{\gamma})
+        = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \boldsymbol{\gamma}^\top \boldsymbol{\Phi}^k
+        +  \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma}
+        + \mathbf{1}^\top \frac{\Delta t}{\lambda}
+        \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
     \end{equation*}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Hard Collision Model: Implementation}
-
-
-    \begin{itemize}
-        \item LCP reformulated as energy minimization:
-              \begin{equation*}
-                  \small
-                  \min_{\boldsymbol{\gamma} \geq \mathbf{0}} E(\boldsymbol{\gamma}) = \boldsymbol{\gamma}^\top \boldsymbol{\Phi}^k + \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma} + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-                  \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
-              \end{equation*}
-        \item Key property: $\nabla E(\boldsymbol{\gamma}^*) = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*)$
-        \item Minimum satisfies all three constraints automatically!
-        \item Solve via BBPGD (Barzilai-Borwein Projected Gradient Descent)
-    \end{itemize}
 
     \vspace{0.3cm}
 
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{Advantages:}
-            \begin{itemize}
-                \item \cmark \; Strict non-overlap
-                \item \cmark \; 30$\times$ larger timesteps
-                \item \cmark \; Accurate stress
-            \end{itemize}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \textbf{Disadvantages:}
-            \begin{itemize}
-                \item \xmark \; Global solver
-                \item \xmark \; High per-step cost
-                \item \xmark \; Complex implementation
-            \end{itemize}
-        \end{column}
-    \end{columns}
+    \textbf{Solve via convex optimization:}
+    \begin{itemize}
+        \item Solve for $\boldsymbol{\gamma}^{*}$ that minimizes $E(\boldsymbol{\gamma}^{*} )$
+        \item Guarantees satisfaction of all constraints
+        \item (See Paper for derivation)
+    \end{itemize}
+
 
 \end{frame}
 
-
-
-\section{Pattern Formation}
-
 \begin{frame}
-    \frametitle{Concentric Ring Patterns}
+    \frametitle{Hard Model: Solver Pipeline}
 
-    \begin{itemize}
-        \item Both models reproduce experimental patterns
-        \item Effect of stress sensitivity $\lambda$:
+    \begin{enumerate}
+        \item \textbf{BBPGD Solver:} Projected gradient descent
               \begin{itemize}
-                  \item $\lambda = 10^{-4}$: No rings (weak inhibition)
-                  \item $\lambda = 10^{-3}$: Clear rings (optimal)
-                  \item $\lambda = 10^{-2}$: Rings dissipate (strong inhibition)
+                  \item Iteratively minimize $E(\boldsymbol{\gamma})$
+                  \item Typically $\sim$2500 iterations
+                  \item Converges to tolerance $\epsilon = 10^{-3}$
               \end{itemize}
-        \item Macroscopic features comparable
-        \item But: microscopic differences visible
+
+              \vspace{0.3cm}
+
+        \item \textbf{ReLCP Refinement:} Remove residual overlaps
+              \begin{itemize}
+                  \item Detect remaining violations
+                  \item Add new constraints
+                  \item Re-solve (typically 6 iterations)
+              \end{itemize}
+    \end{enumerate}
+
+    \vspace{0.5cm}
+
+    \textbf{Characteristics:}
+    \begin{itemize}
+        \item[$+$] Larger timesteps ($3 \cdot 10^{-4}$)
+        \item[$+$] Strict non-overlap
+        \item[$-$] High per-step cost
+        \item[$-$] Complex implementation
     \end{itemize}
 
-    \vspace{0.2cm}
+\end{frame}
 
+% ============================================================
+% SECTION 5: BIOLOGICAL VALIDATION
+% ============================================================
+
+\section{Pattern Formation Results}
+
+\begin{frame}
+    \frametitle{Concentric Rings: Qualitative Comparison}
+
+    % Suggest: Show side-by-side video comparison here if available
+    % \movie[width=0.45\textwidth]{}{hard_growth.mp4} \hfill \movie[width=0.45\textwidth]{}{soft_growth.mp4}
+
+
+    \vspace{-0.3cm}
     \begin{figure}
         \centering
-        \includegraphics[width=0.3\textwidth]{figures/figures_paper/growth/hard_e-2/hard_e-2.0199.jpeg}
-        \includegraphics[width=0.3\textwidth]{figures/figures_paper/growth/hard_e-3/hard_e-3.0198.jpeg}
-        \includegraphics[width=0.3\textwidth]{figures/figures_paper/growth/hard_e-4/hard_e-4.0192.jpeg}
-        \caption{\scriptsize{Colony evolution with $\lambda = 10^{-3}$}}
+        \begin{tabular}{r M{0.25\textwidth} M{0.25\textwidth} M{0.25\textwidth}}
+                                                                                                             & $\lambda = 10^{-4}$   & $\lambda = 10^{-3}$      & $\lambda = 10^{-2}$
+            \\[3pt]
+            \textbf{Hard}                                                                                    &
+            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-4/hard_e-4.0192.jpeg} &
+            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-3/hard_e-3.0198.jpeg} &
+            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-2/hard_e-2.0199.jpeg}                                                                               \\[3pt]
+
+            \textbf{Soft}                                                                                    &
+            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-4/soft_e-4.0198.jpeg} &
+            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-3/soft_e-3.0187.jpeg} &
+            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-2/soft_e-2.0200.jpeg}                                                                               \\[3pt]
+
+                                                                                                             & \scriptsize{No rings} & \scriptsize{Clear rings} & \scriptsize{Dissipating}
+        \end{tabular}
     \end{figure}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Critical Difference: Cell Packing}
+    \frametitle{The Critical Difference: Packing Density}
 
     \begin{columns}
         \begin{column}{0.5\textwidth}
-            \textbf{Hard Model:}
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.9\textwidth]{figures/figures_paper/comparison_plots/density_hard.jpeg}
+                \caption*{\textbf{Hard Model}}
+            \end{figure}
+
+            \vspace{-0.2cm}
+
             \begin{itemize}
-                \item Packing fraction $\approx 0.9$
+                \item Packing fraction $\phi \approx 0.9$
                 \item Physically realistic
-                \item Sharp, well-defined patterns
+                \item Sharp boundaries
             \end{itemize}
-            \centering
-            \begin{figure*}
-                \includegraphics[width=0.65\textwidth]{figures/figures_paper/comparison_plots/density_hard.jpeg}
-            \end{figure*}
         \end{column}
+
         \begin{column}{0.5\textwidth}
-            \textbf{Soft Model:}
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.9\textwidth]{figures/figures_paper/comparison_plots/density_soft.jpeg}
+                \caption*{\textbf{Soft Model}}
+            \end{figure}
+
+            \vspace{-0.2cm}
+
             \begin{itemize}
-                \item Packing fraction up to 5!
+                \item Packing fraction $\phi > 5$ !
                 \item Unphysical overlap
-                \item Fuzzy, dense appearance
+                \item Fuzzy appearance
             \end{itemize}
-            \centering
-            \begin{figure*}
-                \includegraphics[width=0.65\textwidth]{figures/figures_paper/comparison_plots/density_soft.jpeg}
-            \end{figure*}
         \end{column}
     \end{columns}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Quantifying the Packing Problem}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/figures_paper/comparison_plots/combined_radial_packing_fraction.png}
+    \end{figure}
+
+    \begin{itemize}
+        \item Soft model: extreme center overcrowding
+        \item Gets worse at low $\lambda$ (weak inhibition)
+        \item Hard model: constant realistic packing
+    \end{itemize}
 
 \end{frame}
 
 \begin{frame}
     \frametitle{Microdomain Formation}
 
-    \begin{itemize}
-        \item Microdomains: regions of aligned cells
-        \item Small colonies ($R \approx 50$):
-              \begin{itemize}
-                  \item Both models produce similar patterns
-                  \item Match experimental observations
-              \end{itemize}
-        \item Large colonies ($R \approx 100$):
-              \begin{itemize}
-                  \item Hard model: consistent patch sizes
-                  \item Soft model: elongated bundles (artifact!)
-              \end{itemize}
-        \item Soft model unsuitable for:
-              \begin{itemize}
-                  \item Large colonies
-                  \item Low stress sensitivity regimes
-              \end{itemize}
-    \end{itemize}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
 
-    \begin{figure}[h!]
-        \centering
-        \begin{subfigure}[b]{0.48\textwidth}
-            \centering
-            \includegraphics[width=0.65\textwidth]{figures/figures_paper/orientation_comparisons/r50_hard_e-2.jpeg}
-            \caption{\scriptsize{Hard material}}
-        \end{subfigure}
-        \hfill
-        \begin{subfigure}[b]{0.48\textwidth}
-            \centering
-            \includegraphics[width=0.65\textwidth]{figures/figures_paper/orientation_comparisons/r50_soft_e-2.jpeg}
-            \caption{\scriptsize{Soft material}}
-        \end{subfigure}
-        \caption{\scriptsize{Packing density comparison}}
-    \end{figure}
+            \textbf{Small colonies ($R \approx 50$):}
+            \begin{itemize}
+                \item Both work well
+                \item Similar patch structure
+                \item Matches experiments
+            \end{itemize}
 
-\end{frame}
+            \vspace{0.5cm}
 
-\begin{frame}
-    \frametitle{Stress Distribution}
+            \textbf{Large colonies:}
+            \begin{itemize}
+                \item Hard: consistent patches
+                \item Soft: elongated bundles
+                \item Artifact from overcrowding
+            \end{itemize}
+        \end{column}
 
-    \begin{itemize}
-        \item Both models show qualitatively similar profiles
-        \item But: magnitude differs significantly
-              \begin{itemize}
-                  \item Hard: 2$\times$ higher than analytical prediction
-                  \item Soft: 0.5$\times$ lower than prediction
-              \end{itemize}
-        \item Consequence:
-              \begin{itemize}
-                  \item Soft model: higher interior growth rates
-                  \item Hard model: stronger mechanical inhibition
-              \end{itemize}
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.7\textwidth]{figures/figures_paper/comparison_plots/combined_stress_shared.png}
-        \caption{\scriptsize{Radial stress profiles}}
-    \end{figure}
+        \begin{column}{0.5\textwidth}
+            \vspace{-2.3cm}
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.62\textwidth]{figures/figures_paper/orientation_comparisons/zoomed_images/hard_e-3_orient.jpeg}
+                \caption*{\scriptsize{Hard: realistic patches}}
+            \end{figure}
+            \vspace{-0.7cm}
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.62\textwidth]{figures/figures_paper/orientation_comparisons/zoomed_images/soft_e-3_orient.jpeg}
+                \caption*{\scriptsize{Soft: elongated bundles}}
+            \end{figure}
+        \end{column}
+    \end{columns}
 
 \end{frame}
 
-\section{Performance Analysis}
+
+% ============================================================
+% SECTION 6: COMPUTATIONAL PERFORMANCE
+% ============================================================
+
+\section{Computational Performance}
 
 \begin{frame}
-    \frametitle{Adaptive Timestepping}
+    \frametitle{Adaptive Timestepping Strategy}
 
-    \begin{itemize}
-        \item CFL-based adaptive timestep:
-    \end{itemize}
-
+    \textbf{CFL-based criterion:}
     \begin{equation*}
         \Delta t = \frac{0.5 \, \varepsilon}{u_m}
     \end{equation*}
 
+    where $u_m$ = median cell velocity, $\varepsilon = 10^{-3}$ = tolerance
+
+    \vspace{0.5cm}
+
+    \textbf{Benefits:}
     \begin{itemize}
-        \item $u_m$: median cell velocity
-        \item $\varepsilon = 10^{-3}$: solver tolerance
-        \item Ensures stable simulation throughout
-        \item Dynamically adjusts to colony state
+        \item Prevents excessive motion per step
+        \item Adapts to colony dynamics
+        \item Maintains numerical stability
+        \item Essential for both models
     \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Critical Timestep Comparison}
-
-    \begin{itemize}
-        \item Hard model: $\Delta t_{\text{hard}} \approx 3 \times 10^{-4}$ h
-        \item Soft model: $\Delta t_{\text{soft}} \approx 1 \times 10^{-5}$ h
-        \item Ratio: $\sim$30$\times$ larger steps for hard model!
-    \end{itemize}
-
-    \vspace{0.2cm}
+    \frametitle{The Timestep Divide}
 
     \begin{figure}
         \centering
-        \includegraphics[width=0.9\textwidth]{figures/figures_paper/comparison_plots/combined_simulation_time [s]_vs_dt.png}
+        \includegraphics[width=0.8\textwidth]{figures/figures_paper/comparison_plots/combined_simulation_time_vs_dt.png}
     \end{figure}
 
 \end{frame}
 
+
 \begin{frame}
-    \frametitle{Runtime: Small Colonies}
+    \frametitle{Parallel Architecture}
 
-    \begin{itemize}
-        \item Target: colony radius $R = 100$
-        \item Hard model wins at low core counts
-              \begin{itemize}
-                  \item $\sim$20\% faster
-                  \item Fewer timesteps needed
-              \end{itemize}
-        \item Runtimes converge at high core counts
-        \item Soft model scales better
-    \end{itemize}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Implementation:}
+            \begin{itemize}
+                \item MPI + PETSc framework
+                \item Distributed vectors/matrices
+                \item Angular sector decomposition
+                \item Ghost particle exchange
+            \end{itemize}
 
-    \vspace{0.2cm}
+            \vspace{0.3cm}
+
+            \textbf{Benchmarking:}
+            \begin{itemize}
+                \item CoolMUC-4 cluster
+                \item Up to 112 cores
+            \end{itemize}
+        \end{column}
+
+        \begin{column}{0.5\textwidth}
+            \vspace{-1cm}
+            \begin{figure}
+                \centering
+                \includegraphics[width=\textwidth]{figures/figures_paper/runtimes/domain_decomposition.jpeg}
+                \caption*{\scriptsize{Domain decomposition with 8 MPI ranks}}
+            \end{figure}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Strong Scaling: Runtime to reach $R=100$}
 
     \begin{figure}
         \centering
         \includegraphics[width=0.8\textwidth]{figures/figures_paper/runtimes/strong_scaling_runtime_hard_soft.png}
     \end{figure}
 
-\end{frame}
-
-\begin{frame}
-    \frametitle{Per-Particle Efficiency}
-
+    \textbf{Key results:}
     \begin{itemize}
-        \item Soft model: 2 orders of magnitude faster per particle
-        \item But: requires more particles!
-              \begin{itemize}
-                  \item Higher packing density
-                  \item More cells for same colony size
-              \end{itemize}
-        \item Hard model:
-              \begin{itemize}
-                  \item 21 constraints per cell (ReLCP)
-                  \item Global solver overhead
-              \end{itemize}
-        \item Trade-off determines overall performance
+        \item Hard model is always faster!
+        \item Both model slow down at high core counts
     \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Maximum Colony Size}
+    \frametitle{Strong Scaling: Speedup}
 
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/figures_paper/runtimes/strong_scaling_speedup_hard_soft.png}
+    \end{figure}
+
+    \textbf{Scaling limits:}
     \begin{itemize}
-        \item Fixed budget: 24h on 112 CPUs
-        \item Hard model: $R_{\text{max}} \approx 195$ (168,339 cells)
-        \item Soft model: $R_{\text{max}} \approx 210$ (1,033,108 cells)
-        \item Soft model wins for large colonies!
-              \begin{itemize}
-                  \item Per-particle efficiency dominates
-                  \item Despite simulating 6$\times$ more cells
-              \end{itemize}
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.7\textwidth]{figures/figures_paper/comparison_plots/huge_wall_time_vs_radius.png}
-    \end{figure}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Backup: BBPGD Convergence}
-
-    \begin{itemize}
-        \item BBPGD: Barzilai-Borwein projected gradient descent
-        \item Typical convergence: $\sim$2500 iterations
-        \item Dominates runtime (85\% of computation)
-        \item Residual directly represents maximum overlap
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.9\textwidth]{figures/figures_paper/comparison_plots/bbpgd_residual.png}
-    \end{figure}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Backup: Radial Packing Fraction}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=\textwidth]{figures/figures_paper/comparison_plots/combined_radial_packing_fraction.png}
-    \end{figure}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Backup: Growth Rate Profiles}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=\textwidth]{figures/figures_paper/comparison_plots/combined_radial_impedance.png}
-    \end{figure}
-
-\end{frame}
-
-\section{Conclusion}
-
-\begin{frame}
-    \frametitle{Summary of Findings}
-
-    \begin{itemize}
-        \item Both models reproduce macroscopic patterns
-              \begin{itemize}
-                  \item Concentric rings
-                  \item Microdomain formation
-                  \item Stress-dependent growth
-              \end{itemize}
-        \item Critical microscopic differences:
-              \begin{itemize}
-                  \item Hard: realistic packing, accurate stress
-                  \item Soft: unphysical overlap, distorted microdomains
-              \end{itemize}
-        \item Performance trade-off:
-              \begin{itemize}
-                  \item Hard: better for $R \leq 100$
-                  \item Soft: better for $R > 100$
-              \end{itemize}
+        \item Communication overhead dominates at high ranks
+        \item Larger timesteps amortize communication costs
     \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-    \frametitle{Model Selection Guide}
+    \frametitle{Maximum Colony Size (24h budget, 112 cores)}
 
+    \begin{columns}
+        \begin{column}{0.4\textwidth}
+            \textbf{Hard Model:}
+            \begin{itemize}
+                \item $R_{\max} = 260$
+                \item 301,116 cells
+                \item Maintains accuracy
+                \item Larger accessible scales
+            \end{itemize}
+
+            \vspace{0.5cm}
+
+            \textbf{Scaling:}
+            \begin{itemize}
+                \item $T[h] \propto R^5 \propto N^{2.5}$
+                \item $\mathcal{O}(N)$ BBPGD iterations per step
+                \item Many sparse matrix-vector products
+            \end{itemize}
+        \end{column}
+
+        \begin{column}{0.6\textwidth}
+            \begin{figure}
+                \centering
+                \includegraphics[width=\textwidth]{figures/figures_paper/huge/huge_wall_time_vs_radius_with_fit.png}
+            \end{figure}
+        \end{column}
+
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{BBPGD Solver Performance}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/figures_paper/huge/huge_bbpgd_iterations_per_step_vs_num_particles.png}
+    \end{figure}
+
+    \begin{itemize}
+        \item Dominates runtime (90\% of computation)
+        \item Scales roughly linearly with particle count
+    \end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Maximum Colony Visualization ($R = 260$, 301k cells)}
+
+    % Suggest: Show video of largest simulation here
+    % \movie[width=0.9\textwidth]{}{huge_colony_growth.mp4}
+
+    \vspace{-0.3cm}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.6\textwidth]{figures/figures_paper/huge/huge_hard.jpeg}
+    \end{figure}
+
+\end{frame}
+
+
+% ============================================================
+% SECTION 7: SYNTHESIS & CONCLUSIONS
+% ============================================================
+
+\section{Discussion}
+
+\begin{frame}
+    \frametitle{Model Comparison Summary}
+
+    \vspace{-0.5cm}
     \begin{table}
         \centering
-        \small
-        \begin{tabular}{lcc}
-            \toprule
-            \textbf{Criterion}  & \textbf{Hard Model} & \textbf{Soft Model} \\
+        \begin{tabular}{lcccc}
+                                              & \multicolumn{2}{c}{\textbf{Soft}} & \multicolumn{2}{c}{\textbf{Hard}}                                              \\
+            \cmidrule(lr){2-3} \cmidrule(lr){4-5}
+            \textbf{Criterion}
+                                              & \shortstack{Small                                                                                                  \\Colonies}
+                                              & \shortstack{Large                                                                                                  \\Colonies}
+                                              & \shortstack{Small                                                                                                  \\Colonies}
+                                              & \shortstack{Large                                                                                                  \\Colonies} \\
             \midrule
-            Packing fidelity    & \cmark              & \xmark              \\
-            Stress accuracy     & \cmark              & \xmark              \\
-            Microdomain quality & \cmark              & \xmark              \\
-            Small colonies      & \cmark              & \xmark              \\
-            Large colonies      & \xmark              & \cmark              \\
-            Scalability         & \xmark              & \cmark              \\
-            Implementation      & \xmark              & \cmark              \\
-            \bottomrule
+            \multicolumn{5}{l}{\textit{Biological Fidelity:}}                                                                                                      \\
+            $\quad$  Ring formation           & \cmark                            & \cmark                            & \cmark        & \cmark                     \\
+            $\quad$  Packing density          & \cmark                            & \xmark                            & \cmark        & \cmark                     \\
+            $\quad$  Microdomain quality      & \cmark                            & \xmark                            & \cmark        & \cmark                     \\
+            \midrule
+            \multicolumn{5}{l}{\textit{Performance:}}                                                                                                              \\
+            $\quad$ Runtime                   & \cmark \cmark                     & \xmark \xmark \textup{*}          & \cmark        & \cmark \cmark              \\
+            $\quad$ Parallel scalability      & \xmark                            & \cmark \cmark \textup{*}          & \xmark        & \cmark \cmark              \\
+            $\quad$ Implementation complexity & \cmark \cmark                     & \cmark \cmark                     & \emoji{skull} & \emoji{skull}\emoji{skull} \\
         \end{tabular}
     \end{table}
 
     \vspace{0.3cm}
-
-    \textbf{Recommendation:}
-    \begin{itemize}
-        \item Hard model: when accuracy matters
-        \item Soft model: for large-scale pattern studies
-    \end{itemize}
+    \footnotesize{\textup{*} Actual soft model performance degrades significantly due to timestep reduction.}
 
 \end{frame}
+
+\begin{frame}
+    \frametitle{When to use each Model?}
+
+    \vspace{-0.1cm}
+    \begin{block}{Hard Model (Recommended for most applications)}
+        \textbf{Use when:}
+        \begin{itemize}
+            \item Accurate stress distributions needed
+            \item Cell-scale phenomena matter
+            \item Realistic packing required
+        \end{itemize}
+
+        \textbf{Advantages:} Superior performance, physical accuracy
+    \end{block}
+
+    \begin{block}{Soft Model (Limited use cases)}
+        \textbf{Only consider when:}
+        \begin{itemize}
+            \item Preliminary exploration of small systems ($R \lesssim 50$)
+            \item Only macroscopic patterns of interest
+        \end{itemize}
+
+        \textbf{Warning:} Artifacts limit applicability
+    \end{block}
+
+\end{frame}
+
+
+% ============================================================
+% SECTION 8: FUTURE WORK
+% ============================================================
+
+\section{Future Directions}
 
 \begin{frame}
     \frametitle{Future Work}
 
-    \begin{itemize}
-        \item Adaptive resource allocation
-              \begin{itemize}
-                  \item Scale MPI ranks with colony growth
-                  \item Reduce idle processors
-              \end{itemize}
-        \item GPU acceleration
+    \begin{enumerate}
+        \item \textbf{Hard Model Solver Improvements}
               \begin{itemize}
                   \item Leverage PETSc GPU support
-                  \item Offload BBPGD solver
+                  \item Warm-start BBPGD with previous solution
               \end{itemize}
-        \item Integration with MD libraries
+
+              \vspace{0.3cm}
+
+        \item \textbf{Soft Model Enhancements}
               \begin{itemize}
-                  \item Use AutoPas for soft model
-                  \item Automatic parameter tuning
+                  \item Consider overlap, in adaptive timestepping.
+                  \item Consider alternatives to prevent overlap
+                  \item Reduce communication overhead
               \end{itemize}
-        \item Improved adaptive timestepping
+
+              \vspace{0.3cm}
+
+        \item \textbf{More Applications}
               \begin{itemize}
-                  \item Consider overlap, not just velocity
-                  \item Warm-start BBPGD solver
+                  \item Other cell shapes (soft bodies?)
+                  \item More complex models (Nutrient fields?, Outside forces?)
+                  \item Utilize 3D capabilities
               \end{itemize}
-    \end{itemize}
+    \end{enumerate}
 
 \end{frame}
+
+
+% ============================================================
+% CONCLUSIONS
+% ============================================================
+
+\section*{Conclusions}
 
 \begin{frame}
     \begin{center}
         \vspace{1cm}
-        {\large \textbf{Thank you for your attention!}}
+        {\LARGE \textbf{Thank you for your attention!}}
 
-        \vspace{2cm}
+        \vspace{1.5cm}
 
         \Huge{Questions?}
+
+        \vspace{1.5cm}
+
+        \normalsize
+        \texttt{manuel.lerchner@tum.de}
+
+        \vspace{0.3cm}
+
+        \small
+        Code: \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP}
+
+        \vspace{0.2cm}
+
+        Supplementary materials: \url{https://home.cit.tum.de/~ler/bacteria/}
     \end{center}
 \end{frame}
 
+\begin{frame}[allowframebreaks, noframenumbering]
+    \frametitle{References}
+    \footnotesize
+    \bibliographystyle{apalike}
+    \bibliography{../latex/literature}
+\end{frame}
+
+% ============================================================
+% BACKUP SLIDES
+% ============================================================
+
 \appendix
 
+\begin{frame}
+    \frametitle{Backup: BBPGD Convergence}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/figures_paper/bbpgd/bbpgd_residual.png}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Backup: BBPGD Energy Evolution}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=\textwidth]{figures/figures_paper/bbpgd/bbpgd_total_energy.png}
+    \end{figure}
+
+\end{frame}
 
 \end{document}
