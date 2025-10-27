@@ -36,7 +36,6 @@
 \usepackage{balance}
 \usepackage{flushend} 
 \usepackage{stfloats}
-\usepackage{multimedia} % For embedding videos
 \usepackage{emoji}
 
 % TikZ for diagrams
@@ -210,10 +209,10 @@
 \end{frame}
 
 % ============================================================
-% SECTION 2: BIOLOGICAL SYSTEM
+% SECTION 3: MATHEMATICAL MODEL
 % ============================================================
 
-\section{The Biological System}
+\section{Mathematical Framework}
 
 \begin{frame}
     \frametitle{Core Biological Mechanism}
@@ -243,12 +242,6 @@
     \end{itemize}
 
 \end{frame}
-
-% ============================================================
-% SECTION 3: MATHEMATICAL MODEL
-% ============================================================
-
-\section{Mathematical Framework}
 
 \begin{frame}
     \frametitle{Cell Representation}
@@ -353,16 +346,14 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Numerical Integration Framework}
+    \frametitle{Mathematical Formulation}
 
-    \textbf{Colony state vector:}
+    \textbf{Colony Representation:}
     \begin{equation*}
-        \mathbfcal{C} = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N}
-    \end{equation*}
-
-    \textbf{Total Force vector:}
-    \begin{equation*}
-        \mathbfcal{F}  = [\dots, \mathbf{f}_n^\top,\;\boldsymbol{\tau}_n^\top,\;\dots]^\top \in \mathbb{R}^{6N}
+        \begin{align}
+            \mathbfcal{C}     & = [\dots, \mathbf{x}_n^\top, \mathbf{q}_n^\top, \dots]^\top \in \mathbb{R}^{7N} \\
+            \boldsymbol{\ell} & = [\dots, \ell_n, \dots]^\top \in \mathbb{R}^{N}
+        \end{align}
     \end{equation*}
 
     \vspace{0.8cm}
@@ -509,7 +500,7 @@
 
     \vspace{0.3cm}
 
-    \textbf{Physical requirements:}
+    \textbf{Solve for $\boldsymbol{\gamma}$ such that:}
     \begin{enumerate}
         \item {Repulsive Forces:} \hspace{2.42cm}  $\boldsymbol{\gamma} \geq \mathbf{0}$
         \item {No overlap in next step:} \hspace{1cm} $\boldsymbol{\Phi}^{k+1} \geq \mathbf{0}$
@@ -553,38 +544,59 @@
 
 \end{frame}
 
+
 \begin{frame}
-    \frametitle{Hard Model: Solver Pipeline}
+    \frametitle{Energy Surface and BBPGD}
 
-    \begin{enumerate}
-        \item \textbf{BBPGD Solver:} Projected gradient descent
-              \begin{itemize}
-                  \item Iteratively minimize $E(\boldsymbol{\gamma})$
-                  \item Typically $\sim$2500 iterations
-                  \item Converges to tolerance $\epsilon = 10^{-3}$
-              \end{itemize}
+    \vspace{-0.5cm}
+    \begin{columns}[c]
+        \begin{column}{0.4\textwidth}
+            \begin{figure}
+                \centering
+                \includegraphics[width=1\textwidth]{figures/constraints_example_small.jpeg}
+            \end{figure}
+        \end{column}
 
-              \vspace{0.3cm}
-
-        \item \textbf{ReLCP Refinement:} Remove residual overlaps
-              \begin{itemize}
-                  \item Detect remaining violations
-                  \item Add new constraints
-                  \item Re-solve (typically 6 iterations)
-              \end{itemize}
-    \end{enumerate}
-
-    \vspace{0.5cm}
-
-    \textbf{Characteristics:}
-    \begin{itemize}
-        \item[$+$] Larger timesteps ($3 \cdot 10^{-4}$)
-        \item[$+$] Strict non-overlap
-        \item[$-$] High per-step cost
-        \item[$-$] Complex implementation
-    \end{itemize}
+        \begin{column}{0.65\textwidth}
+            \begin{figure}
+                \centering
+                \includegraphics[width=1\textwidth]{figures/energy_surface_contours.png}
+            \end{figure}
+        \end{column}
+    \end{columns}
 
 \end{frame}
+
+\begin{frame}
+    \frametitle{Hard Model: Performance Characteristics}
+
+    \vspace{0.5cm
+    }
+    \begin{columns}[c] % center vertically
+        % Left column: text
+        \begin{column}{0.45\textwidth}
+            \textbf{Characteristics:}
+            \begin{itemize}
+                \item[$+$] Larger timesteps ($10^{-3}$)
+                \item[$+$] Strict non-overlap
+                \item[$-$] High per-step cost
+                \item[$-$] Complex implementation
+            \end{itemize}
+        \end{column}
+
+        % Right column: image
+        \begin{column}{0.65\textwidth}
+
+            \begin{figure}
+                \centering
+                \includegraphics[width=\textwidth]{figures/figures_paper/bbpgd/bbpgd_total_energy.png}
+            \end{figure}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+
 
 % ============================================================
 % SECTION 5: BIOLOGICAL VALIDATION
@@ -593,10 +605,31 @@
 \section{Pattern Formation Results}
 
 \begin{frame}
-    \frametitle{Concentric Rings: Qualitative Comparison}
+    \frametitle{Concentric Ring Formation}
 
-    % Suggest: Show side-by-side video comparison here if available
-    % \movie[width=0.45\textwidth]{}{hard_growth.mp4} \hfill \movie[width=0.45\textwidth]{}{soft_growth.mp4}
+    \begin{columns}[c]
+        % Left column: Hard model
+        \begin{column}{0.48\textwidth}
+            \centering
+            \textbf{Hard Model}\\[0.3em]
+            {\includegraphics[width=\textwidth]{figures/figures_paper/growth/hard_e-3/hard_e-3.0198.jpeg}}\\[0.6em]
+            \small
+            \href{https://home.cit.tum.de/~ler/bacteria/videos/hard_e-3.mp4}{\textcolor{blue}{{View video}}}
+        \end{column}
+
+        % Right column: Soft model
+        \begin{column}{0.48\textwidth}
+            \centering
+            \textbf{Soft Model}\\[0.3em]
+            {\includegraphics[width=\textwidth]{figures/figures_paper/growth/soft_e-3/soft_e-3.0187.jpeg}}\\[0.6em]
+            \small
+            \href{https://home.cit.tum.de/~ler/bacteria/videos/soft_e-3.mp4}{\textcolor{blue}{{View video}}}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Ring Formation Across Parameters}
 
 
     \vspace{-0.3cm}
@@ -661,7 +694,7 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Quantifying the Packing Problem}
+    \frametitle{Radial Packing Fraction Profiles}
 
     \begin{figure}
         \centering
@@ -836,7 +869,7 @@
                 \item Larger accessible scales
             \end{itemize}
 
-            \vspace{0.5cm}
+            \vspace{0.2cm}
 
             \textbf{Scaling:}
             \begin{itemize}
@@ -858,33 +891,13 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{BBPGD Solver Performance}
+    \frametitle{Largest Colony (R = 260, 301k cells)}
 
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.8\textwidth]{figures/figures_paper/huge/huge_bbpgd_iterations_per_step_vs_num_particles.png}
-    \end{figure}
-
-    \begin{itemize}
-        \item Dominates runtime (90\% of computation)
-        \item Scales roughly linearly with particle count
-    \end{itemize}
-
-\end{frame}
-
-
-\begin{frame}
-    \frametitle{Maximum Colony Visualization ($R = 260$, 301k cells)}
-
-    % Suggest: Show video of largest simulation here
-    % \movie[width=0.9\textwidth]{}{huge_colony_growth.mp4}
-
-    \vspace{-0.3cm}
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.6\textwidth]{figures/figures_paper/huge/huge_hard.jpeg}
-    \end{figure}
-
+    \begin{center}
+        {\includegraphics[width=0.9\textwidth]{figures/figures_paper/huge/huge_cropped.jpeg}}\\[0.6em]
+        \small
+        \href{https://home.cit.tum.de/~ler/bacteria/videos/huge_high_quality.jpeg}{\textcolor{blue}{{View Full Image}}}
+    \end{center}
 \end{frame}
 
 
@@ -1035,25 +1048,5 @@
 % ============================================================
 
 \appendix
-
-\begin{frame}
-    \frametitle{Backup: BBPGD Convergence}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.9\textwidth]{figures/figures_paper/bbpgd/bbpgd_residual.png}
-    \end{figure}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Backup: BBPGD Energy Evolution}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=\textwidth]{figures/figures_paper/bbpgd/bbpgd_total_energy.png}
-    \end{figure}
-
-\end{frame}
 
 \end{document}
