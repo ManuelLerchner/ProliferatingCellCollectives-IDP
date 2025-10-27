@@ -149,7 +149,7 @@ In computational biology, agent-based models (ABMs) represent individual cells a
         However, soft models suffer from two key limitations. First, the stiffness of repulsive potentials creates numerical instability, requiring very small timesteps to maintain accuracy and prevent divergence. Second, the finite range of repulsive forces means cells behave as elastically deformable objects rather than rigid bodies, effectively reducing their geometric diameter below the intended size~\cite{Yan2019}. This deformation accumulates and can distort simulation results, particularly in dense regions.
 
     \item[Hard (Constraint-Based) Models]
-        Hard models enforce strict non-overlapping constraints, treating cells as geometrically rigid and impenetrable. Constraint-based methods are widely used in physics simulations~\cite{Tasora2008,Macklin2014,Li2021,Ferguson2021}, and have also been adapted for biological systems~\cite{Rudge2012,Weady2024,Yan2019}.
+        Hard models enforce strict non-overlapping constraints, treating cells as geometrically rigid and impenetrable. Constraint-based methods are widely used in physics simulations~\cite{Tasora2008,Macklin2014,Li2021,Ferguson2021,Yan_2020}, and have also been adapted for biological systems~\cite{Rudge2012,Weady2024,Yan2019}.
 
         The main drawback is computational cost and added complexity. Enforcing global non-overlap constraints requires iterative solvers operating on large coupled systems of equations, which creates a significant bottleneck. Modern implementations, however, can efficiently reduce the numerical stiffness associated with soft models, enabling much larger timesteps while maintaining geometric fidelity~\cite{Yan2019}. Nonetheless, the fundamental trade-off remains: higher cost per timestep due to constraint solving, but fewer timesteps required overall.
 \end{description}
@@ -416,7 +416,7 @@ The colony update rule and additional conditions combine to form a system where 
 
 \subsubsection{Linearization of the Constraint Condition}
 
-The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and the updated lengths $\boldsymbol{\ell}^{k+1}$, and is non-trivial to compute directly. Weady et al.~\cite{Weady2024SM} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ using a Taylor expansion around the current state $\mathbfcal{C}^k$ and lengths $\boldsymbol{\ell}^k$.
+The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a nonlinear function of the updated state $\mathbfcal{C}^{k+1}$ and the updated lengths $\boldsymbol{\ell}^{k+1}$, and is non-trivial to compute directly. Weady et al.~\cite{Weady2024SM} and Yan et al.~\cite{Yan_2020} propose a linearization approach to approximate $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ using a Taylor expansion around the current state:
 
 \noindent The change in $\mathbf{\Phi}$ in our model arises from two main effects:
 
@@ -443,7 +443,7 @@ The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a no
 
 \noindent where $\odot$ denotes the element-wise product.
 
-Here $(\dagger)$, we use the previously introduced $\mathbfcal{D}$, noting that $\mathbfcal{D}^\top = (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \mathbfcal{G}^k$. The transpose $\mathbfcal{D}^\top$ can thus be interpreted as a Jacobian mapping velocities in $\mathbb{R}^{6N}$ first to changes in the colony state (via $\mathbfcal{G}^k$) and then to changes in the signed distance functions $\mathbf{\Phi}$ (see~\cite{Weady2024SM, Tasora2008} for details).
+Here $(\dagger)$, we use the previously introduced $\mathbfcal{D}$, noting that $\mathbfcal{D}^\top = (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \mathbfcal{G}^k$. The transpose $\mathbfcal{D}^\top$ can thus be interpreted as a Jacobian mapping velocities in $\mathbb{R}^{6N}$ first to changes in the colony state (via $\mathbfcal{G}^k$) and then to changes in the signed distance functions $\mathbf{\Phi}$ (see~\cite{Weady2024SM, Tasora2008,Yan_2020} for details).
 
 Similarly, in $(\ddagger)$, the previously defined $\mathbfcal{L}$, which encodes stress contributions from each constraint, has a transpose $\mathbfcal{L}^\top$ that maps stress-induced changes in cell lengths $\boldsymbol{\ell}$ to variations in $\mathbf{\Phi}$ (see~\cite{Weady2024SM} for details).
 
@@ -470,7 +470,7 @@ Substituting the approximation of $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ fro
 
 \subsubsection{Energy Minimization Solution}
 
-To solve this nonlinear complementarity problem efficiently, we reframe it as an optimization problem using a special energy function $E(\boldsymbol{\gamma})$ whose minimization under non-negativity constraints resolves the contact forces~\cite{CellModellerMaths}. Physically, $E(\boldsymbol{\gamma})$ represents the work done by the contact forces and the system's internal energy:
+To solve this nonlinear complementarity problem efficiently, we reframe it as an optimization problem using a special energy function $E(\boldsymbol{\gamma})$ whose minimization under non-negativity constraints resolves the contact forces~\cite{CellModellerMaths,Yan_2020}. Physically, $E(\boldsymbol{\gamma})$ represents the work done by the contact forces and the system's internal energy:
 
 {\small
 \begin{equation} \label{eq:energy_function}
@@ -543,7 +543,7 @@ Built on these abstractions, the framework implements the full physics pipeline,
 
 Collisions are processed through a unified pipeline designed to decouple geometry from physics. The process consists of two phases: broad-phase detection using a spatial grid (reducing neighbor searches to $O(N)$) and narrow-phase detection that computes exact contact points and geometric information. For each collision detected, the framework assembles a standardized data structure containing contact points, normals, and lever arms. This structure is passed to either the hard or soft collision model, which computes the resulting forces and torques. This abstraction allows seamless switching between collision models without altering the overall simulation flow.
 
-Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$. As this threshold is larger than zero, it captures both overlapping and closely adjacent cells. This overapproximation is crucial for the stability of the hard model. For the soft model, those non-overlapping cell-pairs contribute no forces (since $\delta < 0$), while for the hard model they provide additional global information that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022}.
+Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$. As this threshold is larger than zero, it captures both overlapping and closely adjacent cells. This overapproximation is crucial for the stability of the hard model. For the soft model, those non-overlapping cell-pairs contribute no forces (since $\delta < 0$), while for the hard model they provide additional global information that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}.
 
 \subsection{Adaptive Timestepping}
 
@@ -987,7 +987,7 @@ In summary, the hard model is strongly preferred for nearly all applications, as
 
 \section{Future Work}
 
-The computational challenges identified in this work suggest several promising research directions to enhance the scale and efficiency of simulating proliferating cell collectives. While our current implementation provides a solid foundation, significant optimizations remain to exploit modern HPC architectures fully.
+The computational challenges identified in this work suggest several promising research directions to enhance the scale and efficiency of simulating proliferating cell collectives.
 
 \subsection{Improved Parallel Scalability}
 
@@ -1000,6 +1000,10 @@ For the hard model, the primary computational bottleneck at large scales is the 
 \subsection{Addressing Interpenetration in the Soft Model}
 
 Future work should explore strategies to mitigate interpenetration in the soft model. Promising approaches include overlap-aware adaptive timestepping, which reduces $\Delta t$ when overlaps exceed specified thresholds, or hybrid methods that combine soft potentials with periodic constraint projections to remove accumulated overlaps. Additionally, the soft model's pairwise force calculations could benefit from integration with specialized molecular dynamics libraries such as AutoPas~\cite{Gratl2019,Newcome2023}, which provide optimized neighbor search algorithms, hardware-aware traversal schemes, and automatic parameter tuning.
+
+\subsection{Model Extensions}
+
+Future work could also investigate extensions to the current models to capture additional biological phenomena. For instance, external boundaries, nutrient fields, or chemotactic signaling could be incorporated to study their effects on colony growth and pattern formation. Most of these extensions can be integrated into the existing framework with minimal changes to the collision models~\cite{Yan_2020}.
 
 \section*{Acknowledgments}
 
