@@ -164,8 +164,9 @@
     \frametitle{This Work: Comparing Collision Models}
 
     \begin{itemize}
-        \item Bacteria that grow, divide and compress each other
-        \item Investigate and compare two collision models
+        \item Bacteria that grow, divide and compress each Other
+        \item Based on \cite{Weady2024}
+        \item Compare two collision models
     \end{itemize}
 
     \begin{columns}[c]
@@ -409,36 +410,39 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Hard Model: Optimization Formulation}
+    \frametitle{Hard Model: Prevent overlap via optimization}
 
-    \textbf{Key idea: Ensure no overlap via optimization}
     \begin{itemize}
-        \item Define gap function:
-              \begin{equation*}
-                  \boldsymbol{\Phi}_{ij} = \text{"signed distance between cells i and j"}
-              \end{equation*}
+        \item Define signed distance between cells:
+              \[
+                  \boldsymbol{\Phi}_{ij} =
+                  \begin{cases}
+                      > 0 & \text{no contact} \\
+                      = 0 & \text{contact}    \\
+                      < 0 & \text{overlap}
+                  \end{cases}
+              \]
 
-        \item Express forces based on unknown multipliers $\boldsymbol{\gamma}$:
-              \begin{equation*}
-                  \begin{aligned}[t]
-                      \mathbfcal{F}(\boldsymbol{\gamma})       & = \mathbfcal{D} \boldsymbol{\gamma} \\
-                      \boldsymbol{\sigma}(\boldsymbol{\gamma}) & = \mathbfcal{L} \boldsymbol{\gamma}
-                  \end{aligned}
-              \end{equation*}
+        \item Find contact forces $\boldsymbol{\gamma}$ s.t.
+              \[
+                  \boldsymbol{0} \le \boldsymbol{\gamma} \perp \boldsymbol{\Phi}^{k+1} \ge \boldsymbol{0}
+              \]
+
+        \item Approximate how individual forces $\boldsymbol{\gamma}_{i}$ affect $\boldsymbol{\Phi}^{k+1}$
+        \item Solve equivalent convex optimization problem:
+              \[
+                  \min_{\boldsymbol{\gamma} \ge 0} E(\boldsymbol{\gamma})
+                  = \boldsymbol{\gamma}^\top \boldsymbol{\Phi}^k
+                  + \tfrac{\Delta t}{2}\boldsymbol{\gamma}^\top
+                  \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\boldsymbol{\gamma}
+                  + \mathbf{1}^\top \tfrac{\Delta t}{\lambda}
+                  \left( \tfrac{\boldsymbol{\ell}}{\tau} \odot
+                  e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)
+              \]
+
     \end{itemize}
 
-    \textbf{Reformulate as energy minimization:}
-    \begin{equation*} \label{eq:energy_function}
-        \min_{\boldsymbol{\gamma} \geq \mathbf{0}}
-        E(\boldsymbol{\gamma})
-        = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \boldsymbol{\gamma}^\top \boldsymbol{\Phi}^k
-        +  \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma}
-        + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-        \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
-    \end{equation*}
-
 \end{frame}
-
 
 \begin{frame}
     \frametitle{Hard Model: Solution Characteristics}
@@ -681,41 +685,43 @@
 
 \end{frame}
 
+% \begin{frame}
+%     \frametitle{Maximum Colony Size (24h budget, 112 cores)}
+
+%     \begin{columns}
+%         \begin{column}{0.45\textwidth}
+%             \textbf{Hard Model:}
+%             \begin{itemize}
+%                 \item $R_{\max} = 260$
+%                 \item 301,116 cells
+%                 \item Maintains accuracy
+%             \end{itemize}
+
+%             \vspace{0.2cm}
+
+%             \textbf{Scaling:}
+%             \begin{itemize}
+%                 \item $T[h] \propto R^5 \propto N^{2.5}$
+%                 \item $\mathcal{O}(N)$ BBPGD iterations per step
+%                 \item Costly (sparse) matrix-vector products
+%             \end{itemize}
+%         \end{column}
+
+%         \begin{column}{0.55\textwidth}
+%             \begin{figure}
+%                 \centering
+%                 \includegraphics[width=\textwidth]{figures/figures_paper/huge/huge_wall_time_vs_radius_with_fit.png}
+%             \end{figure}
+%         \end{column}
+
+%     \end{columns}
+
+% \end{frame}
+
 \begin{frame}
-    \frametitle{Maximum Colony Size (24h budget, 112 cores)}
+    \frametitle{Largest Colony: R = 260, 301k cells, 24h@112 cores}
 
-    \begin{columns}
-        \begin{column}{0.45\textwidth}
-            \textbf{Hard Model:}
-            \begin{itemize}
-                \item $R_{\max} = 260$
-                \item 301,116 cells
-                \item Maintains accuracy
-            \end{itemize}
 
-            \vspace{0.2cm}
-
-            \textbf{Scaling:}
-            \begin{itemize}
-                \item $T[h] \propto R^5 \propto N^{2.5}$
-                \item $\mathcal{O}(N)$ BBPGD iterations per step
-                \item Costly (sparse) matrix-vector products
-            \end{itemize}
-        \end{column}
-
-        \begin{column}{0.55\textwidth}
-            \begin{figure}
-                \centering
-                \includegraphics[width=\textwidth]{figures/figures_paper/huge/huge_wall_time_vs_radius_with_fit.png}
-            \end{figure}
-        \end{column}
-
-    \end{columns}
-
-\end{frame}
-
-\begin{frame}
-    \frametitle{Largest Colony (R = 260, 301k cells)}
 
     \begin{center}
         {\includegraphics[width=0.9\textwidth]{figures/figures_paper/huge/huge_cropped.jpeg}}\\[0.6em]
@@ -769,6 +775,28 @@
 
     \begin{columns}
         \begin{column}{0.5\textwidth}
+            \begin{alertblock}{Soft Model}
+                \textbf{Use when:}
+                \begin{itemize}
+                    \item Exploring small Colonies
+                    \item Macroscopic effects matter
+                    \item Artefacts acceptable
+                \end{itemize}
+
+                \textbf{Advantages:}
+                \begin{itemize}
+                    \item Simple implementation
+                    \item Can model `squishy' bacteria
+                \end{itemize}
+
+                \textbf{Disadvantages:}
+                \begin{itemize}
+                    \item Slow simulations
+                    \item Limited accuracy
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
             \begin{exampleblock}{Hard Model }
                 \textbf{Use when:}
                 \begin{itemize}
@@ -791,28 +819,6 @@
             \end{exampleblock}
         \end{column}
 
-        \begin{column}{0.5\textwidth}
-            \begin{alertblock}{Soft Model}
-                \textbf{Use when:}
-                \begin{itemize}
-                    \item Exploring small Colonies
-                    \item Only macroscopic effects matter
-                    \item Artefacts acceptable
-                \end{itemize}
-
-                \textbf{Advantages:}
-                \begin{itemize}
-                    \item Simple implementation
-                    \item Can model `squishy' bacteria
-                \end{itemize}
-
-                \textbf{Disadvantages:}
-                \begin{itemize}
-                    \item Slow simulations
-                    \item Limited accuracy
-                \end{itemize}
-            \end{alertblock}
-        \end{column}
     \end{columns}
 
 \end{frame}
@@ -835,15 +841,16 @@
 
               \vspace{0.3cm}
 
-        \item \textbf{Model Extensions}
+        \item \textbf{Soft Model Enhancements}
               \begin{itemize}
                   \item Consider overlap, in adaptive timestepping.
                   \item Consider alternatives to prevent overlap
+                  \item Slow down cell growth (globally) on overlap?
               \end{itemize}
 
               \vspace{0.3cm}
 
-        \item \textbf{More Applications}
+        \item \textbf{More Biological Applications}
               \begin{itemize}
                   \item Other cell shapes (soft bodies?)
                   \item More complex models (Nutrient fields?, Outside forces?)
