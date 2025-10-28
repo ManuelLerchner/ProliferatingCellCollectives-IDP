@@ -136,29 +136,29 @@
 \end{frame}
 
 
-\begin{frame}
-    \frametitle{The Performance Gap in Biological Modeling}
+% \begin{frame}
+%     \frametitle{The Performance Gap in Biological Modeling}
 
-    \begin{block}{Common Practice: Focus on Biological Insight}
-        \begin{itemize}
-            \item Pick a model that reproduces behavior
-            \item Validate against experimental patterns
-            \item Publish biological findings
-            \item \textbf{Runtime? Scaling? Source Code?} Often unreported
-        \end{itemize}
-    \end{block}
+%     \begin{block}{Common Practice: Focus on Biological Insight}
+%         \begin{itemize}
+%             \item Pick a model that reproduces behavior
+%             \item Validate against experimental patterns
+%             \item Publish biological findings
+%             \item \textbf{Runtime? Scaling? Source Code?} Often unreported
+%         \end{itemize}
+%     \end{block}
 
-    \vspace{0.1cm}
+%     \vspace{0.1cm}
 
-    \begin{alertblock}{The Neglected Computational Core}
-        \begin{itemize}
-            \item \textbf{Efficiency:} Can we optimize further?
-            \item \textbf{Scaling:} How does it handle larger systems?
-            \item \textbf{Trade-offs:} What's the speed vs. accuracy balance?
-            \item \textbf{Comparisons:} Are different methods equivalent?
-        \end{itemize}
-    \end{alertblock}
-\end{frame}
+%     \begin{alertblock}{The Neglected Computational Core}
+%         \begin{itemize}
+%             \item \textbf{Efficiency:} Can we optimize further?
+%             \item \textbf{Scaling:} How does it handle larger systems?
+%             \item \textbf{Trade-offs:} What's the speed vs. accuracy balance?
+%             \item \textbf{Comparisons:} Are different methods equivalent?
+%         \end{itemize}
+%     \end{alertblock}
+% \end{frame}
 
 \begin{frame}
     \frametitle{This Work: Comparing Collision Models}
@@ -525,30 +525,30 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}
-    \frametitle{Ring Formation Across Parameters}
+% \begin{frame}
+%     \frametitle{Ring Formation Across Parameters}
 
-    \vspace{-0.3cm}
-    \begin{figure}
-        \centering
-        \begin{tabular}{r M{0.25\textwidth} M{0.25\textwidth} M{0.25\textwidth}}
-                                                                                                             & $\lambda = 10^{-4}$   & $\lambda = 10^{-3}$      & $\lambda = 10^{-2}$
-            \\[3pt]
-            \textbf{Hard}                                                                                    &
-            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-4/hard_e-4.0192.jpeg} &
-            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-3/hard_e-3.0198.jpeg} &
-            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-2/hard_e-2.0199.jpeg}                                                                               \\[3pt]
+%     \vspace{-0.3cm}
+%     \begin{figure}
+%         \centering
+%         \begin{tabular}{r M{0.25\textwidth} M{0.25\textwidth} M{0.25\textwidth}}
+%                                                                                                              & $\lambda = 10^{-4}$        & $\lambda = 10^{-3}$      & $\lambda = 10^{-2}$
+%             \\[3pt]
+%             \textbf{Hard}                                                                                    &
+%             \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-4/hard_e-4.0192.jpeg} &
+%             \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-3/hard_e-3.0198.jpeg} &
+%             \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/hard_e-2/hard_e-2.0199.jpeg}                                                                                          \\[3pt]
 
-            \textbf{Soft}                                                                                    &
-            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-4/soft_e-4.0198.jpeg} &
-            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-3/soft_e-3.0187.jpeg} &
-            \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-2/soft_e-2.0200.jpeg}                                                                               \\[3pt]
+%             \textbf{Soft}                                                                                    &
+%             \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-4/soft_e-4.0198.jpeg} &
+%             \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-3/soft_e-3.0187.jpeg} &
+%             \includegraphics[width=0.25\textwidth]{figures/figures_paper/growth/soft_e-2/soft_e-2.0200.jpeg}                                                                                          \\[3pt]
 
-                                                                                                             & \scriptsize{No inhibition} & \scriptsize{Clear rings} & \scriptsize{Strong inhibition}
-        \end{tabular}
-    \end{figure}
+%                                                                                                              & \scriptsize{No inhibition} & \scriptsize{Clear rings} & \scriptsize{Strong inhibition}
+%         \end{tabular}
+%     \end{figure}
 
-\end{frame}
+% \end{frame}
 
 \begin{frame}
     \frametitle{Critical Difference: Packing Density}
@@ -839,7 +839,6 @@
               \begin{itemize}
                   \item Consider overlap, in adaptive timestepping.
                   \item Consider alternatives to prevent overlap
-                  \item Reduce communication overhead
               \end{itemize}
 
               \vspace{0.3cm}
@@ -869,18 +868,15 @@
 
         \Huge{Questions?}
 
-        \vspace{1.5cm}
+        \vspace{.8cm}
 
-        \normalsize
+        \small
         \texttt{manuel.lerchner@tum.de}
 
         \vspace{0.3cm}
-
-        \small
         Code: \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP}
 
         \vspace{0.2cm}
-
         Supplementary materials: \url{https://home.cit.tum.de/~ler/bacteria/}
     \end{center}
 \end{frame}
