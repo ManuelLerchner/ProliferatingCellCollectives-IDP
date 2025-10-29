@@ -73,7 +73,7 @@
 \setbeamertemplate{bibliography item}[online]
 \graphicspath{{figures/figures_paper/}}
 
-\title{Proliferating Cell Collectives:\newline A Comparison of Hard and Soft Collision Models}
+\title{Proliferating Cell Collectives:\\ A Comparison of Hard and Soft Collision Models}
 \type{Sf}
 \author{Manuel Lerchner}
 \email{manuel.lerchner@tum.de}
@@ -102,22 +102,22 @@
 \section{Motivation}
 
 \begin{frame}
-    \frametitle{Computational Biology: A Growing Field}
+    \frametitle{Computational Biology}
 
     \begin{columns}
         \begin{column}{0.58\textwidth}
-            \textbf{Why simulate biological systems?}
+            \textbf{Why simulate Bacteria?}
             \begin{itemize}
-                \item Link micro-to macroscopic behavior
+                \item Local rules $\to$ emergent behavior
                 \item Test hypotheses in silico
                 \item Beautiful visualizations
             \end{itemize}
 
             \vspace{0.5cm}
 
-            \textbf{The computational challenge:}
+            \textbf{Computational challenge:}
             \begin{itemize}
-                \item Large system sizes
+                \item Large system sizes ($10^6$ cells)
                 \item Complex interactions
                 \item Long timescales
             \end{itemize}
@@ -128,7 +128,7 @@
             \begin{figure}
                 \centering
                 \includegraphics[width=\textwidth]{figures/figures_paper/real-bacteria/Exserohilum turcicum.png}
-                \caption*{\scriptsize{Real fungal colony showing ring patterns~\cite{Bankole2023}.}}
+                \caption*{\scriptsize{Real fungal colony showing macroscopic ring patterns~\cite{Bankole2023}.}}
             \end{figure}
         \end{column}
     \end{columns}
@@ -161,13 +161,9 @@
 % \end{frame}
 
 \begin{frame}
-    \frametitle{This Work: Comparing Collision Models}
+    \frametitle{Small-scale: Simulating individual Bacteria}
 
-    \begin{itemize}
-        \item Bacteria that grow, divide and compress each Other
-        \item Based on \cite{Weady2024}
-        \item Compare two collision models
-    \end{itemize}
+    \vspace{0.3cm}
 
     \begin{columns}[c]
         \begin{column}{0.5\textwidth}
@@ -235,10 +231,10 @@
 
             \textbf{Equations of motion:}
             \begin{equation*}
-                \begin{aligned}[t]
+                \begin{align}
                     \text{Translation:} \quad & \mathbf{u}_i = \frac{1}{\zeta \ell_i} \sum_{j \neq i} \mathbf{F}_{ij}                                    \\
                     \text{Rotation:} \qquad   & \boldsymbol{\omega}_i = \frac{12}{\zeta \ell_i^3} \sum_{j \neq i} \mathbf{r}_{ij} \times \mathbf{F}_{ij}
-                \end{aligned}
+                \end{align}
             \end{equation*}
         \end{column}
 
@@ -270,10 +266,10 @@
 
             \textbf{Growth rate:}
             \begin{equation*}
-                \begin{aligned}[t]
-                    \text{Growth rate:}   \quad & \dot{\ell}_i   = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i}                                       \\
-                    \text{Cell stress:} \quad   & \sigma_i  = \sum_{j \neq i} \tfrac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
-                \end{aligned}
+                \begin{align}
+                    \text{Growth rate: }   \quad & \dot{\ell}_i   = \frac{\ell_i}{\tau} e^{-\lambda \sigma_i}                                       \\
+                    \text{Cell stress:} \qquad   & \sigma_i  = \sum_{j \neq i} \tfrac{1}{2} \left| \hat{\mathbf{t}}_i \cdot \mathbf{F}_{ij} \right|
+                \end{align}
             \end{equation*}
         \end{column}
 
@@ -310,7 +306,7 @@
 
 
 \begin{frame}
-    \frametitle{Contact Mechanics}
+    \frametitle{Collision Resolution}
 
     \begin{figure}
         \centering
@@ -319,6 +315,7 @@
 
 
     \begin{itemize}
+        \item We consider two collision models
         \item Models only differ in how they calculate force magnitudes
     \end{itemize}
 
@@ -337,7 +334,7 @@
                 \begin{itemize}
                     \item Local pairwise forces
                     \item Allows overlap
-                    \item Simple calculation
+                    \item Numerically stiff
                     \item Similar to MD simulations
                 \end{itemize}
 
@@ -356,10 +353,10 @@
                 \textbf{Constraint-based}
 
                 \begin{itemize}
-                    \item Global optimization
+                    \item Global optimization problem
                     \item Strict non-overlap
-                    \item Complex solver
-                    \item Based on Contact Mechanics
+                    \item Single-step solution
+                    \item Similar to DEM simulations
                 \end{itemize}
 
                 \begin{equation*}
@@ -379,7 +376,9 @@
 \begin{frame}
     \frametitle{Soft Model: Hertzian Contact}
 
-    \begin{columns}
+    \vspace{0.7cm}
+
+    \begin{columns}[c]
         \begin{column}{0.5\textwidth}
             \begin{equation*}
                 \mathbf{F}_{ij} = k_{cc} \sqrt{d} \, \delta^{3/2} \, \hat{\mathbf{n}}
@@ -391,7 +390,6 @@
             \begin{itemize}
                 \item[$+$] Embarrassingly parallel
                 \item[$+$] Simple implementation
-                \item[$+$] Local calculations
                 \item[$-$] Numerically stiff
                 \item[$-$] Tiny timesteps needed
                 \item[$-$] Allows overlap
@@ -429,7 +427,7 @@
               \]
 
         \item Approximate how individual forces $\boldsymbol{\gamma}_{i}$ affect $\boldsymbol{\Phi}^{k+1}$
-        \item Solve equivalent convex optimization problem:
+        \item Solve convex optimization problem:
               \[
                   \min_{\boldsymbol{\gamma} \ge 0} E(\boldsymbol{\gamma})
                   = \boldsymbol{\gamma}^\top \boldsymbol{\Phi}^k
@@ -445,7 +443,7 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Hard Model: Solution Characteristics}
+    \frametitle{Example: Hard Model}
 
     \vspace{-0.5cm}
     \begin{columns}[c]
@@ -454,14 +452,6 @@
                 \centering
                 \includegraphics[width=1\textwidth]{figures/constraints_example_small.jpeg}
             \end{figure}
-
-            \textbf{Solution guarantees:}
-            \begin{enumerate}
-                \item {Repulsive Forces}
-                \item {All overlaps resolved: (Tolerance $\varepsilon = 10^{-3}$)}
-                \item {No forces between non-contacting cells}
-            \end{enumerate}
-
         \end{column}
 
         \begin{column}{0.65\textwidth}
@@ -477,16 +467,17 @@
 \begin{frame}
     \frametitle{Hard Model: Performance}
 
+    \vspace{0.8cm}
+
     \begin{columns}[c]
         \begin{column}{0.45\textwidth}
             \textbf{Characteristics:}
             \begin{itemize}
-                \item[$+$] Fewer numerical stiffness
+                \item[$+$] Less numerical stiffness
                 \item[$+$] Larger timesteps possible
                 \item[$+$] Strict non-overlap
                 \item[$-$] High per-step cost
                 \item[$-$] Complex implementation
-                \item[$-$] Global synchronization
                 \item[$-$] Requires multiple passes
             \end{itemize}
         \end{column}
@@ -608,7 +599,9 @@
 \section{Computational Performance}
 
 \begin{frame}
-    \frametitle{Courant-Friedrichs-Lewy (CFL) Condition}
+    \frametitle{CFL Condition}
+
+    \vspace{0.5cm}
 
     \begin{columns}
         \begin{column}{0.52\textwidth}
@@ -628,8 +621,8 @@
 
             \textbf{Key observations:}
             \begin{itemize}
-                \item Hard: stable at $\Delta t \sim 3 \cdot 10^{-4}$
-                \item Soft: drops to $\Delta t \sim 10^{-5}$
+                \item Hard: stable $\Delta t \sim 3 \cdot 10^{-4}$
+                \item Soft: drops $\Delta t \sim 10^{-5}$
                 \item $30\times$ larger timesteps!
             \end{itemize}
         \end{column}
@@ -780,7 +773,6 @@
                 \begin{itemize}
                     \item Exploring small Colonies
                     \item Macroscopic effects matter
-                    \item Artefacts acceptable
                 \end{itemize}
 
                 \textbf{Advantages:}
@@ -792,7 +784,7 @@
                 \textbf{Disadvantages:}
                 \begin{itemize}
                     \item Slow simulations
-                    \item Limited accuracy
+                    \item Causes Artefacts
                 \end{itemize}
             \end{alertblock}
         \end{column}
@@ -802,7 +794,6 @@
                 \begin{itemize}
                     \item Exploring large Colonies
                     \item Cell-scale phenomena matter
-                    \item High accuracy required
                 \end{itemize}
 
                 \textbf{Advantages:}
@@ -896,5 +887,23 @@
 \end{frame}
 
 \appendix
+
+\begin{frame}
+    \frametitle{Backup: CFL vs. Runtime and Constraints}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/figures_paper/bbpgd/cfl_vs_runtime_and_constraints.png}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Backup: BBPGD Iterations vs. Number of Particles}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/figures_paper/huge/huge_bbpgd_iterations_per_step_vs_num_particles.png}
+    \end{figure}
+\end{frame}
 
 \end{document}
