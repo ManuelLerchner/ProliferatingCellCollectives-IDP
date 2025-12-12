@@ -7,10 +7,7 @@ pkg_check_modules(PETSC REQUIRED PETSc)
 # Create an empty target for compatibility with existing CMakeLists
 add_custom_target(petsc)
 
-# Set PETSc include and library directories from pkg-config
-set(PETSC_INCLUDE_DIRS ${PETSC_INCLUDE_DIRS})
-set(PETSC_LIBRARIES ${PETSC_LIBRARIES})
-
+# Use PETSc include and library directories from pkg-config
 include_directories(${PETSC_INCLUDE_DIRS})
 link_directories(${PETSC_LIBRARY_DIRS})
 
