@@ -52,10 +52,10 @@ jobs:
       run: |
         if [ "${{ matrix.mpi_ranks }}" -eq 1 ]; then
           echo "Running tests in single-process mode..."
-          ./tests/unit_tests || exit 1
+          ./tests/unit_tests
         else
           echo "Running tests with MPI (${{ matrix.mpi_ranks }} ranks)..."
-          mpirun --allow-run-as-root --oversubscribe -np ${{ matrix.mpi_ranks }} ./tests/unit_tests || exit 1
+          mpirun --allow-run-as-root --oversubscribe -np ${{ matrix.mpi_ranks }} ./tests/unit_tests
         fi
         echo "✅ Tests completed with ${{ matrix.mpi_ranks }} rank(s)"
       
