@@ -9,7 +9,8 @@ file(
 # Remove main.cpp from the library sources
 list(FILTER MY_SRC EXCLUDE REGEX ".*main\\.cpp$")
 
-# Ensure Domain.cpp is included
+# WORKAROUND: Domain.cpp is not picked up by GLOB_RECURSE for unknown reasons
+# Explicitly add it to ensure it's included in the library
 list(APPEND MY_SRC "${CMAKE_CURRENT_SOURCE_DIR}/spatial/Domain.cpp")
 
 include(petsc)
@@ -47,7 +48,7 @@ target_link_libraries(
 
 target_compile_definitions(
     cellcollectives_lib
-    PUBLIC
+    PRIVATE
     ${MPI_CXX_COMPILE_DEFINITIONS}
     ${OpenMP_CXX_COMPILE_DEFINITIONS}
 )

@@ -53,7 +53,7 @@ else()
     if(NOT PETSC_ALREADY_BUILT)
         ExternalProject_Add(petsc_external
             GIT_REPOSITORY https://gitlab.com/petsc/petsc.git
-            GIT_TAG release
+            GIT_TAG v3.20.2
             SOURCE_DIR "${PETSC_BUILD_DIR}"
             PREFIX "petsc"
             CONFIGURE_COMMAND ./configure --with-debugging=$<IF:$<CONFIG:Debug>,1,0> --with-fc=0 --download-f2cblaslapack

@@ -10,12 +10,14 @@ The test suite includes comprehensive tests for:
 - **Quaternion** (16 tests): Quaternion operations including multiplication, Euler angle conversion, vector rotation, and direction vectors
 - **SpherocylinderCell** (14 tests): Segment-segment distance calculations using DCPQuery for collision detection
 - **Particle** (20 tests): Particle construction, state management, getters/setters, volume calculations, and constraint tracking
-- **SpatialGrid** (15 tests): Construction, particle insertion, collision pair detection, domain boundaries, negative coordinates, multiple particles per cell
+- **SpatialGrid** (13 tests): Construction, particle insertion, collision pair detection, domain boundaries, negative coordinates, multiple particles per cell
 - **CollisionDetector** (16 tests): Collision detector construction, bounds updates, particle endpoint calculations, rotations, symmetry verification, 3D transformations
-- **BBPGD Solver** (6 tests): Result structure tests, iteration tracking, convergence (full solver tests require complex PETSc/MPI setup)
+- **BBPGD Solver** (13 tests): Result structure tests, iteration tracking, convergence testing (residual decrease, tolerance checks, monotonic decrease, early stopping)
 - **Constraint** (16 tests): Constraint construction, signed distances, normal vectors, stress values, locality flags, contact points, particle IDs
+- **MPI Tests** (11 tests): MPI initialization, rank coordination, global reduce operations (sum/min/max), vector reductions, cross-rank communication validation
+- **PETSc Tests** (8 tests): VecWrapper operations (create, set/get, AXPY, norm, Like), MatWrapper creation, RAII semantics, move operations
 
-**Total: 127 tests**
+**Total: 153 tests**
 
 ## Building and Running Tests
 
