@@ -12,12 +12,12 @@ The test suite includes comprehensive tests for:
 - **Particle** (20 tests): Particle construction, state management, getters/setters, volume calculations, and constraint tracking
 - **SpatialGrid** (13 tests): Construction, particle insertion, collision pair detection, domain boundaries, negative coordinates, multiple particles per cell
 - **CollisionDetector** (16 tests): Collision detector construction, bounds updates, particle endpoint calculations, rotations, symmetry verification, 3D transformations
-- **BBPGD Solver** (13 tests): Result structure tests, iteration tracking, convergence testing (residual decrease, tolerance checks, monotonic decrease, early stopping)
+- **BBPGD Solver** (15 tests): Result structure tests, iteration tracking, convergence testing (residual decrease, tolerance checks, monotonic decrease, early stopping), quadratic function minimization with actual BBPGD solver calls
 - **Constraint** (16 tests): Constraint construction, signed distances, normal vectors, stress values, locality flags, contact points, particle IDs
 - **MPI Tests** (11 tests): MPI initialization, rank coordination, global reduce operations (sum/min/max), vector reductions, cross-rank communication validation
 - **PETSc Tests** (8 tests): VecWrapper operations (create, set/get, AXPY, norm, Like), MatWrapper creation, RAII semantics, move operations
 
-**Total: 153 tests**
+**Total: 155 tests**
 
 ## Building and Running Tests
 

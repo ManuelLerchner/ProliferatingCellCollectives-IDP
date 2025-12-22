@@ -1,7 +1,20 @@
 #include <gtest/gtest.h>
+#include <petsc.h>
 #include <array>
 #include <cmath>
 #include "solver/BBPGD.h"
+#include "util/PetscRaii.h"
+
+// Global PETSc initialization for BBPGD tests
+static bool petsc_initialized_bbpgd = false;
+
+#define ENSURE_PETSC_INIT_BBPGD() \
+    if (!petsc_initialized_bbpgd) { \
+        int argc = 0; \
+        char** argv = nullptr; \
+        PetscInitialize(&argc, &argv, nullptr, nullptr); \
+        petsc_initialized_bbpgd = true; \
+    }
 
 // Test BBPGD result structure
 TEST(BBPGDTest, ResultStructure) {
@@ -151,4 +164,119 @@ TEST(BBPGDTest, ConvergenceNearZero) {
     // Very small residual indicates strong convergence
     EXPECT_NEAR(result.residual, 0.0, 1e-11);
 }
+
+// Quadratic function gradient implementation for testing
+// Minimize f(x) = 0.5 * x^T * A * x - b^T * x
+// Gradient: grad f(x) = A * x - b
+class QuadraticGradient : public Gradient {
+private:
+    VecWrapper grad_vec;
+    VecWrapper temp_vec;
+    double A_diag;  // Using diagonal matrix for simplicity: A = A_diag * I
+    double b_val;   // Using constant vector: b = b_val * ones
+    
+public:
+    QuadraticGradient(int size, double a_diag, double b_value) 
+        : grad_vec(VecWrapper::Create(size)),
+          temp_vec(VecWrapper::Create(size)),
+          A_diag(a_diag),
+          b_val(b_value) {
+    }
+    
+    VecWrapper& gradient(const VecWrapper& gamma_curr) override {
+        // grad = A * gamma - b = A_diag * gamma - b_val * ones
+        VecCopy(gamma_curr, grad_vec);
+        VecScale(grad_vec, A_diag);
+        VecShift(grad_vec, -b_val);
+        return grad_vec;
+    }
+    
+    double residual(const VecWrapper& gradient_val, const VecWrapper& gamma) override {
+        // For constrained optimization with gamma >= 0, residual is based on KKT conditions
+        // Simplified: use norm of gradient where gamma > 0 or gradient < 0
+        double res;
+        VecNorm(gradient_val, NORM_2, &res);
+        return res;
+    }
+    
+    std::tuple<double, double, double, double> energy(const VecWrapper& gamma) override {
+        // Energy: 0.5 * gamma^T * A * gamma - b^T * gamma
+        // For diagonal A: 0.5 * A_diag * sum(gamma^2) - b_val * sum(gamma)
+        double gamma_norm_sq, gamma_sum;
+        VecNorm(gamma, NORM_2, &gamma_norm_sq);
+        gamma_norm_sq *= gamma_norm_sq;
+        
+        VecSum(gamma, &gamma_sum);
+        
+        double energy = 0.5 * A_diag * gamma_norm_sq - b_val * gamma_sum;
+        return {energy, 0.0, 0.0, 0.0};
+    }
+};
+
+// Test BBPGD with quadratic function minimization
+TEST(BBPGDTest, QuadraticMinimization) {
+    ENSURE_PETSC_INIT_BBPGD();
+    
+    // Set up quadratic problem: minimize f(x) = 0.5 * x^T * x - 2 * ones^T * x
+    // Optimal solution (unconstrained): x* = 2 * ones
+    // With constraint x >= 0, solution is still x* = 2 * ones
+    int size = 5;
+    double A_diag = 1.0;
+    double b_val = 2.0;
+    
+    QuadraticGradient gradient(size, A_diag, b_val);
+    auto gamma = VecWrapper::Create(size);
+    
+    // Start from zero (feasible point)
+    VecSet(gamma, 0.0);
+    
+    // Run BBPGD
+    double tolerance = 1e-6;
+    size_t max_iter = 1000;
+    auto result = BBPGD(gradient, gamma, tolerance, max_iter, std::nullopt);
+    
+    // Check convergence
+    EXPECT_LE(result.residual, tolerance * 10);  // Allow some tolerance relaxation
+    EXPECT_LT(result.bbpgd_iterations, max_iter);  // Should converge before max
+    
+    // Check that solution is close to optimum (x* = 2 * ones)
+    const PetscScalar* gamma_array;
+    VecGetArrayRead(gamma, &gamma_array);
+    PetscInt local_size;
+    VecGetLocalSize(gamma, &local_size);
+    
+    for (PetscInt i = 0; i < local_size; i++) {
+        EXPECT_NEAR(gamma_array[i], 2.0, 0.5);  // Relaxed tolerance for convergence
+    }
+    
+    VecRestoreArrayRead(gamma, &gamma_array);
+}
+
+// Test BBPGD convergence from different starting points
+TEST(BBPGDTest, QuadraticConvergenceFromDifferentStarts) {
+    ENSURE_PETSC_INIT_BBPGD();
+    
+    int size = 3;
+    double A_diag = 2.0;
+    double b_val = 4.0;  // Optimal: x* = b_val / A_diag = 2.0
+    
+    QuadraticGradient gradient(size, A_diag, b_val);
+    
+    // Test different starting points
+    std::vector<double> start_vals = {0.0, 1.0, 5.0};
+    
+    for (double start : start_vals) {
+        auto gamma = VecWrapper::Create(size);
+        VecSet(gamma, start);
+        
+        double tolerance = 1e-5;
+        size_t max_iter = 500;
+        auto result = BBPGD(gradient, gamma, tolerance, max_iter, std::nullopt);
+        
+        // Should converge from any starting point
+        EXPECT_LT(result.bbpgd_iterations, max_iter);
+        EXPECT_LE(result.residual, tolerance * 10);
+    }
+}
+
 
