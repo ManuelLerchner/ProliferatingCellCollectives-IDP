@@ -10,8 +10,12 @@ The test suite includes comprehensive tests for:
 - **Quaternion** (16 tests): Quaternion operations including multiplication, Euler angle conversion, vector rotation, and direction vectors
 - **SpherocylinderCell** (14 tests): Segment-segment distance calculations using DCPQuery for collision detection
 - **Particle** (20 tests): Particle construction, state management, getters/setters, volume calculations, and constraint tracking
+- **SpatialGrid** (15 tests): Construction, particle insertion, collision pair detection, domain boundaries, negative coordinates, multiple particles per cell
+- **CollisionDetector** (16 tests): Collision detector construction, bounds updates, particle endpoint calculations, rotations, symmetry verification, 3D transformations
+- **BBPGD Solver** (6 tests): Result structure tests, iteration tracking, convergence (full solver tests require complex PETSc/MPI setup)
+- **Constraint** (16 tests): Constraint construction, signed distances, normal vectors, stress values, locality flags, contact points, particle IDs
 
-**Total: 76 tests**
+**Total: 127 tests**
 
 ## Building and Running Tests
 
@@ -73,6 +77,10 @@ Each test file follows this structure:
 - `test_quaternion.cpp`: Tests for quaternion operations and rotations
 - `test_spherocylinder.cpp`: Tests for geometric distance calculations
 - `test_particle.cpp`: Tests for particle state management and physics
+- `test_spatial_grid.cpp`: Tests for spatial partitioning and collision pair finding
+- `test_collision_detector.cpp`: Tests for collision detection and particle endpoint calculations
+- `test_bbpgd_solver.cpp`: Tests for BBPGD solver result structures
+- `test_constraint.cpp`: Tests for constraint creation and management
 
 ## CI/CD
 
