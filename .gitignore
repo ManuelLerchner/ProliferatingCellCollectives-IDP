@@ -1,3 +1,9 @@
 **/vtk_output/
 .idea
 build
+*.gcda
+*.gcno
+*.gcov
+coverage_report/
+coverage.info
+coverage_filtered.info
