@@ -9,6 +9,9 @@ file(
 # Remove main.cpp from the library sources
 list(FILTER MY_SRC EXCLUDE REGEX ".*main\\.cpp$")
 
+# Ensure Domain.cpp is included
+list(APPEND MY_SRC "${CMAKE_CURRENT_SOURCE_DIR}/spatial/Domain.cpp")
+
 include(petsc)
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)

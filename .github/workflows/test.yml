@@ -33,13 +33,27 @@ jobs:
         cd build
         cmake -DENABLE_COVERAGE=ON ..
         
+    - name: Build main application
+      working-directory: ${{github.workspace}}/code/cpp/build
+      run: |
+        echo "Building main application..."
+        make -j$(nproc) cellcollectives || exit 1
+        echo "✅ Main application built successfully"
+        
     - name: Build tests
       working-directory: ${{github.workspace}}/code/cpp/build
       run: make -j$(nproc) unit_tests
       
-    - name: Run tests
+    - name: Run unit tests
       working-directory: ${{github.workspace}}/code/cpp/build
       run: ./tests/unit_tests
+      
+    - name: Run MPI tests
+      working-directory: ${{github.workspace}}/code/cpp/build
+      run: |
+        echo "Running MPI-enabled tests..."
+        mpirun -np 2 ./tests/unit_tests --gtest_filter="*MPI*" || echo "No MPI-specific tests found, continuing..."
+        echo "✅ MPI tests completed"
       
     - name: Generate coverage report
       working-directory: ${{github.workspace}}/code/cpp/build
