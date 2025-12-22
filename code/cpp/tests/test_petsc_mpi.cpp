@@ -6,22 +6,8 @@
 #include "util/MPIUtil.h"
 #include "util/PetscRaii.h"
 
-// Global PETSc initialization state
-static bool petsc_initialized_globally = false;
-
-// Helper macro to ensure PETSc is initialized
-#define ENSURE_PETSC_INIT() \
-    if (!petsc_initialized_globally) { \
-        int argc = 0; \
-        char** argv = nullptr; \
-        PetscInitialize(&argc, &argv, nullptr, nullptr); \
-        petsc_initialized_globally = true; \
-    }
-
 // Test MPI rank and size
 TEST(MPITest, MPIInitialized) {
-    ENSURE_PETSC_INIT();
-    
     int rank, size;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
     MPI_Comm_size(PETSC_COMM_WORLD, &size);
@@ -33,7 +19,6 @@ TEST(MPITest, MPIInitialized) {
 
 // Test MPI communication
 TEST(MPITest, MPIBasicCommunication) {
-    ENSURE_PETSC_INIT();
     
     int rank, size;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -52,7 +37,6 @@ TEST(MPITest, MPIBasicCommunication) {
 
 // Test global reduce helper for integers
 TEST(MPITest, GlobalReduceInteger) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -70,7 +54,6 @@ TEST(MPITest, GlobalReduceInteger) {
 
 // Test global reduce helper for doubles
 TEST(MPITest, GlobalReduceDouble) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -88,7 +71,6 @@ TEST(MPITest, GlobalReduceDouble) {
 
 // Test global reduce for max operation
 TEST(MPITest, GlobalReduceMax) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -105,7 +87,6 @@ TEST(MPITest, GlobalReduceMax) {
 
 // Test global reduce for min operation
 TEST(MPITest, GlobalReduceMin) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -119,7 +100,6 @@ TEST(MPITest, GlobalReduceMin) {
 
 // Test global reduce on array
 TEST(MPITest, GlobalReduceVector) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -146,7 +126,6 @@ TEST(MPITest, GlobalReduceVector) {
 
 // Test getGlobalMinMax helper
 TEST(MPITest, GetGlobalMinMax) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -169,7 +148,6 @@ TEST(MPITest, GetGlobalMinMax) {
 
 // Test VecWrapper creation
 TEST(PetscTest, VecWrapperCreate) {
-    ENSURE_PETSC_INIT();
     
     auto vec = VecWrapper::Create(10);
     
@@ -181,7 +159,6 @@ TEST(PetscTest, VecWrapperCreate) {
 
 // Test VecWrapper set and get
 TEST(PetscTest, VecWrapperSetGet) {
-    ENSURE_PETSC_INIT();
     
     auto vec = VecWrapper::Create(5);
     
@@ -201,7 +178,6 @@ TEST(PetscTest, VecWrapperSetGet) {
 
 // Test VecWrapper operations
 TEST(PetscTest, VecWrapperOperations) {
-    ENSURE_PETSC_INIT();
     
     auto vec1 = VecWrapper::Create(10);
     auto vec2 = VecWrapper::Create(10);
@@ -225,7 +201,6 @@ TEST(PetscTest, VecWrapperOperations) {
 
 // Test VecWrapper norm
 TEST(PetscTest, VecWrapperNorm) {
-    ENSURE_PETSC_INIT();
     
     auto vec = VecWrapper::Create(4);
     
@@ -246,7 +221,6 @@ TEST(PetscTest, VecWrapperNorm) {
 
 // Test VecWrapper Like (duplicate)
 TEST(PetscTest, VecWrapperLike) {
-    ENSURE_PETSC_INIT();
     
     auto vec1 = VecWrapper::Create(8);
     VecSet(vec1, 1.5);
@@ -263,7 +237,6 @@ TEST(PetscTest, VecWrapperLike) {
 
 // Test MatWrapper creation
 TEST(PetscTest, MatWrapperCreate) {
-    ENSURE_PETSC_INIT();
     
     MatWrapper mat;
     
@@ -281,14 +254,12 @@ TEST(PetscTest, MatWrapperCreate) {
 
 // Test MPI data type helper
 TEST(MPITest, GetMpiDataTypeInt) {
-    ENSURE_PETSC_INIT();
     
     auto dtype = getMpiDataType<int>();
     EXPECT_EQ(dtype, MPI_INT);
 }
 
 TEST(MPITest, GetMpiDataTypeDouble) {
-    ENSURE_PETSC_INIT();
     
     auto dtype = getMpiDataType<double>();
     EXPECT_EQ(dtype, MPI_DOUBLE);
@@ -296,7 +267,6 @@ TEST(MPITest, GetMpiDataTypeDouble) {
 
 // Test PETSc error handling with PetscCallAbort
 TEST(PetscTest, PetscCallAbortSuccess) {
-    ENSURE_PETSC_INIT();
     
     auto vec = VecWrapper::Create(5);
     
@@ -308,7 +278,6 @@ TEST(PetscTest, PetscCallAbortSuccess) {
 
 // Test VecWrapper move semantics
 TEST(PetscTest, VecWrapperMove) {
-    ENSURE_PETSC_INIT();
     
     auto vec1 = VecWrapper::Create(10);
     VecSet(vec1, 7.0);
@@ -325,7 +294,6 @@ TEST(PetscTest, VecWrapperMove) {
 
 // Test that all MPI ranks see the same test results
 TEST(MPITest, AllRanksAgree) {
-    ENSURE_PETSC_INIT();
     
     int rank;
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);

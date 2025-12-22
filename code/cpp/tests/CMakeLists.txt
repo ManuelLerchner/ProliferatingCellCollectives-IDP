@@ -14,7 +14,7 @@ add_executable(unit_tests ${TEST_SOURCES})
 # Link against Google Test, the library, and other dependencies
 target_link_libraries(unit_tests
     PRIVATE
-    GTest::gtest_main
+    GTest::gtest
     cellcollectives_lib
 )
 

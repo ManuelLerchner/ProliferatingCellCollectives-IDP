@@ -5,17 +5,6 @@
 #include "solver/BBPGD.h"
 #include "util/PetscRaii.h"
 
-// Global PETSc initialization for BBPGD tests
-static bool petsc_initialized_bbpgd = false;
-
-#define ENSURE_PETSC_INIT_BBPGD() \
-    if (!petsc_initialized_bbpgd) { \
-        int argc = 0; \
-        char** argv = nullptr; \
-        PetscInitialize(&argc, &argv, nullptr, nullptr); \
-        petsc_initialized_bbpgd = true; \
-    }
-
 // Test BBPGD result structure
 TEST(BBPGDTest, ResultStructure) {
     BBPGDResult result;
@@ -215,7 +204,6 @@ public:
 
 // Test BBPGD with quadratic function minimization
 TEST(BBPGDTest, QuadraticMinimization) {
-    ENSURE_PETSC_INIT_BBPGD();
     
     // Set up quadratic problem: minimize f(x) = 0.5 * x^T * x - 2 * ones^T * x
     // Optimal solution (unconstrained): x* = 2 * ones
@@ -254,7 +242,6 @@ TEST(BBPGDTest, QuadraticMinimization) {
 
 // Test BBPGD convergence from different starting points
 TEST(BBPGDTest, QuadraticConvergenceFromDifferentStarts) {
-    ENSURE_PETSC_INIT_BBPGD();
     
     int size = 3;
     double A_diag = 2.0;
