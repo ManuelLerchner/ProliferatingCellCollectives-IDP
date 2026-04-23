@@ -292,7 +292,7 @@ To account for Brownian motion and other sources of random fluctuations, we appl
         node[midway, above] {$\boldsymbol{\omega}_j$};
 
     \end{tikzpicture}
-    \caption{Spherocylinder cell model. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange), and also produce translational displacements of the cells. Cell division occurs when a cell reaches critical length $\ell_{\text{crit}}$.}
+    \caption{Spherocylinder cell model. Cells are modeled as 3D spherocylinders; the diagram shows a 2D schematic view. Contact forces $\mathbf{F}_{ij}$ (red) and lever arms $\mathbf{r}_{ij}$ (dashed blue) generate torques causing angular motion $\boldsymbol{\omega}$ (orange), and also produce translational displacements of the cells. Cell division occurs when a cell reaches critical length $\ell_{\text{crit}}$.}
     \label{fig:spherocylinder_model}
 
 \end{figure}
@@ -634,7 +634,7 @@ Despite these qualitatively similar outcomes, visual differences emerge between 
         \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
     \end{tabular}
 
-    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring patterns are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100 (non-dimensionalized units, $\ell_0 = 1$). The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring patterns are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
     \label{fig:pattern_formation}
 \end{figure*}
 
@@ -658,7 +658,7 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
         \includegraphics[width=\linewidth]{figures/comparison_plots/density_soft.jpeg}
         \caption{Soft model}
     \end{subfigure}
-    \caption{Close-up comparison of cell packing in the colony center for both collision models. The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding.}
+    \caption{Close-up comparison of cell packing in the colony center for both collision models at $\lambda = 10^{-3}$. The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and unphysical crowding.}
     \label{fig:dense_packing_comparison}
 \end{figure}
 
@@ -667,14 +667,14 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
-        \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models. Here $A_{\text{cells}}$ is the total area occupied by cells within a radial bin of width 2 at distance $r$ from the colony center, and $A_{\text{total}}$ is the annular area of that bin. The hard model maintains nearly optimal packing, while the soft model exhibits higher fractions in the colony center, especially at low stress-sensitivity ($\lambda = 10^{-4}$).}
+        \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models, taken at colony radius $R = 100$. The x-axis shows distance from the colony center (non-dimensionalized, $\ell_0 = 1$). Here $A_{\text{cells}}$ is the total area occupied by cells within a radial bin of width 2, and $A_{\text{total}}$ is the annular area of that bin (analogous to RDF binning). The hard model maintains nearly optimal packing, while the soft model exhibits higher fractions in the colony center, especially at low stress-sensitivity ($\lambda = 10^{-4}$).}
         \label{fig:radial_distribution_packing_fraction}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
-        \caption{Maximum cell overlap over simulation time. The hard model maintains overlap near the solver tolerance $\epsilon = 10^{-3}$, while the soft model exhibits a steady increase, reaching near-complete overlap by the simulation end.}
+        \caption{Maximum cell overlap vs.\ colony radius (i.e.\ simulation progress). The hard model maintains overlap near the solver tolerance $\epsilon = 10^{-3}$, while the soft model exhibits a steady increase, reaching near-complete overlap by the simulation end. Overlap decreases radially because peripheral cells have more room to expand outward, while interior cells are mechanically compressed by accumulated colony pressure.}
         \label{fig:max_overlap_simulation}
     \end{subfigure}
 
@@ -879,7 +879,7 @@ All benchmarks in the previous section used a conservative CFL factor of 0.5, in
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/bbpgd/cfl_vs_runtime_and_constraints.png}
-    \caption{Total runtime to reach a colony radius of 100 versus CFL number on 112 cores. The red region indicates CFL values where the ReLCP procedure fails to converge.}
+    \caption{Total runtime to reach a colony radius of 100 versus CFL number on 112 cores. The x-axis shows the fixed CFL factor used across independent simulation runs, not the dynamic $\Delta t$ within a single run; each point corresponds to a separate simulation. The U-shaped curve reflects the cost of using a given CFL factor as a policy: small CFL requires many timesteps; large CFL inflates solver iterations per step. The red region indicates CFL values where the ReLCP procedure fails to converge.}
     \label{fig:cfl_vs_runtime}
 \end{figure}
 
@@ -904,7 +904,7 @@ There remains considerable potential to further improve the performance of BBPGD
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_num_particles_vs_bbpgd_steps.png}
-        \caption{Number of BBPGD iterations per timestep as a function of particle count. Iterations remain roughly $\mathcal{O}(1000)$ on average, with occasional spikes up to $\mathcal{O}(5000)$.}
+        \caption{Number of BBPGD iterations per timestep as a function of particle count for a representative run at $R \approx 100$ ($N \leq 175{,}000$). Iterations remain roughly $\mathcal{O}(1000)$ on average, with occasional spikes up to $\mathcal{O}(5000)$.}
         \label{fig:bbpgd_iterations_per_step_vs_num_particles}
     \end{subfigure}
 
@@ -918,7 +918,7 @@ There remains considerable potential to further improve the performance of BBPGD
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_total_energy.png}
-        \caption{System energy (\autoref{eq:energy_function}) throughout the ReLCP procedure during a single timestep. The energy consistently decreases as BBPGD iterations progress. After each set of constraints is resolved, new overlaps are detected, and the process repeats until a feasible configuration is reached within six ReLCP iterations.}
+        \caption{System energy (\autoref{eq:energy_function}) throughout the ReLCP procedure during a single timestep. The energy consistently decreases as BBPGD iterations progress. After each set of constraints is resolved, new overlaps are detected, and the process repeats until a feasible configuration is reached within six ReLCP iterations. The rightmost segment (ReLCP Iter 6) shows the final feasible configuration where all constraints are resolved.}
         \label{fig:bbpgd_energy}
     \end{subfigure}
 
@@ -955,7 +955,7 @@ Finally, \autoref{fig:huge_combined_stress_shared} shows the corresponding radia
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/huge/huge_bbpgd_iterations_per_step_vs_num_particles.png}
-        \caption{BBPGD iterations per timestep as a function of particle count for the hard model. Each timestep at $R = 260$ resolves about 5{,}131{,}551 constraints over 8 ReLCP phases, requiring on average 7{,}800 iterations, with occasional peaks up to 25{,}000.}
+        \caption{BBPGD iterations per timestep as a function of particle count for the hard model at maximum scale ($R = 260$, $N \leq 301{,}116$). Unlike \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} which shows $R \approx 100$ behaviour, this shows the large-scale regime: each timestep resolves about 5{,}131{,}551 constraints over 8 ReLCP phases, requiring on average 7{,}800 iterations, with occasional peaks up to 25{,}000.}
         \label{fig:huge_bbpgd_iterations_per_step_vs_num_particles}
     \end{subfigure}
 

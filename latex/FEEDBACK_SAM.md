@@ -172,57 +172,44 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 
 ### C — Figures & Captions
 
-**#15** — Figure 2 origin unclear
-- *Target:* Figure 2 caption: "Spherocylinder cell model..."
-- *Fix:* Determine whether the schematic is adapted from [15] (You et al.) or [23] (Weady et al.) and add "Adapted from [23]." or draw originally. If original, no change needed.
+**#15** ✅ — Figure 2 origin unclear
+- Figure is original TikZ drawing — no attribution needed.
 
-**#16** — 2D vs 3D ambiguity in Figure 2
-- *Target:* Figure 2 diagram and caption
-- *Fix:* Add to caption: "Cells are modeled as 3D spherocylinders; the figure shows a 2D cross-sectional view." (or correct if model is 2D.)
+**#16** ✅ — 2D vs 3D ambiguity in Figure 2
+- Added "Cells are modeled as 3D spherocylinders; the diagram shows a 2D schematic view." to caption.
 
-**#20** — Figure 3 (Hertzian plot) possibly redundant
-- *Target:* Figure 3 (F^elastic vs δ plot)
-- *Fix:* Decision required — if Eq. 7 + one sentence suffices, drop Figure 3 to save space. Keep only if the nonlinear δ^{3/2} shape needs visual emphasis.
+**#20** ⚠️ TODO — Figure 3 (Hertzian plot) possibly redundant
+- Decision required: drop if Eq. 7 + text suffices; keep if nonlinear shape needs visual emphasis. Sam leans toward dropping.
 
-**#41** — Figure 4 caption missing units
-- *Target:* Figure 4 caption: "...up to a maximum colony radius of 100"
-- *Fix:* Add "(in non-dimensionalized units with ℓ₀ = 1)" after "colony radius of 100."
+**#41** ✅ — Figure 4 caption missing units
+- Added "(non-dimensionalized units, ℓ₀ = 1)" to caption.
 
-**#42** — Figure 5 caption missing λ value
-- *Target:* Figure 5 caption: "Close-up comparison of cell packing in the colony center..."
-- *Fix:* Add which stress sensitivity is shown, e.g. "at λ = 10⁻³."
+**#42** ✅ — Figure 5 caption missing λ value
+- Added "at λ = 10⁻³" to caption. ⚠️ Confirm this is the correct λ shown in density_hard/soft.jpeg.
 
-**#43** — Figure 5 caption word choice flagged
-- *Target:* Figure 5 caption, "The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding."
-- *Fix:* Review "overcrowding" — Sam flagged this word. Consider "excessive cell overlap" or "unphysical crowding" for precision.
+**#43** ✅ — Figure 5 caption word choice flagged
+- "overcrowding" → "unphysical crowding".
 
-**#45 + #46 + #47** — Figure 6a axis and binning unclear
-- *Target:* Figure 6a caption and x-axis label
-- *Fix:* (a) Label x-axis explicitly as "Distance from colony center (non-dim.)"; (b) add "taken at colony radius R = 100"; (c) add "Radial bins of width 2, analogous to RDF binning."
+**#45 + #46 + #47** ✅ — Figure 6a axis and binning unclear
+- Added: R=100, non-dim x-axis note, RDF-style binning description to caption.
 
-**#48** — Figure 6b: no explanation of why overlap decreases with radius
-- *Target:* Figure 6b caption / surrounding Sec. VI-B text
-- *Fix:* Add: "Overlap decreases radially because peripheral cells have more room to expand outward, while interior cells are mechanically compressed by accumulated colony pressure."
+**#48** ✅ — Figure 6b: no explanation of why overlap decreases with radius
+- Added physical explanation to Figure 6b caption.
 
-**#56** — Figure 15 Δt signal not annotated
-- *Target:* Figure 15 caption: "Adaptive timestep Δt for both collision models."
-- *Fix:* Annotate key phases in the figure (e.g., growth-dominated regime, collision-dominated regime) and reference them in the caption.
+**#56** ⚠️ TODO — Figure 15 Δt signal not annotated
+- Requires editing the matplotlib figure to annotate growth-dominated vs. collision-dominated regimes.
 
-**#57** — Figure 16 confuses Δt value with CFL parameter
-- *Target:* Figure 16 caption: "Total runtime vs. CFL number on 112 cores."
-- *Fix:* Clarify: "The x-axis shows the fixed CFL factor used across independent simulation runs, not the dynamic Δt within a run. Each point corresponds to a separate simulation."
+**#57** ✅ — Figure 16 confuses Δt value with CFL parameter
+- Caption clarified: x-axis = fixed CFL policy across independent runs; U-shape explained.
 
-**#59** — Figures 17a and 19a appear identical
-- *Target:* Figure 17a caption and Figure 19a caption (both: BBPGD iterations per timestep vs. N)
-- *Fix:* Either merge the two figures or clearly differentiate them by scale/context in the captions. E.g., 17a = single representative run at R=100, 19a = scaling behaviour at R=260 with up to 25k spikes noted.
+**#59** ✅ — Figures 17a and 19a appear identical
+- Fig 17a scoped to R≈100 (N≤175k); Fig 19a explicitly contrasted as R=260 large-scale regime.
 
-**#63** — Figure 17c "final phase" ambiguous
-- *Target:* Figure 17c caption: "System energy throughout the ReLCP procedure during a single timestep."
-- *Fix:* Add: "The system converges within six ReLCP iterations; the rightmost segment shows the final feasible configuration where all constraints are resolved."
+**#63** ✅ — Figure 17c "final phase" ambiguous
+- Added "The rightmost segment (ReLCP Iter 6) shows the final feasible configuration where all constraints are resolved."
 
-**#64** — Figure 19b wavelengths not annotated
-- *Target:* Figure 19b (radial cell length oscillations at R=260)
-- *Fix:* Add wavelength annotations at ring positions matching Sam's measured values: λ≈27, λ≈21, λ≈32, λ≈25, λ≈19.
+**#64** ⚠️ TODO — Figure 19b wavelengths not annotated
+- Requires editing the matplotlib figure to add wavelength annotations (λ≈27, 21, 32, 25, 19).
 
 ---
 
