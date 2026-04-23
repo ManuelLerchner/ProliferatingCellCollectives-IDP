@@ -76,3 +76,295 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 | 69 | [ ] | 17 | Green | Sec. IX-D Model Extensions | "If not good 'Why', then cut" |
 | 70 | [ ] | 20 | Green | Top / Performance section (blank extra page) | "Should have some per-timestep comparison." |
 | 71 | [ ] | 20 | Green | Bottom / MPI communication timing | "Where does MPI communication happen? – After every ReLCP step?" |
+
+---
+
+## Triage
+
+### A — Phrasing & Word Choice
+*Quick single-word or single-sentence fixes, no new content required.*
+
+**#5** — "embarrassingly parallelizable"
+- *Target:* Sec. II-A, sentence "the calculations are local and embarrassingly parallelizable, enabling large-scale simulations."
+- *Fix:* Replace with "easily parallelizable." Also check whether NBL (neighbor list) is actually used; if not, remove that implication.
+
+**#6 + #7** — Benchmarking gap framed as a negative
+- *Target:* Sec. II-B, sentence "the question of which approach offers better performance remains unresolved."
+- *Fix:* Reframe positively. E.g. "a direct, systematic comparison has yet to be performed, representing a clear opportunity." Rewording the whole paragraph from "negative gap" to "research opportunity."
+
+**#13** — "Uniformly → Randomly?"
+- *Target:* Sec. III-A, "producing two daughters with lengths sampled from [0.98ℓ₀, 1.02ℓ₀]"
+- *Fix:* Add "uniformly" → "lengths uniformly randomly sampled from [0.98ℓ₀, 1.02ℓ₀]."
+
+**#18** — "intra-cell / per chem..." (interpenetration wording)
+- *Target:* Sec. III-D, "preventing significant interpenetration while allowing elastic deformation."
+- *Fix:* Clarify → "preventing significant inter-cell penetration while allowing elastic deformation." ("Interpenetration" alone is ambiguous between intra- and inter-cell.)
+
+**#27** — Complementarity Condition (3) too convoluted
+- *Target:* Sec. IV-3 Constraint Conditions, Complementarity Condition explanation (~6 lines starting "This condition enforces that if two cells are in contact…")
+- *Fix:* Trim to one physical sentence: "If cells are separated (Φ_α > 0), no force acts (γ_α = 0); if a force acts (γ_α > 0), cells must be touching (Φ_α = 0)."
+
+**#38** — "W. Starts, Convey it 'while'" (uncertain reading)
+- *Target:* Sec. V-D Simulation Output opening sentence
+- *Fix:* Likely Sam wants the simulation output description to use "whilst" / "while running" phrasing to convey it happens concurrently with the simulation. Review and rephrase accordingly.
+
+**#44** — "slowen linear growth"
+- *Target:* Sec. VI-C, "both models transition from early exponential growth to slowen linear growth as stress limits expansion"
+- *Fix:* Replace "slowen linear growth" with "stress-limited linear growth" or "sublinear growth."
+
+**#49** — Growth curve description missing a name
+- *Target:* Figure 7b caption / Sec. VI-C surrounding text
+- *Fix:* Describe explicitly: "Both models exhibit logistic-like growth dynamics: initial exponential expansion decelerates as mechanical stress saturates growth in the colony interior."
+
+---
+
+### B — Missing Content / Additions
+*Requires new text, explanations, or significant expansions.*
+
+**#1** — Abstract needs more intro
+- *Target:* Abstract, first 2 sentences before the main results
+- *Fix:* Expand the opening to briefly introduce the biological system and the modelling challenge before the contribution. Also evaluate trimming the results summary by 1–2 sentences.
+
+**#4** — Introduction missing key topics
+- *Target:* Sec. I Introduction body paragraphs
+- *Fix:* Add 3–4 sentences covering: (a) overview of hard vs. soft model trade-offs, (b) why adaptive timestepping is essential for stability, (c) relation to continuum modelling (discrete complement), (d) the unified framework as the enabling contribution.
+
+**#8** — No attribution sentence at start of Sec. III
+- *Target:* Sec. III Cell Mechanics, heading or opening sentence
+- *Fix:* Add "Unless otherwise noted, the following mechanics model follows Weady et al. [23]."
+
+**#10** — No intro to Sec. IV stating what comes from [23]
+- *Target:* Sec. IV Unified Computational Framework, opening sentence
+- *Fix:* Add "Subsections IV-A through IV-C follow Weady et al. [23]; the soft collision model (IV-D) and adaptive timestepping (Sec. V-C) are novel contributions of this work."
+
+**#11** — ℓ₀ and the 1/e characteristic not defined at Eq. 2
+- *Target:* Sec. III-A, immediately after Eq. 2: "ℓ̇ᵢ = (ℓᵢ/τ)e^{-λ'σᵢ}"
+- *Fix:* Add "where τ is the 1/e growth timescale (the characteristic division time under zero stress) and ℓ₀ is the reference cell length at birth."
+
+**#12** — Non-dim variables used before formally introduced
+- *Target:* Sec. III-A, non-dimensionalization paragraph "we set ℓ₀ = 1, d = 0.5, τ = 1, ζ = 1"
+- *Fix:* Audit that ℓ₀, d, τ, ζ, λ are each defined in text before this paragraph appears, or add a single "where" sentence listing all with brief descriptions.
+
+**#17** — Closing paragraph of Sec. IV-C too terse
+- *Target:* Last paragraph of page 3 right column: "The distinction between hard and soft collision models lies solely in how the generalized force vector F and in particular the inter-cell forces F_ij are computed. The rest of the framework... remains identical."
+- *Fix:* Expand with one forward-reference sentence: "Specifically, the hard model computes F_ij via constraint forces (Sec. IV-E), while the soft model uses repulsive potentials (Sec. IV-D)."
+
+**#28** — BBPGD not described despite being central
+- *Target:* Sec. IV-5 Numerical Solution, sentence "We solve... using the Barzilai-Borwein projected gradient descent method (BBPGD) [27]..."
+- *Fix:* Add 2–3 sentences: "At each iteration BBPGD computes a gradient step with Barzilai-Borwein adaptive step-size selection, then projects γ onto γ ≥ 0 to enforce repulsivity. This avoids expensive line searches while achieving fast convergence for the box-constrained quadratic structure of the NCP."
+
+**#34** — CFL discussion omits growth forces
+- *Target:* Sec. V-C, CFL derivation around Eq. 18–19 where u_m is defined as "median of all cell velocities"
+- *Fix:* Extend u_m definition to include growth-induced displacement: "u_m = median{‖vᵢ‖ + ℓ̇ᵢ} accounts for both mechanical velocities and cell elongation."
+
+**#35** — Algorithm 1 variables undefined
+- *Target:* Algorithm 1 Require block and Eq. 19
+- *Fix:* Add a "where" clause after Eq. 19: "u_m: median particle speed (including growth), c: CFL safety factor (c = 0.5), ε: solver displacement tolerance (ε = 10⁻³), α: EMA smoothing factor (α = 0.01)."
+
+**#36 + #37** — Steps 4 & 5 of Algorithm 1 feel ad hoc
+- *Target:* Algorithm 1 steps 4 (EMA smoothing Δt_new = (1−α)Δt + αΔt*) and 5 (clamp within 20%)
+- *Fix:* Add justification in surrounding text: step 4 prevents oscillatory Δt that could destabilise the solver; step 5 limits acceleration to avoid single-step overshoots. Alternatively, derive the 20% cap from a stability bound if one exists.
+
+**#39 + #40** — Soft model overlap section needs a conclusion statement
+- *Target:* Sec. VI-B last paragraph (soft model overlap discussion)
+- *Fix:* Add a closing sentence: "Whilst a smaller Δt would reduce overlap, incorporating instantaneous overlap into the timestep criterion would add per-step cost; we identify this as a future improvement (Sec. IX-C)."
+
+**#53** — Domain decomposition needs a source/credit
+- *Target:* Sec. VII-A Domain Decomposition paragraph or Figure 13 caption
+- *Fix:* Add citation if the angular sector decomposition scheme originates from a prior work; if novel, state "We introduce an angular sector decomposition specifically suited to the circular geometry of bacterial colonies."
+
+**#54** — Strong scaling communication costs: examples missing
+- *Target:* Sec. VII-B, "ghost particle exchanges and global PETSc matrix operations become more frequent and costly"
+- *Fix:* Add concrete examples: "including matrix-vector products (MV), vector additions, and scatter/gather operations — each requiring global MPI synchronization."
+
+**#67** — Conclusion doesn't explain *why* soft model is useful at small scales
+- *Target:* Sec. VIII, "The soft model may still be useful for exploratory studies of very small colonies (R ≤ 50)..."
+- *Fix:* Add "...due to its simpler implementation and tolerance for the limited packing artifacts that arise at these scales, where cell-scale stress resolution is not required."
+
+**#70** — Missing per-timestep cost comparison
+- *Target:* Sec. VII (or the blank extra page 20 Sam annotated)
+- *Fix:* Add a table or small figure comparing per-timestep wall-clock time (hard vs. soft) at matched colony sizes, broken down by: solver time, neighbor-list rebuild, MPI communication.
+
+**#71** — Where MPI communication occurs is never stated
+- *Target:* Sec. V Implementation or Sec. VII-A Domain Decomposition
+- *Fix:* Add explicit statement: "MPI communication occurs (1) once per timestep for neighbor-list reconstruction, and (2) after each ReLCP iteration to synchronize ghost-particle states across rank boundaries."
+
+---
+
+### C — Figures & Captions
+
+**#15** — Figure 2 origin unclear
+- *Target:* Figure 2 caption: "Spherocylinder cell model..."
+- *Fix:* Determine whether the schematic is adapted from [15] (You et al.) or [23] (Weady et al.) and add "Adapted from [23]." or draw originally. If original, no change needed.
+
+**#16** — 2D vs 3D ambiguity in Figure 2
+- *Target:* Figure 2 diagram and caption
+- *Fix:* Add to caption: "Cells are modeled as 3D spherocylinders; the figure shows a 2D cross-sectional view." (or correct if model is 2D.)
+
+**#20** — Figure 3 (Hertzian plot) possibly redundant
+- *Target:* Figure 3 (F^elastic vs δ plot)
+- *Fix:* Decision required — if Eq. 7 + one sentence suffices, drop Figure 3 to save space. Keep only if the nonlinear δ^{3/2} shape needs visual emphasis.
+
+**#41** — Figure 4 caption missing units
+- *Target:* Figure 4 caption: "...up to a maximum colony radius of 100"
+- *Fix:* Add "(in non-dimensionalized units with ℓ₀ = 1)" after "colony radius of 100."
+
+**#42** — Figure 5 caption missing λ value
+- *Target:* Figure 5 caption: "Close-up comparison of cell packing in the colony center..."
+- *Fix:* Add which stress sensitivity is shown, e.g. "at λ = 10⁻³."
+
+**#43** — Figure 5 caption word choice flagged
+- *Target:* Figure 5 caption, "The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding."
+- *Fix:* Review "overcrowding" — Sam flagged this word. Consider "excessive cell overlap" or "unphysical crowding" for precision.
+
+**#45 + #46 + #47** — Figure 6a axis and binning unclear
+- *Target:* Figure 6a caption and x-axis label
+- *Fix:* (a) Label x-axis explicitly as "Distance from colony center (non-dim.)"; (b) add "taken at colony radius R = 100"; (c) add "Radial bins of width 2, analogous to RDF binning."
+
+**#48** — Figure 6b: no explanation of why overlap decreases with radius
+- *Target:* Figure 6b caption / surrounding Sec. VI-B text
+- *Fix:* Add: "Overlap decreases radially because peripheral cells have more room to expand outward, while interior cells are mechanically compressed by accumulated colony pressure."
+
+**#56** — Figure 15 Δt signal not annotated
+- *Target:* Figure 15 caption: "Adaptive timestep Δt for both collision models."
+- *Fix:* Annotate key phases in the figure (e.g., growth-dominated regime, collision-dominated regime) and reference them in the caption.
+
+**#57** — Figure 16 confuses Δt value with CFL parameter
+- *Target:* Figure 16 caption: "Total runtime vs. CFL number on 112 cores."
+- *Fix:* Clarify: "The x-axis shows the fixed CFL factor used across independent simulation runs, not the dynamic Δt within a run. Each point corresponds to a separate simulation."
+
+**#59** — Figures 17a and 19a appear identical
+- *Target:* Figure 17a caption and Figure 19a caption (both: BBPGD iterations per timestep vs. N)
+- *Fix:* Either merge the two figures or clearly differentiate them by scale/context in the captions. E.g., 17a = single representative run at R=100, 19a = scaling behaviour at R=260 with up to 25k spikes noted.
+
+**#63** — Figure 17c "final phase" ambiguous
+- *Target:* Figure 17c caption: "System energy throughout the ReLCP procedure during a single timestep."
+- *Fix:* Add: "The system converges within six ReLCP iterations; the rightmost segment shows the final feasible configuration where all constraints are resolved."
+
+**#64** — Figure 19b wavelengths not annotated
+- *Target:* Figure 19b (radial cell length oscillations at R=260)
+- *Fix:* Add wavelength annotations at ring positions matching Sam's measured values: λ≈27, λ≈21, λ≈32, λ≈25, λ≈19.
+
+---
+
+### D — Notation & Math
+
+**#9** — ℓ not written as ℓ(t) on first introduction
+- *Target:* End of page 2 / start of Sec. III where cell length ℓ first appears
+- *Fix:* Write ℓᵢ(t) on first use to make time-dependence explicit before it appears in dynamic equations.
+
+**#14** — Mobility matrix entries: ℓ₀ scaling to verify
+- *Target:* Eq. 5: M^k = diag(1/ζℓ₁^k I₃, 12/ζ(ℓ₁^k)³ I₃, ...)
+- *Fix:* Sam annotates entries should be "1/ζℓ₀⁻³, 1/ζℓ₀³ I₃." Verify dimensional analysis after non-dimensionalization with ℓ₀ = 1. If ℓ₀ factors cancel, add a note clarifying that ℓ₀ = 1 simplifies the expression.
+
+**#19** — γ missing timestep superscript k (explanation needed)
+- *Target:* Eq. 9: F_nα^hard = n̂_α γ_α
+- *Fix:* Add a parenthetical: "The multipliers γ are solved fresh each timestep and carry no history; unlike F^k, they require no k superscript."
+
+**#22** — Eq. 16 bracket notation ambiguous
+- *Target:* Eq. 16 energy minimization opening "= ("
+- *Fix:* Ensure LaTeX uses `\left(` / `\right)` to size brackets correctly and that the equality sign is not visually merged with the opening bracket. Consider a two-line split for readability.
+
+**#23** — Growth term in linearization not explained
+- *Target:* Eq. 14, Φ^k_growth = −(∇_ℓ Φ^k)ℓ̇
+- *Fix:* Add: "The growth term Φ^k_growth captures how cell elongation reduces separation distances during the timestep, and is already included in the linearized Φ^{k+1} without additional correction."
+
+**#24** — ≈ Φ^k(γ) relation not stated explicitly
+- *Target:* Eq. 17 and surrounding text: ∇_γ E = Φ^k + Δt(...)
+- *Fix:* Add after Eq. 17: "Noting that ∇_γ E ≈ Φ^{k+1}(γ), minimizing E is equivalent to driving the linearized separation distances to zero."
+
+**#29** — Cross-reference to Eq. 14 verified ✓
+- *Target:* Reference to Eq. 14 in the ReLCP/BBPGD section
+- *Fix:* No change needed — Sam confirmed correct. Ensure label matches in final LaTeX.
+
+---
+
+### E — Citations
+
+**#25** — [15]? near Eq. 17 energy formulation
+- *Target:* Eq. 16–17 energy minimization
+- *Fix:* Verify whether the energy reformulation of the NCP originates from [15] (You et al.) or [11, 25]. Add citation if applicable; otherwise cite the NCP literature already referenced.
+
+**#51** — Missing citation to You et al. for microdomains
+- *Target:* Sec. VI-D, "...aligned cells that do not resemble experimentally observed microdomains."
+- *Fix:* Append [15] directly: "...experimentally observed microdomains [15]."
+
+**#62** — ReLCP convergence needs citation or caveat
+- *Target:* Sec. IV-6 or VII-E, claim that ReLCP "typically converges within a small number of iterations [23]"
+- *Fix:* Either find a formal convergence result in the ReLCP / LCP literature, or be explicit: "In practice, convergence within ≤6 ReLCP iterations is consistently observed (Figure 17c), though no formal bound is available."
+
+---
+
+### F — Cuts, Decisions & Verification
+
+**#2** — Corresponding author missing
+- *Target:* Title/author block
+- *Fix:* Add "∗ Corresponding author" marker and email for Manuel Lerchner if applicable.
+
+**#3** — Abstract soft model claims need verification
+- *Target:* Abstract: "packing fractions exceeding 5 in colony centers"
+- *Fix:* Cross-check against Figure 6a (which does show φ≈5 for λ=10⁻⁴). Confirm "distorted microdomains" and "unrealistic cell bundles" are visually supported by Figure 9/10 before finalising.
+
+**#20** — Figure 3 drop decision
+- *Target:* Figure 3 (Hertzian F^elastic vs δ plot)
+- *Fix:* Drop if Eq. 7 + text suffices. Keep only if the nonlinear shape needs explicit visualisation. Sam leans toward dropping.
+
+**#30** — PETSc description too vague
+- *Target:* PETSc bullet in Sec. V-A
+- *Fix:* State actual parallelism capability: "PETSc supports distributed computing across hundreds of CPU cores via MPI, providing scalable sparse matrix operations and iterative solvers." Remove or correct the "16 CPUs" figure if inaccurate.
+
+**#31** — "ghost cell" undefined on first use
+- *Target:* MPI bullet: "...including ghost-cell exchanges at domain boundaries..."
+- *Fix:* Add parenthetical: "ghost cells (copies of boundary particles replicated to neighbouring MPI ranks for cross-boundary collision detection)."
+
+**#32** — Collision pipeline possibly incomplete
+- *Target:* Sec. V-B Collision Handling Pipeline
+- *Fix:* Verify the pipeline description covers all steps (broad-phase → narrow-phase → force assembly → stress computation). Sam asks "is this really all?" — add stress computation step if missing.
+
+**#33** — Threshold distance d=0.5 unjustified
+- *Target:* "...within a threshold distance d = 0.5"
+- *Fix:* Add justification: "The threshold d = 0.5 equals one cell radius, ensuring both overlapping cells and near-contact cells are captured for constraint generation."
+
+**#50** — Microdomain comparison needs literature grounding
+- *Target:* Sec. VI-D, comparison with You et al. [15]
+- *Fix:* Re-read [15] and related E. coli microdomain literature to ensure the comparison is accurate and appropriately caveated (You et al. uses constant growth rates; this work uses stress-dependent growth).
+
+**#52** — Figure 12 missing analytical growth rate curve
+- *Target:* Figure 12 (Radial relative growth rate profiles e^{−λσ})
+- *Fix:* Figure 12 currently shows only hard and soft model simulation profiles. Add the analytical growth rate prediction e^{−λσ̄(r)} derived from Weady et al. [23]'s stress formula σ̄(r) ≈ (2/λ)ln(1/(8c) − cλr²) as a reference curve (dashed black line). Add to caption: "Dashed black: analytical prediction from [23]."
+
+**#55** — Load imbalance: confirm it is not a bottleneck
+- *Target:* Sec. VII-B, sentence about decreasing efficiency at high core counts
+- *Fix:* Add explanation: "Despite increasing load imbalance, the angular decomposition ensures each rank handles a geometrically similar colony slice, limiting imbalance to a modest factor at the core counts tested."
+
+**#58** (was #57) — Δt stability vs. CFL analysis
+- *Target:* Figure 16 and surrounding Sec. VII-D text
+- *Fix:* Already partially addressed in C-#57. Additionally: explain in text why the U-shaped curve is informative even though Δt is not constant — it reflects the total runtime cost of using a given CFL factor as a policy.
+
+**#60** — BBPGD behaviour at N=1.3k vs. actual colony size
+- *Target:* Sec. VII-E, BBPGD iteration discussion
+- *Fix:* Confirm and state explicitly which N the Figure 17a data represents (N≈36,244 for R≈100). If Sam questions whether the behaviour is already present at N=1,300, add a note or subplot.
+
+**#61** — Future improvements claimed without citations
+- *Target:* Sec. VII-E last paragraph on warm-start and feedback-based Δt
+- *Fix:* Add "We propose the following directions as open research problems not yet explored in the literature:" to clearly distinguish original ideas from cited prior work.
+
+**#65** — Stress profile matching not explained
+- *Target:* Sec. VII-F, "the simulated stress profile closely follows the analytical prediction of Weady et al. [23]"
+- *Fix:* Add: "At R=260 with ≈301k cells, the colony satisfies the continuum limit assumptions underlying [23]'s analytical derivation, explaining the improved agreement relative to smaller colonies."
+
+**#66** — "Robustness justifies…" sentence flagged by Sam
+- *Target:* Sec. VIII, "This robustness justifies the use of computationally simpler, soft, models for studies focused on colony-level pattern formation at small radii."
+- *Fix:* Revise or remove. If kept, qualify: "...provided packing fidelity and cell-scale accuracy are not required." If this claim is inconsistent with the overall conclusion that the hard model is preferred, remove.
+
+**#68** — PETSc + OpenMP claim may be outdated
+- *Target:* Sec. IX-A, "PETSc does not fully support hybrid operations, so alternative libraries or frameworks may need to be considered."
+- *Fix:* Verify current PETSc documentation — Sam notes OpenMP support may exist. If PETSc now supports MPI+OpenMP, update to: "PETSc supports limited hybrid MPI+OpenMP parallelism via its VecCUDA and thread-based backends; leveraging this could reduce per-rank memory and communication overhead."
+
+**#69** — Model Extensions: justify or cut each direction
+- *Target:* Sec. IX-D Model Extensions paragraph listing external boundaries, nutrient fields, chemotactic signaling
+- *Fix:* For each proposed extension, add one sentence of biological motivation. Remove any direction that cannot be motivated in ≤1 sentence.
+
+**[NEW]** — Nutrient depletion incorrectly implied as part of model
+- *Target:* Sec. VI-E (p. 12), "...where mechanical feedback and nutrient depletion restrict active expansion to the growing front [5],[31],[32]."
+- *Fix:* This sentence describes real microbial biology but may mislead readers into thinking our model captures nutrient depletion. Add a clarifying sentence: "Our model captures only stress-dependent mechanical feedback; nutrient depletion is not included." Alternatively, restructure the sentence to make clear this is a biological observation not reproduced by the model: "...where both mechanical feedback and nutrient depletion drive this transition — our model isolates the mechanical contribution alone."
