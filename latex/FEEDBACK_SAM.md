@@ -117,73 +117,56 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 ### B — Missing Content / Additions
 *Requires new text, explanations, or significant expansions.*
 
-**#1** — Abstract needs more intro
-- *Target:* Abstract, first 2 sentences before the main results
-- *Fix:* Expand the opening to briefly introduce the biological system and the modelling challenge before the contribution. Also evaluate trimming the results summary by 1–2 sentences.
+**#1** ✅ — Abstract needs more intro
+- Added 2-sentence biological motivation paragraph before the contribution sentence.
 
-**#4** — Introduction missing key topics
-- *Target:* Sec. I Introduction body paragraphs
-- *Fix:* Add 3–4 sentences covering: (a) overview of hard vs. soft model trade-offs, (b) why adaptive timestepping is essential for stability, (c) relation to continuum modelling (discrete complement), (d) the unified framework as the enabling contribution.
+**#4** ✅ — Introduction missing key topics
+- Added sentences covering hard vs. soft trade-offs, adaptive timestepping necessity, and unified framework as enabling contribution. Note: continuum modelling relation not added — the paper doesn't position itself as a discrete complement to continuum models, so that framing would be inaccurate.
 
-**#8** — No attribution sentence at start of Sec. III
-- *Target:* Sec. III Cell Mechanics, heading or opening sentence
-- *Fix:* Add "Unless otherwise noted, the following mechanics model follows Weady et al. [23]."
+**#8** ✅ — No attribution sentence at start of Sec. III
+- Added "Unless otherwise noted, the mechanics model in this section follows Weady et al. [23,SM]."
 
-**#10** — No intro to Sec. IV stating what comes from [23]
-- *Target:* Sec. IV Unified Computational Framework, opening sentence
-- *Fix:* Add "Subsections IV-A through IV-C follow Weady et al. [23]; the soft collision model (IV-D) and adaptive timestepping (Sec. V-C) are novel contributions of this work."
+**#10** ✅ — No intro to Sec. IV stating what comes from [23]
+- Added opening sentence to Sec. IV with subsection references for Weady et al. material vs. novel contributions.
 
-**#11** — ℓ₀ and the 1/e characteristic not defined at Eq. 2
-- *Target:* Sec. III-A, immediately after Eq. 2: "ℓ̇ᵢ = (ℓᵢ/τ)e^{-λ'σᵢ}"
-- *Fix:* Add "where τ is the 1/e growth timescale (the characteristic division time under zero stress) and ℓ₀ is the reference cell length at birth."
+**#11** ✅ — ℓ₀ and the 1/e characteristic not defined at Eq. 2
+- Extended "where" clause after Eq. 2 to define τ as 1/e growth timescale and ℓ₀ as reference cell length at birth.
 
-**#12** — Non-dim variables used before formally introduced
-- *Target:* Sec. III-A, non-dimensionalization paragraph "we set ℓ₀ = 1, d = 0.5, τ = 1, ζ = 1"
-- *Fix:* Audit that ℓ₀, d, τ, ζ, λ are each defined in text before this paragraph appears, or add a single "where" sentence listing all with brief descriptions.
+**#12** ✅ — Non-dim variables used before formally introduced
+- Added "where ζ is the drag coefficient and d is the cell diameter" to the non-dim paragraph.
 
-**#17** — Closing paragraph of Sec. IV-C too terse
-- *Target:* Last paragraph of page 3 right column: "The distinction between hard and soft collision models lies solely in how the generalized force vector F and in particular the inter-cell forces F_ij are computed. The rest of the framework... remains identical."
-- *Fix:* Expand with one forward-reference sentence: "Specifically, the hard model computes F_ij via constraint forces (Sec. IV-E), while the soft model uses repulsive potentials (Sec. IV-D)."
+**#17** ✅ — Closing paragraph of Sec. IV-C too terse
+- Added forward-reference sentence distinguishing hard (constraint forces) vs. soft (repulsive potentials) with section cross-references.
 
-**#28** — BBPGD not described despite being central
-- *Target:* Sec. IV-5 Numerical Solution, sentence "We solve... using the Barzilai-Borwein projected gradient descent method (BBPGD) [27]..."
-- *Fix:* Add 2–3 sentences: "At each iteration BBPGD computes a gradient step with Barzilai-Borwein adaptive step-size selection, then projects γ onto γ ≥ 0 to enforce repulsivity. This avoids expensive line searches while achieving fast convergence for the box-constrained quadratic structure of the NCP."
+**#28** ✅ — BBPGD not described despite being central
+- Added 2 sentences describing gradient-step + projection mechanics and why BB step-size avoids line searches.
 
-**#34** — CFL discussion omits growth forces
-- *Target:* Sec. V-C, CFL derivation around Eq. 18–19 where u_m is defined as "median of all cell velocities"
-- *Fix:* Extend u_m definition to include growth-induced displacement: "u_m = median{‖vᵢ‖ + ℓ̇ᵢ} accounts for both mechanical velocities and cell elongation."
+**#34** ✅ — CFL discussion omits growth forces
+- Rewrote u_m definition to explicitly include ℓ̇ᵢ (growth elongation) alongside mechanical velocity.
 
-**#35** — Algorithm 1 variables undefined
-- *Target:* Algorithm 1 Require block and Eq. 19
-- *Fix:* Add a "where" clause after Eq. 19: "u_m: median particle speed (including growth), c: CFL safety factor (c = 0.5), ε: solver displacement tolerance (ε = 10⁻³), α: EMA smoothing factor (α = 0.01)."
+**#35** ✅ — Algorithm 1 variables undefined
+- Added "where" clause after Eq. 19 defining c, ε, and u_m with their values.
 
-**#36 + #37** — Steps 4 & 5 of Algorithm 1 feel ad hoc
-- *Target:* Algorithm 1 steps 4 (EMA smoothing Δt_new = (1−α)Δt + αΔt*) and 5 (clamp within 20%)
-- *Fix:* Add justification in surrounding text: step 4 prevents oscillatory Δt that could destabilise the solver; step 5 limits acceleration to avoid single-step overshoots. Alternatively, derive the 20% cap from a stability bound if one exists.
+**#36 + #37** ✅ — Steps 4 & 5 of Algorithm 1 feel ad hoc
+- Added inline justification comments to Algorithm 1 steps 4 and 5.
 
-**#39 + #40** — Soft model overlap section needs a conclusion statement
-- *Target:* Sec. VI-B last paragraph (soft model overlap discussion)
-- *Fix:* Add a closing sentence: "Whilst a smaller Δt would reduce overlap, incorporating instantaneous overlap into the timestep criterion would add per-step cost; we identify this as a future improvement (Sec. IX-C)."
+**#39 + #40** ✅ — Soft model overlap section needs a conclusion statement
+- Replaced vague "beyond the scope" sentence with explicit forward-reference to Sec. IX-C.
 
-**#53** — Domain decomposition needs a source/credit
-- *Target:* Sec. VII-A Domain Decomposition paragraph or Figure 13 caption
-- *Fix:* Add citation if the angular sector decomposition scheme originates from a prior work; if novel, state "We introduce an angular sector decomposition specifically suited to the circular geometry of bacterial colonies."
+**#53** ✅ — Domain decomposition needs a source/credit
+- Stated explicitly "We introduce this angular sector decomposition specifically suited to the circular geometry of bacterial colonies."
 
-**#54** — Strong scaling communication costs: examples missing
-- *Target:* Sec. VII-B, "ghost particle exchanges and global PETSc matrix operations become more frequent and costly"
-- *Fix:* Add concrete examples: "including matrix-vector products (MV), vector additions, and scatter/gather operations — each requiring global MPI synchronization."
+**#54** ✅ — Strong scaling communication costs: examples missing
+- Added "including matrix-vector products, vector additions, and scatter/gather operations."
 
-**#67** — Conclusion doesn't explain *why* soft model is useful at small scales
-- *Target:* Sec. VIII, "The soft model may still be useful for exploratory studies of very small colonies (R ≤ 50)..."
-- *Fix:* Add "...due to its simpler implementation and tolerance for the limited packing artifacts that arise at these scales, where cell-scale stress resolution is not required."
+**#67** ✅ — Conclusion doesn't explain *why* soft model is useful at small scales
+- Added "due to its simpler implementation and tolerance for limited packing artifacts... where cell-scale stress resolution is not required."
 
-**#70** — Missing per-timestep cost comparison
-- *Target:* Sec. VII (or the blank extra page 20 Sam annotated)
-- *Fix:* Add a table or small figure comparing per-timestep wall-clock time (hard vs. soft) at matched colony sizes, broken down by: solver time, neighbor-list rebuild, MPI communication.
+**#70** ⚠️ TODO — Missing per-timestep cost comparison
+- Requires new benchmark data + figure/table. Cannot be done as a text fix. Needs actual timing measurements.
 
-**#71** — Where MPI communication occurs is never stated
-- *Target:* Sec. V Implementation or Sec. VII-A Domain Decomposition
-- *Fix:* Add explicit statement: "MPI communication occurs (1) once per timestep for neighbor-list reconstruction, and (2) after each ReLCP iteration to synchronize ghost-particle states across rank boundaries."
+**#71** ✅ — Where MPI communication occurs is never stated
+- Added explicit statement of both MPI communication points to Sec. VII-A.
 
 ---
 
