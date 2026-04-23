@@ -326,7 +326,7 @@ where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ du
     \mathbfcal{M}^k = \text{diag}\left(\frac{1}{\zeta \ell_1^k}\mathbf{I}_3, \frac{12}{\zeta {\ell_1^k}^3}\mathbf{I}_3, \dots \right) \in \mathbb{R}^{6N \times 6N}
 \end{equation}
 
-where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix. Note that $\ell_i^k$ is the current length of cell $i$ at timestep $k$, not the reference length $\ell_0$; cells grow continuously so $\ell_i^k \neq \ell_0$ in general. The resulting matrix-vector product thus implements the overdamped Langevin equation from \autoref{eq:overdamped_langevin} for all cells simultaneously.
+where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix. The resulting matrix-vector product thus implements the overdamped Langevin equation from \autoref{eq:overdamped_langevin} for all cells simultaneously.
 
 \subsection{State Integration}
 \label{sec:state_integration}
@@ -585,11 +585,13 @@ where $c = 0.5$ is the CFL safety factor (ensuring cells move at most half the t
         \State Compute characteristic velocity $u_i = \|v_i\| + \dot{\ell_i}$ for each particle.
         \State Calculate $u_m$ as the median of $\{u_i\}$.
         \State Determine $\Delta t^*$ using~\autoref{eq:cfl_dt}.
-        \State Smooth the timestep change to avoid oscillations: $\Delta t_{\text{new}} = (1 - \alpha)\Delta t + \alpha \Delta t^*$ with $\alpha = 0.01$. \hfill\textit{(prevents oscillatory $\Delta t$ that could destabilise the solver)}
-        \State Clamp $\Delta t_{\text{new}}$ within 20\% of current $\Delta t$ to prevent abrupt changes. \hfill\textit{(limits single-step acceleration to avoid overshoots)}
+        \State Smooth the timestep change to avoid oscillations: $\Delta t_{\text{new}} = (1 - \alpha)\Delta t + \alpha \Delta t^*$ with $\alpha = 0.01$.
+        \State Clamp $\Delta t_{\text{new}}$ within 20\% of current $\Delta t$ to prevent abrupt changes.
         \State Update simulation timestep: $\Delta t \gets \Delta t_{\text{new}}$.
     \end{algorithmic}
 \end{algorithm}
+
+The EMA smoothing in step 4 prevents oscillatory $\Delta t$ sequences that could destabilise the solver when velocity fluctuations are large. The 20\% clamp in step 5 limits single-step acceleration so that $\Delta t$ cannot jump abruptly to a value that would cause excessive overlaps before the next CFL check. Both the smoothing factor $\alpha = 0.01$ and the 20\% cap were determined empirically and found to work well across all tested colony sizes and stress sensitivities.
 
 \subsection{Simulation Output and Availability}
 

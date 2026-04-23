@@ -148,7 +148,7 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 - Added "where" clause after Eq. 19 defining c, ε, and u_m with their values.
 
 **#36 + #37** ✅ — Steps 4 & 5 of Algorithm 1 feel ad hoc
-- Added inline justification comments to Algorithm 1 steps 4 and 5.
+- Moved justification to prose paragraph after the algorithm. Added that α = 0.01 and the 20% cap were determined empirically and work well across all tested configurations.
 
 **#39 + #40** ✅ — Soft model overlap section needs a conclusion statement
 - Replaced vague "beyond the scope" sentence with explicit forward-reference to Sec. IX-C.
@@ -216,10 +216,10 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 ### D — Notation & Math
 
 **#9** ✅ — ℓ not written as ℓ(t) on first introduction
-- Changed to $\ell_i(t)$ on first use in Sec. III opening.
+- Changed to $\ell_i(t)$ on first use to make time-dependence explicit.
 
 **#14** ✅ — Mobility matrix entries: ℓ₀ scaling to verify
-- Added note: ℓᵢ^k is current cell length, not ℓ₀; cells grow so ℓᵢ^k ≠ ℓ₀ in general. Notation is correct.
+- Notation is correct: ℓᵢ^k is the current cell length, not ℓ₀. No note added — would be pedantic. Sam was checking dimensional consistency, which holds.
 
 **#19** ✅ — γ missing timestep superscript k (explanation needed)
 - Added: "The multipliers γ are solved fresh each timestep and carry no history; unlike F^k, they require no k superscript."
