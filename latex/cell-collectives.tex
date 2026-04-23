@@ -172,7 +172,7 @@ Unless otherwise noted, the mechanics model in this section follows Weady et al.
 
 Accurately modeling mechanical interactions between cells is essential for simulating colony growth and emergent spatial patterns. From a computational perspective, approximating bacteria and fungi as rigid spherocylinders (rods with hemispherical end caps) offers a balance between biological realism and computational efficiency. This representation captures the elongated morphology of these organisms while preserving the fundamental mechanics of cell-cell interactions and colony expansion. Although real cells exhibit some deformability, the rigid spherocylinder approximation successfully captures essential collective dynamics at significantly reduced computational cost and is well validated experimentally~\cite{Rudge2012,Khan_2024,Rudge2013,Langeslay_2023,Ghosh2015}. The spherocylinder geometry closely matches common organisms such as \textit{E. coli} and \textit{Setosphaeria rostrata} (see \autoref{fig:exserohilum_turcicum}), and has become standard in computational models of microbial collectives~\cite{You2018, Weady2024, Blanchard2015, Warren2019, Ghosh2015}.
 
-Each spherocylinder is characterized by a time-varying length $\ell$ that increases during growth prior to division, and a fixed diameter $d$ that remains constant across the population. This geometry enables efficient contact detection algorithms~\cite{GeometricTools} and naturally accommodates rotational dynamics essential for capturing realistic colony mechanics.
+Each spherocylinder is characterized by a time-varying length $\ell_i(t)$ that increases during growth prior to division, and a fixed diameter $d$ that remains constant across the population. This geometry enables efficient contact detection algorithms~\cite{GeometricTools} and naturally accommodates rotational dynamics essential for capturing realistic colony mechanics.
 
 At bacterial length scales, the Reynolds number is extremely small ($\text{Re} \ll 1$), so viscous forces dominate over inertia. In this highly viscous, \textit{sticky} environment, cells stop almost immediately once forces cease~\cite{datta2024lifelowreynoldsnumber,Rudge2012}. As a result, cell motion is governed by the overdamped Langevin equation:
 
@@ -326,7 +326,7 @@ where, $\mathbf{f}_i = \sum_j \mathbf{F}_{ij}$ is the total force on cell $i$ du
     \mathbfcal{M}^k = \text{diag}\left(\frac{1}{\zeta \ell_1^k}\mathbf{I}_3, \frac{12}{\zeta {\ell_1^k}^3}\mathbf{I}_3, \dots \right) \in \mathbb{R}^{6N \times 6N}
 \end{equation}
 
-where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix. The resulting matrix-vector product thus implements the overdamped Langevin equation from \autoref{eq:overdamped_langevin} for all cells simultaneously.
+where $\mathbf{I}_3$ is the $3 \times 3$ identity matrix. Note that $\ell_i^k$ is the current length of cell $i$ at timestep $k$, not the reference length $\ell_0$; cells grow continuously so $\ell_i^k \neq \ell_0$ in general. The resulting matrix-vector product thus implements the overdamped Langevin equation from \autoref{eq:overdamped_langevin} for all cells simultaneously.
 
 \subsection{State Integration}
 \label{sec:state_integration}
@@ -385,7 +385,7 @@ The force on cell $n$ from constraint $\alpha$ is:
     \mathbf{F}^{\text{hard}}_{n\alpha} = \hat{\mathbf{n}}_\alpha \gamma_\alpha
 \end{equation}
 
-where $\hat{\mathbf{n}}_\alpha$ is the normal vector at the contact point. The total generalized force vector $\mathbfcal{F}$ for the colony depends linearly on the multipliers $\boldsymbol{\gamma} = [\dots, \gamma_\alpha, \dots]^\top \in \mathbb{R}^{C}$ and can be conveniently expressed in matrix form:
+where $\hat{\mathbf{n}}_\alpha$ is the normal vector at the contact point. The multipliers $\boldsymbol{\gamma}$ are solved fresh each timestep and carry no history; unlike $\mathbfcal{F}^k$, they require no $k$ superscript. The total generalized force vector $\mathbfcal{F}$ for the colony depends linearly on the multipliers $\boldsymbol{\gamma} = [\dots, \gamma_\alpha, \dots]^\top \in \mathbb{R}^{C}$ and can be conveniently expressed in matrix form:
 \begin{equation} \label{eq:force_as_function_of_multipliers}
     \mathbfcal{F}(\boldsymbol{\gamma}) = \mathbfcal{D} \boldsymbol{\gamma}
 \end{equation}
@@ -432,7 +432,7 @@ The central challenge is that $\mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$ is a no
 
 \begin{enumerate}
     \item \textbf{Cell Motion:} All cell distances change due to the motion driven by collision forces. This is captured by the term $\dot{\mathbf{\Phi}^k}_{\text{motion}} = \frac{d \mathbf{\Phi}^k}{d \mathbfcal{C}} \frac{d \mathbfcal{C}}{dt} = (\nabla_{\mathbfcal{C}} \mathbf{\Phi}^k) \dot{\mathbfcal{C}}$.
-    \item \textbf{Cell Growth:} Additionally, cell growth affects separation according to $\dot{\mathbf{\Phi}^k}_{\text{growth}} = \frac{d \mathbf{\Phi}^k}{d \boldsymbol{\ell}} \frac{d \boldsymbol{\ell}}{dt} =-(\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}}$.\newline The negative sign arises because as cells elongate, they reduce the separation distance between them.
+    \item \textbf{Cell Growth:} Additionally, cell growth affects separation according to $\dot{\mathbf{\Phi}^k}_{\text{growth}} = \frac{d \mathbf{\Phi}^k}{d \boldsymbol{\ell}} \frac{d \boldsymbol{\ell}}{dt} =-(\nabla_{\boldsymbol{\ell}} \mathbf{\Phi}^k) \dot{\boldsymbol{\ell}}$.\newline The negative sign arises because as cells elongate, they reduce the separation distance between them. This growth term captures how cell elongation reduces separation distances during the timestep and is already fully accounted for in the linearized $\mathbf{\Phi}^{k+1}$ without additional correction.
 \end{enumerate}
 
 \noindent Combining these two effects leads to the following approximation for $\mathbf{\Phi}^{k+1}$:
@@ -484,14 +484,13 @@ To solve this NCP efficiently, we reframe it as an optimization problem using a 
 
 {\small
 \begin{equation} \label{eq:energy_function}
-    \begin{aligned}
-        \min_{\boldsymbol{\gamma} \geq \mathbf{0}}
-        E(\boldsymbol{\gamma})
-        = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \boldsymbol{\gamma}^\top \mathbf{\Phi}^k
-         & +  \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma} \\
-         & + \mathbf{1}^\top \frac{\Delta t}{\lambda}
+    \min_{\boldsymbol{\gamma} \geq \mathbf{0}} E(\boldsymbol{\gamma})
+    = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \left[
+        \boldsymbol{\gamma}^\top \mathbf{\Phi}^k
+        + \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma}
+        + \mathbf{1}^\top \frac{\Delta t}{\lambda}
         \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
-    \end{aligned}
+    \right]
 \end{equation}
 }
 
@@ -505,7 +504,7 @@ By construction, the gradient of this energy equals the linearized separation di
 \end{equation}
 }
 
-Because $E(\boldsymbol{\gamma})$ is convex, the constrained optimization problem has a unique global minimizer over the feasible region $\boldsymbol{\gamma} \geq \mathbf{0}$. We compute this minimum using a projected gradient method, which iteratively takes steps in the direction of the negative gradient and projects the result onto the feasible region to ensure repulsive forces.
+Noting that $\nabla_{\boldsymbol{\gamma}} E \approx \mathbf{\Phi}^{k+1}(\boldsymbol{\gamma})$, minimizing $E$ is equivalent to driving the linearized separation distances to zero — precisely the no-overlap condition. Because $E(\boldsymbol{\gamma})$ is convex, the constrained optimization problem has a unique global minimizer over the feasible region $\boldsymbol{\gamma} \geq \mathbf{0}$. We compute this minimum using a projected gradient method, which iteratively takes steps in the direction of the negative gradient and projects the result onto the feasible region to ensure repulsive forces.
 
 At the optimal solution $\boldsymbol{\gamma}^*$, the Karush-Kuhn-Tucker (KKT) conditions for this constrained minimization problem are exactly equivalent to our physical constraints:
 

@@ -215,33 +215,26 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 
 ### D — Notation & Math
 
-**#9** — ℓ not written as ℓ(t) on first introduction
-- *Target:* End of page 2 / start of Sec. III where cell length ℓ first appears
-- *Fix:* Write ℓᵢ(t) on first use to make time-dependence explicit before it appears in dynamic equations.
+**#9** ✅ — ℓ not written as ℓ(t) on first introduction
+- Changed to $\ell_i(t)$ on first use in Sec. III opening.
 
-**#14** — Mobility matrix entries: ℓ₀ scaling to verify
-- *Target:* Eq. 5: M^k = diag(1/ζℓ₁^k I₃, 12/ζ(ℓ₁^k)³ I₃, ...)
-- *Fix:* Sam annotates entries should be "1/ζℓ₀⁻³, 1/ζℓ₀³ I₃." Verify dimensional analysis after non-dimensionalization with ℓ₀ = 1. If ℓ₀ factors cancel, add a note clarifying that ℓ₀ = 1 simplifies the expression.
+**#14** ✅ — Mobility matrix entries: ℓ₀ scaling to verify
+- Added note: ℓᵢ^k is current cell length, not ℓ₀; cells grow so ℓᵢ^k ≠ ℓ₀ in general. Notation is correct.
 
-**#19** — γ missing timestep superscript k (explanation needed)
-- *Target:* Eq. 9: F_nα^hard = n̂_α γ_α
-- *Fix:* Add a parenthetical: "The multipliers γ are solved fresh each timestep and carry no history; unlike F^k, they require no k superscript."
+**#19** ✅ — γ missing timestep superscript k (explanation needed)
+- Added: "The multipliers γ are solved fresh each timestep and carry no history; unlike F^k, they require no k superscript."
 
-**#22** — Eq. 16 bracket notation ambiguous
-- *Target:* Eq. 16 energy minimization opening "= ("
-- *Fix:* Ensure LaTeX uses `\left(` / `\right)` to size brackets correctly and that the equality sign is not visually merged with the opening bracket. Consider a two-line split for readability.
+**#22** ✅ — Eq. 16 bracket notation ambiguous
+- Restructured energy equation into single-line \left[\right] bracket; equals sign no longer visually merges with bracket.
 
-**#23** — Growth term in linearization not explained
-- *Target:* Eq. 14, Φ^k_growth = −(∇_ℓ Φ^k)ℓ̇
-- *Fix:* Add: "The growth term Φ^k_growth captures how cell elongation reduces separation distances during the timestep, and is already included in the linearized Φ^{k+1} without additional correction."
+**#23** ✅ — Growth term in linearization not explained
+- Added: "This growth term captures how cell elongation reduces separation distances during the timestep and is already fully accounted for in the linearized Φ^{k+1} without additional correction."
 
-**#24** — ≈ Φ^k(γ) relation not stated explicitly
-- *Target:* Eq. 17 and surrounding text: ∇_γ E = Φ^k + Δt(...)
-- *Fix:* Add after Eq. 17: "Noting that ∇_γ E ≈ Φ^{k+1}(γ), minimizing E is equivalent to driving the linearized separation distances to zero."
+**#24** ✅ — ≈ Φ^k(γ) relation not stated explicitly
+- Added before convexity sentence: "Noting that ∇_γ E ≈ Φ^{k+1}(γ), minimizing E is equivalent to driving the linearized separation distances to zero."
 
-**#29** — Cross-reference to Eq. 14 verified ✓
-- *Target:* Reference to Eq. 14 in the ReLCP/BBPGD section
-- *Fix:* No change needed — Sam confirmed correct. Ensure label matches in final LaTeX.
+**#29** ✅ — Cross-reference to Eq. 14 verified ✓
+- No change needed — Sam confirmed correct.
 
 ---
 
