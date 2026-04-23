@@ -240,17 +240,14 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 
 ### E — Citations
 
-**#25** — [15]? near Eq. 17 energy formulation
-- *Target:* Eq. 16–17 energy minimization
-- *Fix:* Verify whether the energy reformulation of the NCP originates from [15] (You et al.) or [11, 25]. Add citation if applicable; otherwise cite the NCP literature already referenced.
+**#25** ✅ — [15]? near Eq. 17 energy formulation
+- Verified: You2018 is the microdomains paper, not the NCP energy source. Energy formulation correctly attributed to CellModellerMaths + Yan_2020. No change needed.
 
-**#51** — Missing citation to You et al. for microdomains
-- *Target:* Sec. VI-D, "...aligned cells that do not resemble experimentally observed microdomains."
-- *Fix:* Append [15] directly: "...experimentally observed microdomains [15]."
+**#51** ✅ — Missing citation to You et al. for microdomains
+- Added `\cite{You2018}` after "experimentally observed microdomains."
 
-**#62** — ReLCP convergence needs citation or caveat
-- *Target:* Sec. IV-6 or VII-E, claim that ReLCP "typically converges within a small number of iterations [23]"
-- *Fix:* Either find a formal convergence result in the ReLCP / LCP literature, or be explicit: "In practice, convergence within ≤6 ReLCP iterations is consistently observed (Figure 17c), though no formal bound is available."
+**#62** ✅ — ReLCP convergence needs citation or caveat
+- Replaced vague "typically converges" with: "In practice, convergence within ≤6 ReLCP iterations is consistently observed (Fig. 17c), though no formal convergence bound is available."
 
 ---
 

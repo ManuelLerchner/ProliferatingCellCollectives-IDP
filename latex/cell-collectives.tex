@@ -484,13 +484,15 @@ To solve this NCP efficiently, we reframe it as an optimization problem using a 
 
 {\small
 \begin{equation} \label{eq:energy_function}
+    \begin{aligned}
     \min_{\boldsymbol{\gamma} \geq \mathbf{0}} E(\boldsymbol{\gamma})
-    = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \left[
-        \boldsymbol{\gamma}^\top \mathbf{\Phi}^k
-        + \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma}
-        + \mathbf{1}^\top \frac{\Delta t}{\lambda}
-        \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda\, \mathbfcal{L}\, \boldsymbol{\gamma}} \right)
-    \right]
+    = \min_{\boldsymbol{\gamma} \geq \mathbf{0}} \Bigl[
+        &\boldsymbol{\gamma}^\top \mathbf{\Phi}^k
+        + \frac{\Delta t}{2}\, \boldsymbol{\gamma}^\top \mathbfcal{D}^\top \mathbfcal{M}^k \mathbfcal{D}\, \boldsymbol{\gamma}\\
+        &+ \mathbf{1}^\top \frac{\Delta t}{\lambda}
+        \left( \frac{\boldsymbol{\ell}}{\tau} \odot e^{-\lambda \mathbfcal{L} \boldsymbol{\gamma}} \right)
+    \Bigr]
+    \end{aligned}
 \end{equation}
 }
 
@@ -528,7 +530,7 @@ Following Weady et al.~\cite{Weady2024SM}, we adopt a convergence criterion base
 
 A fundamental limitation of the linearization is that orthogonal motions, specifically rotations about contact points and translations parallel to the contact plane, are unconstrained within the linear approximation~\cite{Weady2024SM}. Consequently, even after the BBPGD algorithm converges to the specified tolerance $\epsilon$, residual overlaps may still be present that violate the non-overlap constraint.
 
-To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recursively generated linear complementarity problem (ReLCP) method. After each BBPGD convergence, ReLCP identifies any remaining overlaps by examining all pairwise cell distances, generates new constraints for these violations, and re-solves the complementarity problem with the augmented constraint set. This process iterates until all cell overlaps fall below the tolerance $\epsilon$. This hierarchical approach ensures that the non-overlap condition is strictly enforced, even in the presence of complex contact geometries and coupled motions (see \autoref{fig:bbpgd_residual}). The iterative refinement procedure typically converges within a small number of iterations, making it computationally tractable for most simulations~\cite{Weady2024SM}.
+To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recursively generated linear complementarity problem (ReLCP) method. After each BBPGD convergence, ReLCP identifies any remaining overlaps by examining all pairwise cell distances, generates new constraints for these violations, and re-solves the complementarity problem with the augmented constraint set. This process iterates until all cell overlaps fall below the tolerance $\epsilon$. This hierarchical approach ensures that the non-overlap condition is strictly enforced, even in the presence of complex contact geometries and coupled motions (see \autoref{fig:bbpgd_residual}). In practice, convergence within $\leq 6$ ReLCP iterations is consistently observed (see \autoref{fig:bbpgd_energy}), making it computationally tractable for most simulations~\cite{Weady2024SM}, though no formal convergence bound is available in the literature.
 
 Nevertheless, this approach still requires a sufficiently small timestep, $\Delta t \sim 2 \cdot 10^{-3}$ (see \autoref{fig:cfl_vs_runtime}), to prevent excessive cell motion~\cite{Yan2022}. If cells move too far in a single timestep, new overlaps can form that the linearization does not capture, preventing constraint resolution. In practice, this can cause the BBPGD method to fail to converge or the ReLCP solver to be unable to resolve all overlaps within a reasonable number of iterations, leading to simulation failure.
 
@@ -733,7 +735,7 @@ As shown in \autoref{fig:orientation_comparison_small}, both hard and soft colli
 
 Although the hard and soft collision models presented here are not directly comparable to You et al.~\cite{You2018}, because their study assumes constant growth rates while our models use stress-dependent growth, their findings still provide useful context. You et al. show that reduced growth rates lead to larger microdomains. In our models, stress sensitivity $\lambda$ produces a similar effect by inhibiting growth in the densely packed colony center, resulting in larger microdomains. This trend is evident in simulations of the soft model (see \autoref{fig:orientation_comparison}), where higher $\lambda$ values correspond to slower growth and larger microdomains, consistent with You et al.'s observations. The hard model, in contrast, shows no such trend. The consistent microdomain size across $\lambda$ values in the hard model may be related to the global constraint resolution mechanism, but a detailed investigation of the underlying mechanisms is beyond the scope of this comparison.
 
-We saw that both models produce similar orientation patterns in small colonies at a colony radius around $R \approx 50$ (see \autoref{fig:orientation_comparison_small}). However, pronounced differences emerge as colonies grow larger or $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintains distinct patches of similarly-sized aligned cells across all $\lambda$ values. In contrast, the soft model produces elongated, unrealistic bundles of densely packed aligned cells that do not resemble experimentally observed microdomains.
+We saw that both models produce similar orientation patterns in small colonies at a colony radius around $R \approx 50$ (see \autoref{fig:orientation_comparison_small}). However, pronounced differences emerge as colonies grow larger or $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintains distinct patches of similarly-sized aligned cells across all $\lambda$ values. In contrast, the soft model produces elongated, unrealistic bundles of densely packed aligned cells that do not resemble experimentally observed microdomains~\cite{You2018}.
 
 This artifact stems directly from the soft model's higher interior growth rates, discussed in the previous chapter. Without sufficient outward stress propagation, the interior becomes unphysically dense, forcing cells into long, aligned bundles.
 
