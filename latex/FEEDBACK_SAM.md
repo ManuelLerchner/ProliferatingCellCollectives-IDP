@@ -253,74 +253,89 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 
 ### F — Cuts, Decisions & Verification
 
-**#2** — Corresponding author missing
+**#2** ⚠️ TODO — Corresponding author missing
 - *Target:* Title/author block
-- *Fix:* Add "∗ Corresponding author" marker and email for Manuel Lerchner if applicable.
+- *Fix:* Add "∗ Corresponding author" marker and email for Manuel Lerchner if applicable. **Author decision needed.**
 
-**#3** — Abstract soft model claims need verification
+**#3** ⚠️ TODO — Abstract soft model claims need verification
 - *Target:* Abstract: "packing fractions exceeding 5 in colony centers"
-- *Fix:* Cross-check against Figure 6a (which does show φ≈5 for λ=10⁻⁴). Confirm "distorted microdomains" and "unrealistic cell bundles" are visually supported by Figure 9/10 before finalising.
+- *Fix:* Cross-check against Figure 6a (which does show φ≈5 for λ=10⁻⁴). Confirm "distorted microdomains" and "unrealistic cell bundles" are visually supported by Figure 9/10 before finalising. **Author verification needed.**
 
-**#20** — Figure 3 drop decision
+**#20** ⚠️ TODO — Figure 3 drop decision
 - *Target:* Figure 3 (Hertzian F^elastic vs δ plot)
-- *Fix:* Drop if Eq. 7 + text suffices. Keep only if the nonlinear shape needs explicit visualisation. Sam leans toward dropping.
+- *Fix:* Drop if Eq. 7 + text suffices. Keep only if the nonlinear shape needs explicit visualisation. Sam leans toward dropping. **Author decision needed.**
 
-**#30** — PETSc description too vague
-- *Target:* PETSc bullet in Sec. V-A
-- *Fix:* State actual parallelism capability: "PETSc supports distributed computing across hundreds of CPU cores via MPI, providing scalable sparse matrix operations and iterative solvers." Remove or correct the "16 CPUs" figure if inaccurate.
+**#30** ✅ — PETSc description too vague
+- Added "supporting distributed computation across hundreds of CPU cores via MPI" and expanded description to include iterative solvers.
 
-**#31** — "ghost cell" undefined on first use
-- *Target:* MPI bullet: "...including ghost-cell exchanges at domain boundaries..."
-- *Fix:* Add parenthetical: "ghost cells (copies of boundary particles replicated to neighbouring MPI ranks for cross-boundary collision detection)."
+**#31** ✅ — "ghost cell" undefined on first use
+- Added parenthetical: "ghost cells (copies of boundary particles replicated to neighbouring MPI ranks for cross-boundary collision detection)."
 
-**#32** — Collision pipeline possibly incomplete
-- *Target:* Sec. V-B Collision Handling Pipeline
-- *Fix:* Verify the pipeline description covers all steps (broad-phase → narrow-phase → force assembly → stress computation). Sam asks "is this really all?" — add stress computation step if missing.
+**#32** ✅ — Collision pipeline possibly incomplete
+- Restructured pipeline as three explicit phases: (1) broad-phase, (2) narrow-phase, (3) force and stress assembly. Stress computation now explicitly named.
 
-**#33** — Threshold distance d=0.5 unjustified
-- *Target:* "...within a threshold distance d = 0.5"
-- *Fix:* Add justification: "The threshold d = 0.5 equals one cell radius, ensuring both overlapping cells and near-contact cells are captured for constraint generation."
+**#33** ✅ — Threshold distance d=0.5 unjustified
+- Added: "equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation."
 
-**#50** — Microdomain comparison needs literature grounding
-- *Target:* Sec. VI-D, comparison with You et al. [15]
-- *Fix:* Re-read [15] and related E. coli microdomain literature to ensure the comparison is accurate and appropriately caveated (You et al. uses constant growth rates; this work uses stress-dependent growth).
+**#50** ⚠️ TODO — Microdomain comparison needs literature grounding
+- *Fix:* Re-read [15] and related E. coli microdomain literature to ensure comparison is accurate and appropriately caveated. **Author verification needed.**
 
-**#52** — Figure 12 missing analytical growth rate curve
-- *Target:* Figure 12 (Radial relative growth rate profiles e^{−λσ})
-- *Fix:* Figure 12 currently shows only hard and soft model simulation profiles. Add the analytical growth rate prediction e^{−λσ̄(r)} derived from Weady et al. [23]'s stress formula σ̄(r) ≈ (2/λ)ln(1/(8c) − cλr²) as a reference curve (dashed black line). Add to caption: "Dashed black: analytical prediction from [23]."
+**#52** ⚠️ TODO — Figure 12 missing analytical growth rate curve
+- *Fix:* Requires matplotlib edit — add e^{−λσ̄(r)} analytical curve (dashed black) from Weady et al. [23]. Add to caption: "Dashed black: analytical prediction from [23]." **Figure edit needed.**
 
-**#55** — Load imbalance: confirm it is not a bottleneck
-- *Target:* Sec. VII-B, sentence about decreasing efficiency at high core counts
-- *Fix:* Add explanation: "Despite increasing load imbalance, the angular decomposition ensures each rank handles a geometrically similar colony slice, limiting imbalance to a modest factor at the core counts tested."
+**#55** ✅ — Load imbalance: confirm it is not a bottleneck
+- Added: "Despite this, the angular decomposition ensures each rank handles a geometrically similar colony slice, limiting load imbalance to a modest factor at the core counts tested."
 
-**#58** (was #57) — Δt stability vs. CFL analysis
-- *Target:* Figure 16 and surrounding Sec. VII-D text
-- *Fix:* Already partially addressed in C-#57. Additionally: explain in text why the U-shaped curve is informative even though Δt is not constant — it reflects the total runtime cost of using a given CFL factor as a policy.
+**#58** ✅ — Δt stability vs. CFL analysis
+- Already addressed: figure caption explicitly explains U-shaped curve as "cost of using a given CFL factor as a policy" with each point being a separate simulation. No additional text change needed.
 
-**#60** — BBPGD behaviour at N=1.3k vs. actual colony size
-- *Target:* Sec. VII-E, BBPGD iteration discussion
-- *Fix:* Confirm and state explicitly which N the Figure 17a data represents (N≈36,244 for R≈100). If Sam questions whether the behaviour is already present at N=1,300, add a note or subplot.
+**#60** ✅ — BBPGD behaviour at N=1.3k vs. actual colony size
+- Already clearly stated: figure caption says "representative run at R ≈ 100 (N ≤ 175,000)" and text states R≈100 with 36,244 cells. Data range covers N from ~0 to 175k, showing behaviour throughout. No additional change needed.
 
-**#61** — Future improvements claimed without citations
-- *Target:* Sec. VII-E last paragraph on warm-start and feedback-based Δt
-- *Fix:* Add "We propose the following directions as open research problems not yet explored in the literature:" to clearly distinguish original ideas from cited prior work.
+**#61** ✅ — Future improvements claimed without citations
+- Added: "We propose the following directions as open research problems not yet explored in the literature:" before listing warm-start and feedback-based Δt ideas.
 
-**#65** — Stress profile matching not explained
-- *Target:* Sec. VII-F, "the simulated stress profile closely follows the analytical prediction of Weady et al. [23]"
-- *Fix:* Add: "At R=260 with ≈301k cells, the colony satisfies the continuum limit assumptions underlying [23]'s analytical derivation, explaining the improved agreement relative to smaller colonies."
+**#65** ✅ — Stress profile matching not explained
+- Added: "At R=260 with ≈301,000 cells, the colony satisfies the continuum limit assumptions underlying the analytical derivation, explaining the improved agreement relative to smaller colonies where discretization noise is significant."
 
-**#66** — "Robustness justifies…" sentence flagged by Sam
-- *Target:* Sec. VIII, "This robustness justifies the use of computationally simpler, soft, models for studies focused on colony-level pattern formation at small radii."
-- *Fix:* Revise or remove. If kept, qualify: "...provided packing fidelity and cell-scale accuracy are not required." If this claim is inconsistent with the overall conclusion that the hard model is preferred, remove.
+**#66** ✅ — "Robustness justifies…" sentence flagged by Sam
+- Qualified: "...provided packing fidelity and cell-scale accuracy are not required."
 
-**#68** — PETSc + OpenMP claim may be outdated
-- *Target:* Sec. IX-A, "PETSc does not fully support hybrid operations, so alternative libraries or frameworks may need to be considered."
-- *Fix:* Verify current PETSc documentation — Sam notes OpenMP support may exist. If PETSc now supports MPI+OpenMP, update to: "PETSc supports limited hybrid MPI+OpenMP parallelism via its VecCUDA and thread-based backends; leveraging this could reduce per-rank memory and communication overhead."
+**#68** ✅ — PETSc + OpenMP claim may be outdated
+- Updated: "PETSc supports limited hybrid MPI+OpenMP parallelism via its thread-based backends; leveraging this more fully, or adopting complementary libraries for the thread-parallel portions, could reduce per-rank memory footprint and communication overhead."
 
-**#69** — Model Extensions: justify or cut each direction
-- *Target:* Sec. IX-D Model Extensions paragraph listing external boundaries, nutrient fields, chemotactic signaling
-- *Fix:* For each proposed extension, add one sentence of biological motivation. Remove any direction that cannot be motivated in ≤1 sentence.
+**#69** ✅ — Model Extensions: justify or cut each direction
+- Added one sentence of biological motivation per extension: external boundaries (biofilm confinement), nutrient fields (starvation-driven growth arrest), chemotactic signaling (directed migration in E. coli swarms).
 
-**[NEW]** — Nutrient depletion incorrectly implied as part of model
-- *Target:* Sec. VI-E (p. 12), "...where mechanical feedback and nutrient depletion restrict active expansion to the growing front [5],[31],[32]."
-- *Fix:* This sentence describes real microbial biology but may mislead readers into thinking our model captures nutrient depletion. Add a clarifying sentence: "Our model captures only stress-dependent mechanical feedback; nutrient depletion is not included." Alternatively, restructure the sentence to make clear this is a biological observation not reproduced by the model: "...where both mechanical feedback and nutrient depletion drive this transition — our model isolates the mechanical contribution alone."
+**[NEW]** ✅ — Nutrient depletion incorrectly implied as part of model
+- Restructured sentence to: "...where both mechanical feedback and nutrient depletion drive this transition — our model isolates the mechanical contribution alone."
+
+---
+
+## Open Tasks (remaining work)
+
+### Needs author decision
+| # | What |
+|---|------|
+| #2 | Add corresponding author marker + email to title block (your call whether to include) |
+| #3 | Visually verify abstract claims against figures: φ>5 in Fig. 6a, "distorted microdomains" in Fig. 9/10, "unrealistic cell bundles" |
+| #20 | Drop Figure 3 (Hertzian F vs. δ plot)? Sam leans toward dropping. Decide and remove figure + reference if cutting. |
+| #50 | Re-read You et al. [15] to verify microdomain comparison is accurate; add caveat that You2018 uses constant (not stress-dependent) growth rates |
+
+### Needs matplotlib figure edits
+| # | What |
+|---|------|
+| #52 | Figure 12: add analytical growth rate curve e^{−λσ̄(r)} from Weady et al. [23] as dashed black line; update caption |
+| #56 | Figure 15: annotate Δt time-series to label growth-dominated vs. collision-dominated regimes |
+| #64 | Figure 19b: add wavelength annotations (λ≈27, 21, 32, 25, 19) per Sam's handwritten values |
+
+### Needs new benchmark data
+| # | What |
+|---|------|
+| #70 | Add per-timestep cost comparison table/figure (hard vs. soft, per-step wall time at matched N) |
+
+### Needs clarification from Sam
+| # | What |
+|---|------|
+| #38 | Annotation on p.7 reads "W. Starts, Convey it 'while'" — meaning unclear. Ask Sam what edit he intended for the Simulation Output opening sentence. |
+| #42 | Confirm that Figure 5 (density plot) shows λ = 10⁻³ — caption was updated with this value but needs visual verification against the actual figure file. |
