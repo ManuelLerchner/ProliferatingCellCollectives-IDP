@@ -84,37 +84,33 @@ Colors: **green** = Sam's main comments, **blue** = Sam's secondary/question com
 ### A — Phrasing & Word Choice
 *Quick single-word or single-sentence fixes, no new content required.*
 
-**#5** — "embarrassingly parallelizable"
+**#5** ✅ — "embarrassingly parallelizable"
 - *Target:* Sec. II-A, sentence "the calculations are local and embarrassingly parallelizable, enabling large-scale simulations."
 - *Fix:* Replace with "easily parallelizable." Also check whether NBL (neighbor list) is actually used; if not, remove that implication.
 
-**#6 + #7** — Benchmarking gap framed as a negative
+**#6 + #7** ✅ — Benchmarking gap framed as a negative
 - *Target:* Sec. II-B, sentence "the question of which approach offers better performance remains unresolved."
 - *Fix:* Reframe positively. E.g. "a direct, systematic comparison has yet to be performed, representing a clear opportunity." Rewording the whole paragraph from "negative gap" to "research opportunity."
 
-**#13** — "Uniformly → Randomly?"
+**#13** ✅ — "Uniformly → Randomly?"
 - *Target:* Sec. III-A, "producing two daughters with lengths sampled from [0.98ℓ₀, 1.02ℓ₀]"
 - *Fix:* Add "uniformly" → "lengths uniformly randomly sampled from [0.98ℓ₀, 1.02ℓ₀]."
 
-**#18** — "intra-cell / per chem..." (interpenetration wording)
+**#18** ✅ — "intra-cell / per chem..." (interpenetration wording)
 - *Target:* Sec. III-D, "preventing significant interpenetration while allowing elastic deformation."
 - *Fix:* Clarify → "preventing significant inter-cell penetration while allowing elastic deformation." ("Interpenetration" alone is ambiguous between intra- and inter-cell.)
 
-**#27** — Complementarity Condition (3) too convoluted
+**#27** ✅ — Complementarity Condition (3) too convoluted
 - *Target:* Sec. IV-3 Constraint Conditions, Complementarity Condition explanation (~6 lines starting "This condition enforces that if two cells are in contact…")
 - *Fix:* Trim to one physical sentence: "If cells are separated (Φ_α > 0), no force acts (γ_α = 0); if a force acts (γ_α > 0), cells must be touching (Φ_α = 0)."
 
-**#38** — "W. Starts, Convey it 'while'" (uncertain reading)
+**#38** ⚠️ TODO — "W. Starts, Convey it 'while'" (illegible — ask Sam)
 - *Target:* Sec. V-D Simulation Output opening sentence
-- *Fix:* Likely Sam wants the simulation output description to use "whilst" / "while running" phrasing to convey it happens concurrently with the simulation. Review and rephrase accordingly.
+- *Fix:* Annotation unreadable; meaning unclear. Ask Sam directly what he intended before editing this sentence.
 
-**#44** — "slowen linear growth"
+**#44 + #49** ✅ — "slowen linear growth" / growth curve naming
 - *Target:* Sec. VI-C, "both models transition from early exponential growth to slowen linear growth as stress limits expansion"
-- *Fix:* Replace "slowen linear growth" with "stress-limited linear growth" or "sublinear growth."
-
-**#49** — Growth curve description missing a name
-- *Target:* Figure 7b caption / Sec. VI-C surrounding text
-- *Fix:* Describe explicitly: "Both models exhibit logistic-like growth dynamics: initial exponential expansion decelerates as mechanical stress saturates growth in the colony interior."
+- *Fix:* Replaced with "stress-limited linear growth." Note: Sam asked "logistic?" but true logistic has a plateau — the colony doesn't plateau, so "logistic-like" would overclaim. Kept as stress-limited linear growth.
 
 ---
 

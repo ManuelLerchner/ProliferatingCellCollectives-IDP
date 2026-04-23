@@ -144,7 +144,7 @@ In computational biology, agent-based models (ABMs) represent individual cells a
 
 \begin{description}[style=nextline]
     \item[Soft (Potential-Based) Models]
-        Soft models manage cell interactions through repulsive forces defined by potentials such as Hertzian or Lennard-Jones functions. When cells overlap, these forces push them apart continuously. The primary advantage is computational efficiency: the calculations are local and embarrassingly parallelizable, enabling large-scale simulations. For instance, Warren et al.~\cite{Warren2019} demonstrated this by simulating millions of cells in three dimensions using a soft repulsion approach.
+        Soft models manage cell interactions through repulsive forces defined by potentials such as Hertzian or Lennard-Jones functions. When cells overlap, these forces push them apart continuously. The primary advantage is computational efficiency: the calculations are local and easily parallelizable, enabling large-scale simulations. For instance, Warren et al.~\cite{Warren2019} demonstrated this by simulating millions of cells in three dimensions using a soft repulsion approach.
 
         However, soft models suffer from two key limitations. First, the stiffness of repulsive potentials creates numerical instability, requiring very small timesteps to maintain accuracy and prevent divergence. Second, the finite range of repulsive forces means cells behave as elastically deformable objects rather than rigid bodies, effectively reducing their geometric diameter below the intended size~\cite{Yan2019}. This deformation accumulates and can distort simulation results, particularly in dense regions.
 
@@ -158,7 +158,7 @@ In computational biology, agent-based models (ABMs) represent individual cells a
 
 \subsection{The Benchmarking Gap}
 
-While soft and hard collision models entail distinct computational trade-offs, the question of which approach offers better performance remains unresolved. This trade-off becomes particularly critical when simulating large populations of independent agents, where the choice of collision model directly affects runtime, scalability, and the accuracy of the simulation.
+While soft and hard collision models entail distinct computational trade-offs, a direct, systematic comparison of their performance has yet to be performed, representing a clear opportunity. This trade-off becomes particularly critical when simulating large populations of independent agents, where the choice of collision model directly affects runtime, scalability, and the accuracy of the simulation.
 
 To our knowledge, a direct, systematic comparison of these models is absent from the literature. Moreover, existing biological studies typically validate their chosen approach against experimental data, such as microscopy images, growth curves, and morphological features~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021,Valdez2025,Rudge2013,Langeslay_2023}, prioritizing biological accuracy over computational performance. Few studies provide rigorous benchmarking of runtime, scalability, or numerical stability across different colony sizes. Consequently, modelers lack clear guidance on which paradigm is more efficient for a given problem scale.
 
@@ -197,7 +197,7 @@ The stress on cell $i$ is computed by projecting contact forces onto the cell's 
 
 Similar to \cite{Weady2024SM}, we nondimensionalize lengths by $\ell_0$, time by $\tau$, and stress by $\tau / (\zeta \ell_0^2)$, leaving the dimensionless growth sensitivity $\lambda = (\tau / \zeta \ell_0^2)\lambda^{'}$ as the only free parameter. Therefore we set $\ell_0 = 1$, $d = 0.5$, $\tau = 1$, and $\zeta = 1$.
 
-Cells divide at a critical length $\ell_{\text{crit}} = 2 \ell_0$, producing two daughters with lengths sampled from $\left[0.98 \ell_0, 1.02 \ell_0 \right]$ to avoid synchronized divisions~\cite{You2018}.
+Cells divide at a critical length $\ell_{\text{crit}} = 2 \ell_0$, producing two daughters with lengths uniformly randomly sampled from $\left[0.98 \ell_0, 1.02 \ell_0 \right]$ to avoid synchronized divisions~\cite{You2018}.
 
 \subsection{Rotational Diffusion}
 
@@ -335,7 +335,7 @@ The distinction between hard and soft collision models lies solely in how the ge
 
 \subsection{Soft Collision Model}
 
-The soft collision model treats cell-cell interactions through continuous, potential-based repulsive forces. When cells overlap, these forces smoothly increase, preventing significant interpenetration while allowing elastic deformation. This approach is well-suited for simulating the soft, deformable nature of real biological cells and has been widely used in prior work~\cite{Warren2019, You2018,Blanchard2015,Ghosh2015,Khan_2024,You_2021,Valdez2025,Rudge2013,Langeslay_2023}.
+The soft collision model treats cell-cell interactions through continuous, potential-based repulsive forces. When cells overlap, these forces smoothly increase, preventing significant inter-cell penetration while allowing elastic deformation. This approach is well-suited for simulating the soft, deformable nature of real biological cells and has been widely used in prior work~\cite{Warren2019, You2018,Blanchard2015,Ghosh2015,Khan_2024,You_2021,Valdez2025,Rudge2013,Langeslay_2023}.
 
 We implement a Hertzian contact model, which describes elastic deformation between curved surfaces in contact. The repulsive elastic force exerted on cell $i$ by cell $j$ is:
 
@@ -395,8 +395,7 @@ To ensure that solving for the multipliers $\boldsymbol{\gamma}$ leads to physic
     \item \textbf{Repulsive Forces:} $\boldsymbol{\gamma} \geq \mathbf{0}$. This ensures that the forces are repulsive, preventing cells from attracting each other.
     \item \textbf{No-Overlap:} $\mathbf{\Phi}^{k+1} \geq \mathbf{0}$ with $\mathbf{\Phi}^{k+1} = [\dots, \Phi_\alpha^{k+1}, \dots]^\top$. Here, $\mathbf{\Phi}^{k+1} \in \mathbb{R}^{C}$ is the vector of signed separation distances between the pairs of cells associated with each constraint $\alpha$ at timestep $k+1$. Signed separation distances between cells are computed using the robust geometric algorithm described by~\cite{Yan2019, GeometricTools}.
           A positive value $\Phi_\alpha^{k+1}$ indicates that the cells in the next iteration are separated, while a negative value indicates overlap. This condition enforces that no overlaps occur after the update.
-    \item \textbf{Complementarity Condition:}  $\boldsymbol{\gamma}^\top \mathbf{\Phi}^{k+1} = \mathbf{0}$ (often written as $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$). This condition enforces that if two cells are in contact in the next iteration (i.e., $\Phi_\alpha^{k+1} = 0$), then a force may act in the current iteration to prevent overlap.
-          Conversely, if two cells are separated in the next iteration (i.e., $\Phi_\alpha^{k+1} > 0$), no force should act in the current iteration (i.e., $\gamma_\alpha = 0$) in order to avoid force application at a distance.
+    \item \textbf{Complementarity Condition:}  $\boldsymbol{\gamma}^\top \mathbf{\Phi}^{k+1} = \mathbf{0}$ (often written as $\boldsymbol{\gamma} \perp \mathbf{\Phi}^{k+1}$). If cells are separated ($\Phi_\alpha > 0$), no force acts ($\gamma_\alpha = 0$); if a force acts ($\gamma_\alpha > 0$), cells must be touching ($\Phi_\alpha = 0$).
 \end{enumerate}
 
 These conditions are often abbreviated as:
@@ -676,7 +675,7 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
 
 A direct consequence of the overcrowded interior in the soft model is its effect on the total number of cells. The soft model requires substantially more cells to reach the same colony radius (see \autoref{fig:colony_radius_vs_num_cells}). In particular, when stress-sensitivity is low ($\lambda = 10^{-4}$), it needs almost three times as many cells as the hard model to achieve the same radius. This disparity shows that the densely packed interior contributes little to outward colony pressure: interior cells remain largely immobile yet continue to grow and divide, creating a large excess of cells that do not contribute to expansion.
 
-\autoref{fig:sim_time_vs_colony_radius} compares simulation time and colony radius for both models. Despite the difference in cell numbers, their overall growth dynamics are similar, with the soft model growing slightly more slowly due to cell overlap. At high stress-sensitivity ($\lambda = 10^{-2}$), both models transition from early exponential growth to slower, linear growth as stress limits expansion in the colony interior.
+\autoref{fig:sim_time_vs_colony_radius} compares simulation time and colony radius for both models. Despite the difference in cell numbers, their overall growth dynamics are similar, with the soft model growing slightly more slowly due to cell overlap. At high stress-sensitivity ($\lambda = 10^{-2}$), both models transition from early exponential growth to stress-limited linear growth as mechanical stress accumulates in the colony interior.
 
 \begin{figure}[h]
     \centering
