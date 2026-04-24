@@ -353,7 +353,7 @@ We implement a Hertzian contact model, which describes elastic deformation betwe
     \mathbf{F}^{\text{elastic}}_{ij} = k_{cc} \sqrt{d} \, \delta^{3/2} \, \hat{\mathbf{n}}
 \end{equation}
 
-where $\delta$ is the overlap distance, $d$ is the cell diameter, $k_{cc}$ is an elastic constant, and $\hat{\mathbf{n}}$ is the unit normal vector at the contact point. The $\delta^{3/2}$ dependence is characteristic of Hertzian theory for elastic contacts and produces a nonlinear, smooth increase in force as overlap grows (see \autoref{fig:hertzian_contact_model}).
+where $\delta$ is the overlap distance, $d$ is the cell diameter, $k_{cc}$ is an elastic constant, and $\hat{\mathbf{n}}$ is the unit normal vector at the contact point. The $\delta^{3/2}$ dependence is characteristic of Hertzian theory for elastic contacts and produces a nonlinear, smooth increase in force as overlap grows.
 
 \subsubsection{Force Assembly}
 
@@ -367,13 +367,6 @@ The total force and torque on cell $n$ are computed by summing contributions fro
 \subsubsection{Model Parameters and Numerical Stability}
 
 The elastic constant is defined as $k_{cc} = \frac{Y}{\zeta}$, where $Y$ is the cell's Young's modulus and $\zeta$ is the fluid drag coefficient. Using typical bacterial parameters ($Y \approx 4$ MPa and $\zeta \approx 200$ Pa$\cdot$h)~\cite{You2018, Blanchard2015}, we set $k_{cc} = 20000$ h$^{-1}$. This value is sufficiently large to prevent significant overlap between cells. However, the steep, nonlinear nature of the Hertzian force law creates numerical stiffness: cells can undergo rapid acceleration when overlap occurs, potentially causing large position changes within a single timestep. To maintain stability, an extremely small timestep ($\Delta t \sim 10^{-5}$) is required~\cite{Khan_2024, You2018, Blanchard2015}. This timestep restriction is a well-known limitation of soft collision models and creates a significant computational bottleneck for large colonies.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/hertzian_contact_model.png}
-    \caption{Hertzian contact model. When two spherocylindrical cells overlap by a distance $\delta$, they experience a repulsive elastic force $\mathbf{F}^{\text{elastic}}$. The force acts along the normal vector $\hat{\mathbf{n}}$ at the contact point.}
-    \label{fig:hertzian_contact_model}
-\end{figure}
 
 \subsection{Hard Collision Model}
 \label{sec:hard_model}
@@ -609,7 +602,7 @@ We validate both implementations by reproducing concentric ring patterns that ar
 
 The effect of $\lambda$ on pattern formation is consistent across both models. At low stress-sensitivity (e.g. $\lambda = 10^{-4}$, corresponding to weak growth inhibition), stress gradients are too weak to generate significant spatial patterns, and thus no rings form. At intermediate sensitivity (e.g. $\lambda = 10^{-3}$), distinct concentric rings emerge early in the simulation and persist as the colony expands, with ring spacing determined by the balance between growth and stress. At high sensitivity (e.g. $\lambda = 10^{-2}$, corresponding to strong growth inhibition), an initially formed ring quickly dissipates as cells reorient to random orientations and growth nearly ceases due to strong mechanical inhibition throughout most of the colony.
 
-Despite these qualitatively similar outcomes, visual differences emerge between the models. The soft model produces visibly denser patterns with a fuzzy appearance due to allowable cell overlap, while the hard model yields sharper, more sparsely looking rings. Nevertheless, macroscopic features, such as the number of rings, spacing, and colony expansion rate, remain comparable between the two models.
+Despite these qualitatively similar outcomes, visual differences emerge between the models. The soft model produces visibly denser patterns with a fuzzy appearance due to allowable cell overlap, while the hard model yields sharper, more clearly defined rings. Nevertheless, macroscopic features, such as the number of rings, spacing, and colony expansion rate, remain comparable between the two models.
 
 \begin{figure*}[p]
     \centering
@@ -643,7 +636,7 @@ Despite these qualitatively similar outcomes, visual differences emerge between 
 
 \subsection{Cell Density and Local Packing Fraction}
 
-The most striking difference between the models is the cell packing density (see \autoref{fig:dense_packing_comparison}). The soft model exhibits significantly denser packing in the colony center, decreasing radially outward (see \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), local packing fractions (defined as the ratio of cell area to available area) reach values of 5, indicating severe cell overlap. Values exceeding 1.0 are impossible for truly rigid spherocylinders and reflect the soft model's inability to prevent interpenetration. In contrast, the hard model maintains approximately constant, and physically realistic, packing density of 0.9 throughout the colony.
+The most striking difference between the models is the cell packing density (see \autoref{fig:dense_packing_comparison}). The soft model exhibits significantly denser packing in the colony center, decreasing radially outward (see \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), local packing fractions (defined as the ratio of cell area to available area) reach values of 5, indicating severe cell overlap. Values exceeding 1.0 are impossible for truly rigid spherocylinders and reflect the soft model's inability to prevent interpenetration. In contrast, the hard model maintains approximately constant packing density of 0.9 throughout the colony, consistent with densely packed non-overlapping rods.
 
 The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge. Combined with a numerical timestep too large to resolve all collisions, this leads to excessive cell overlap and overcrowding in the interior. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model's maximum cell overlap steadily increases throughout the simulation, reaching nearly complete interpenetration by the end. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ by enforcing the strict non-overlap constraints.
 
@@ -800,7 +793,8 @@ As shown in \autoref{fig:radial_distribution_growth_rate}, the differences in st
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
-    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity ($\lambda = 10^{-3}$ and $\lambda = 10^{-4}$). At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing.}
+    \includegraphics[width=\linewidth]{figures/comparison_plots/analytical_radial_growth_rate.png}
+    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$). \textbf{Top:} Simulated profiles for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity ($\lambda = 10^{-3}$ and $\lambda = 10^{-4}$). At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing. \textbf{Bottom:} Analytical prediction $e^{-\lambda\bar{\sigma}(r)}$ from Weady et al.~\cite{Weady2024SM} for $R=100$. The simulation profiles qualitatively match the analytical trend (growth suppressed in the interior, active at the periphery), though the soft model overestimates interior growth due to its lower stress transmission.}
     \label{fig:radial_distribution_growth_rate}
 \end{figure}
 
@@ -862,7 +856,7 @@ Using adaptive timestepping provides both stability and efficiency by adjusting 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time_vs_dt.png}
-    \caption{Adaptive timestep $\Delta t$ for both collision models. The soft model requires a drastic reduction of $\Delta t$ ($\Delta t_{\text{soft}} \approx 10^{-5}$) to maintain stability, whereas the hard model maintains a significantly larger timestep ($\Delta t_{\text{hard}} \approx 3 \cdot 10^{-4}$), allowing more computation per communication step.}
+    \caption{Adaptive timestep $\Delta t$ for both collision models over simulation time. In the early growth-dominated phase, both models share a similar $\Delta t$ set by cell growth velocities. As the colony densifies, the soft model enters a collision-dominated regime where large overlaps drive velocities up, forcing $\Delta t$ down to $\approx 10^{-5}$. The hard model avoids this: its constraint-based resolution keeps cells separated, so $\Delta t$ remains stable or even increases as interior growth decelerates.}
     \label{fig:simulation_time_vs_dt}
 \end{figure}
 
