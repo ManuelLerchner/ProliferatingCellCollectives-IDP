@@ -165,7 +165,7 @@ In computational biology, individual-based models (IBMs) represent individual ce
 
 While soft and hard collision models entail distinct computational trade-offs, a direct, systematic comparison of their performance has yet to be performed, representing a clear opportunity. This trade-off becomes particularly critical when simulating large populations of independent agents, where the choice of collision model directly affects runtime, scalability, and the accuracy of the simulation.
 
-To our knowledge, a direct, systematic comparison of these models remains limited in the literature. Existing biological studies often validate their approaches against experimental data, such as microscopy images, growth curves, and morphological features~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021,Valdez2025,Rudge2013,Langeslay_2023}, with a primary emphasis on biological fidelity. Comparatively fewer works examine computational aspects such as runtime, scalability, and numerical stability across varying colony sizes, leaving limited guidance on selecting an appropriate modeling paradigm for a given problem scale.
+Existing biological studies often validate their approaches against experimental data, such as microscopy images, growth curves, and morphological features~\cite{Rudge2012,Weady2024,Blanchard2015,Ghosh2015,You2018,Warren2019,Khan_2024,You_2021,Valdez2025,Rudge2013,Langeslay_2023}, with a primary emphasis on biological fidelity. Comparatively fewer works examine computational aspects such as runtime, scalability, and numerical stability across varying colony sizes, leaving limited guidance on selecting an appropriate modeling paradigm for a given problem scale.
 
 This work aims to address this gap by implementing both soft and hard collision schemes within a shared computational framework, enabling direct performance comparisons. We systematically benchmark the two approaches across a range of colony sizes, evaluating their respective strengths and limitations in both biological fidelity and computational efficiency.
 
@@ -352,7 +352,7 @@ The orientation quaternion $\mathbf{q}_n^k$ for each cell evolves according to t
     \end{aligned}
 \end{equation}
 
-The distinction between hard and soft collision models lies solely in how the generalized force vector $\mathbfcal{F}$ and in particular the inter-cell forces $\mathbf{F}_{ij}$ are computed. The rest of the framework, including the colony representation, growth law, stress computation, and state integration, is identical for both models.
+With the shared framework established, the two models differ only in how the inter-cell forces $\mathbf{F}_{ij}$ (and hence $\mathbfcal{F}$) are computed, as described in the following subsections.
 
 \subsection{Soft Collision Model}
 
@@ -511,7 +511,7 @@ By construction, the gradient of this energy equals the linearized separation di
 
 Because $E(\boldsymbol{\gamma})$ is convex, the constrained optimization problem has a unique global minimizer over the feasible region $\boldsymbol{\gamma} \geq \mathbf{0}$. We compute this minimum using a projected gradient method, which iteratively takes steps in the direction of the negative gradient and projects the result onto the feasible region to ensure repulsive forces.
 
-At the optimal solution $\boldsymbol{\gamma}^*$, the Karush-Kuhn-Tucker (KKT) conditions hold. These are the standard first-order optimality conditions for constrained optimization: they generalize the unconstrained condition $\nabla E = 0$ to account for inequality constraints, and are both necessary and sufficient here due to convexity~\cite{Nocedal2006}. Remarkably, they map directly onto our physical constraints:
+At the optimal solution $\boldsymbol{\gamma}^*$, the Karush–Kuhn–Tucker (KKT) conditions are satisfied. These constitute the first-order optimality conditions for constrained problems, extending the stationarity condition $\nabla E = 0$ to include inequality constraints via Lagrange multipliers. Under convexity, they are both necessary and sufficient for global optimality~\cite{Nocedal2006}. In particular, primal feasibility, dual feasibility, and complementary slackness jointly characterize the solution. Importantly, the KKT conditions admit a direct correspondence with the imposed physical constraints.
 
 \begin{enumerate}
     \item \textbf{Primal feasibility} ($\boldsymbol{\gamma}^* \geq 0$): We enforce this explicitly through a projection (\texttt{max} operator) during minimization, which prevents forces from becoming attractive. Physically, this ensures that contact forces only push cells apart according to the \textbf{Repulsive Forces} constraint.
@@ -557,7 +557,7 @@ Built on these abstractions, the framework implements the full physics pipeline,
 
 \subsection{Collision Handling Pipeline}
 
-Collisions are processed through a unified pipeline designed to decouple geometry from physics. The process consists of three phases: (1) broad-phase detection using a spatial grid (reducing neighbor searches to $O(N)$), (2) narrow-phase detection that computes exact contact points, normals, and lever arms, and (3) force and stress assembly, in which the collision model computes per-contact forces and torques that are accumulated into the global force vector and used to update the colony stress state. This structure is passed to either the hard or soft collision model, which computes the resulting forces and torques. This abstraction allows seamless switching between collision models without altering the overall simulation flow.
+Collisions are processed through a unified pipeline designed to decouple geometry from physics. The process consists of three phases: (1) broad-phase detection using a spatial grid (reducing neighbor searches to $O(N)$), (2) narrow-phase detection that computes exact contact points, normals, and lever arms, and (3) force and stress assembly. The resulting contact geometry is passed to either the hard or soft collision model, which computes the per-contact forces and torques that are accumulated into the global force vector and used to update the colony stress state. This abstraction allows seamless switching between collision models without altering the overall simulation flow.
 
 Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This overapproximation is crucial for the stability of the hard model. For the soft model, those non-overlapping cell-pairs contribute no forces (since $\delta < 0$), while for the hard model they provide additional global information that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}.
 
@@ -579,7 +579,7 @@ For our cell-based system, we define a characteristic velocity scale $u_m$ as th
 
 where $c = 0.5$ is the CFL safety factor (ensuring cells move at most half the tolerance per step), $\varepsilon = 10^{-3}$ is the solver displacement tolerance, and $u_m$ is the median particle speed including growth as defined above. Choosing $\Delta t$ this way ensures that most cells move less than half the solver tolerance in each timestep, preventing excessive overlaps that could destabilize the simulation.
 
-\begin{algorithm}[H]
+\begin{algorithm}[h]
     \caption{Adaptive Timestep Control}
     \label{alg:adaptive_dt}
     \begin{algorithmic}[1]
@@ -595,14 +595,22 @@ where $c = 0.5$ is the CFL safety factor (ensuring cells move at most half the t
     \end{algorithmic}
 \end{algorithm}
 
-Both the smoothing factor $\alpha = 0.01$ and the 20\% cap were chosen empirically and were found to provide stable and robust timestep control across all tested colony sizes and stress-sensitivity regimes. In particular, these values effectively suppress oscillatory timestep updates while still allowing the method to adapt responsively to changes in colony dynamics.
+The smoothing factor $\alpha = 0.01$ and the 20\% clamping threshold are introduced to regularize timestep updates and prevent abrupt fluctuations in $\Delta t$. This damping mechanism suppresses high-frequency oscillations that may arise from transient changes in the velocity distribution, while preserving responsiveness to gradual shifts in colony dynamics.
 
 
 \subsection{Simulation Output and Availability}
 
-Simulation results are saved in VTK format for visualization with ParaView~\cite{ahrens2005paraview}. Cell attributes, including positions, orientations, lengths, stresses, growth rates and contact forces, are recorded at user-defined intervals. The framework also logs performance metrics, such as timestep sizes, solver iterations, and computation times, to facilitate analysis and debugging.
+The full framework is openly available at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP} and includes:
 
-The full simulation framework, including all features and implementations described in this work, is openly available on GitHub at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP}.
+\begin{itemize}
+    \item \textbf{Simulation}: Both hard and soft collision models in a shared C++ codebase with MPI parallelization and adaptive timestepping. Simulation state is exported in VTK format at user-defined intervals, recording positions, orientations, lengths, stresses, growth rates, and contact forces for visualization in ParaView~\cite{ahrens2005paraview}.
+
+    \item \textbf{Analysis}: Jupyter notebooks for radial distribution profiles (packing fraction, stress, growth rate, cell length), microdomain cluster analysis, BBPGD convergence diagnostics, and energy landscape visualization.
+
+    \item \textbf{Benchmarking}: Python scripts and notebooks for strong-scaling studies, CFL factor sweeps, and colony-size runtime profiling, reproducing all performance results in this work.
+
+    \item \textbf{Utilities}: Modules for parsing VTK output, loading and aligning multi-run datasets, generating simulation configurations, and rendering colony snapshots via ParaView state files.
+\end{itemize}
 
 \section{Pattern Formation Analysis}
 
