@@ -686,7 +686,7 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
         \label{fig:max_overlap_simulation}
     \end{subfigure}
 
-    \caption{Cell packing analysis comparing hard and soft collision models. (a) Radial packing fraction profiles. (b) Maximum cell overlap vs distance from colony center.}
+    \caption{(a) Radial packing fraction profiles. (b) Maximum cell overlap vs distance from colony center.}
     \label{fig:combined_packing_analysis}
 \end{figure}
 
@@ -716,6 +716,34 @@ A direct consequence of the overcrowded interior in the soft model is its effect
     \caption{Colony growth dynamics and cell scaling comparison between hard and soft models. (a) Number of cells vs. colony radius. (b) Colony radius vs. simulation time.}
     \label{fig:comparison_combined}
 \end{figure}
+
+\subsection{Radial Stress Distribution and Growth Rate}
+
+Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $\tilde{\sigma}(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$~\cite{Weady2024SM}, which predicts a logarithmic decay of stress with increasing distance $r$ from the colony center.
+
+Although the overall shape of the profiles is comparable, the magnitude of the predicted stresses differs substantially between the two models. Quantitatively, the hard model produces stress values that are up to two times higher than the analytical prediction, whereas the soft model yields stresses that are only about half the analytical value. This variation in stress magnitude is significant and likely plays a central role in explaining the discrepancies in growth dynamics and microdomain organization discussed in \autoref{sec:colony_growth_dynamics} and \autoref{sec:microdomain_formation}.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
+    \caption{Radial stress profiles for both models across different $\lambda$ values. Both models exhibit similar qualitative trends, with stresses peaking at the colony center and decreasing toward the edge. However, the hard model consistently produces higher stress magnitudes compared to the soft model. The black curves represent the analytical prediction from~\cite{Weady2024SM}, shown for each $\lambda$ value with the corresponding line style.}
+    \label{fig:radial_distribution_stress}
+\end{figure*}
+
+The consistently elevated stresses observed in the hard model are also noted by Weady et al.~\cite{Weady2024} and are likely a consequence of the discrete cell-based representation not fully satisfying the continuum assumptions used in the analytical derivation.
+
+In contrast, the soft model produces lower stresses because it lacks a global force propagation mechanism: stress is transmitted only through local pairwise repulsive interactions, which are insufficient to communicate mechanical load effectively across the entire colony. Consequently, stresses in the colony interior remain low, and central cells experience weaker mechanical inhibition. These cells therefore continue to grow and divide, eventually leading to the overcrowding and distorted microdomain patterns.
+
+As shown in \autoref{fig:radial_distribution_growth_rate}, the differences in stress transmission directly manifest in the radial growth rate profiles. Cells in the soft model exhibit substantially higher growth rates than those in the hard model across most of the colony interior, particularly at low stress-sensitivity values. At higher stress-sensitivity ($\lambda = 10^{-2}$), growth becomes strongly suppressed in the colony interior for both models, and only cells located near the periphery remain actively dividing. The resulting shift from interior-driven to edge-driven proliferation is also clearly visible in \autoref{fig:sim_time_vs_colony_radius} and mirrors a well-documented behavior in real microbial systems, such as in bacterial and yeast colonies, including \textit{E. coli} and \textit{Saccharomyces cerevisiae}, where both mechanical feedback and nutrient depletion drive this transition~\cite{Warren2019,Hallatschek2007,Giometto2018}; our model isolates the mechanical contribution alone.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
+    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity values. At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing.}
+    \label{fig:radial_distribution_growth_rate}
+\end{figure}
+
 
 \subsection{Microdomain Formation}
 \label{sec:microdomain_formation}
@@ -763,7 +791,6 @@ the overall orientation patterns show qualitative agreement with the hard model.
 Within these limited conditions, it may serve as a computationally efficient tool
 for preliminary exploration. For applications that require accurate characterization of microdomain properties or the exploration of weak stress-sensitivity regimes, the hard model remains the preferred choice.
 
-Future work could further examine the influence of the stress-sensitivity parameter $\lambda$ on the emergence, size, and stability of microdomains in the hard model, following an approach similar to the analyses presented by You et al.~\cite{You2018}.
 
 \begin{figure*}[p]
     \makebox[\textwidth][c]{
@@ -781,34 +808,7 @@ Future work could further examine the influence of the stress-sensitivity parame
     \label{fig:orientation_comparison}
 \end{figure*}
 
-\subsection{Radial Stress Distribution and Growth Rate}
 
-Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $\tilde{\sigma}(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$~\cite{Weady2024SM}, which predicts a logarithmic decay of stress with increasing distance $r$ from the colony center.
-
-Although the overall shape of the profiles is comparable, the magnitude of the predicted stresses differs substantially between the two models. Quantitatively, the hard model produces stress values that are up to two times higher than the analytical prediction, whereas the soft model yields stresses that are only about half the analytical value. This variation in stress magnitude is significant and likely plays a central role in explaining the discrepancies in growth dynamics and microdomain organization discussed in \autoref{sec:colony_growth_dynamics} and \autoref{sec:microdomain_formation}.
-
-\begin{figure*}[b]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
-    \caption{Radial stress profiles for both models across different $\lambda$ values. Both models exhibit similar qualitative trends, with stresses peaking at the colony center and decreasing toward the edge. However, the hard model consistently produces higher stress magnitudes compared to the soft model. The black curves represent the analytical prediction from~\cite{Weady2024SM}, shown for each $\lambda$ value with the corresponding line style.}
-    \label{fig:radial_distribution_stress}
-\end{figure*}
-
-The consistently elevated stresses observed in the hard model are also noted by Weady et al.~\cite{Weady2024} and are likely a consequence of the discrete cell-based representation not fully satisfying the continuum assumptions used in the analytical derivation.
-
-In contrast, the soft model produces lower stresses because it lacks a global force propagation mechanism: stress is transmitted only through local pairwise repulsive interactions, which are insufficient to communicate mechanical load effectively across the entire colony. Consequently, stresses in the colony interior remain low, and central cells experience weaker mechanical inhibition. These cells therefore continue to grow and divide, eventually leading to the overcrowding and distorted microdomain patterns.
-
-As shown in \autoref{fig:radial_distribution_growth_rate}, the differences in stress transmission directly manifest in the radial growth rate profiles. Cells in the soft model exhibit substantially higher growth rates than those in the hard model across most of the colony interior, particularly at low stress-sensitivity values. At higher stress-sensitivity ($\lambda = 10^{-2}$), growth becomes strongly suppressed in the colony interior for both models, and only cells located near the periphery remain actively dividing. The resulting shift from interior-driven to edge-driven proliferation is also clearly visible in \autoref{fig:sim_time_vs_colony_radius} and mirrors a well-documented behavior in real microbial systems, such as in bacterial and yeast colonies, including \textit{E. coli} and \textit{Saccharomyces cerevisiae}, where both mechanical feedback and nutrient depletion drive this transition~\cite{Warren2019,Hallatschek2007,Giometto2018}; our model isolates the mechanical contribution alone.
-
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
-    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity ($\lambda = 10^{-3}$ and $\lambda = 10^{-4}$). At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing.}
-    \label{fig:radial_distribution_growth_rate}
-\end{figure}
-
-\clearpage
 \section{Computational Performance}
 \label{sec:performance_analysis}
 
@@ -983,8 +983,6 @@ Finally, \autoref{fig:huge_combined_stress_shared} shows the corresponding radia
     \label{fig:huge_colony_scaling}
 \end{figure}
 
-\clearpage
-\newpage
 
 \section{Discussion and Conclusion}
 
@@ -1014,14 +1012,14 @@ For the hard model, the primary computational bottleneck at large scales is the 
 
 \subsection{Model Extensions}
 
-Future work could also investigate extensions to the current models to capture additional biological phenomena. For instance, external boundaries, nutrient fields, or chemotactic signaling could be incorporated to study their effects on colony growth and pattern formation. Most of these extensions can be integrated into the existing framework with minimal changes to the collision models~\cite{Yan_2020}.
+Future work could also investigate extensions to the current models to capture additional biological phenomena. For instance, external boundaries, nutrient fields, or chemotactic signaling could be incorporated to study their effects on colony growth and pattern formation. Most of these extensions can be integrated into the existing framework with minimal changes to the collision models~\cite{Yan_2020}. Additionally, future work could further examine the influence of the stress-sensitivity parameter $\lambda$ on the emergence, size, and stability of microdomains in the hard model, following an approach similar to the analyses presented by You et al.~\cite{You2018}.
 
 \section*{Acknowledgments}
 
 We gratefully acknowledge the computational and data resources, as well as the support provided by the Leibniz Supercomputing Centre (\url{www.lrz.de}). All benchmarks in this work were carried out on the \texttt{CoolMUC-4} cluster, which is part of the Linux Cluster at LRZ. Further information is available at \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.
 
 
-\newpage
+\clearpage
 
 \balance
 \bibliographystyle{IEEEtran}
