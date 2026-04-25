@@ -938,7 +938,7 @@ There remains considerable potential to further improve the performance of BBPGD
 
 In this section, we examine the largest colony sizes achievable within a 24-hour budget on 112 CPU cores of the \texttt{CoolMUC-4} cluster at $\lambda = 10^{-3}$. Only the hard model is considered, as the soft model exhibits severe overcrowding and overlap at these scales.
 
-\autoref{fig:huge_colony_hard} shows a representative snapshot at the maximum simulated size of $R = 260$ with 1,301{,}116 cells. The colony exhibits clear concentric density bands and a smooth boundary, indicating that the solver, contact handling, and domain decomposition remain stable at this scale.
+\autoref{fig:huge_colony_hard} shows a representative snapshot at the maximum simulated size of $R = 260$ with 301{,}116 cells. The colony exhibits clear concentric density bands and a smooth boundary, indicating that the solver, contact handling, and domain decomposition remain stable at this scale.
 
 The computational cost of reaching such colony sizes is summarized in \autoref{fig:huge_wall_time_vs_radius_with_fit}. The wall time grows rapidly with colony radius and closely follows a fifth-degree polynomial fit given by $T_\text{wall}\,[\mathrm{h}] \approx 1.94\cdot10^{-11}\,R^{5} + 0.37$. Since the number of particles scales approximately as $N \propto R^{2}$, this implies a total runtime scaling of $T_\text{wall}\,[\mathrm{h}] \propto N^{2.5}$.
 
