@@ -748,7 +748,7 @@ As shown in \autoref{fig:radial_distribution_growth_rate}, the differences in st
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
-    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity values. At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing.}
+    \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity values. At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing. The black lines indicate the theoretical growth rates derived from the continuum model in~\cite{Weady2024}.}
     \label{fig:radial_distribution_growth_rate}
 \end{figure}
 
@@ -778,7 +778,7 @@ As shown in \autoref{fig:orientation_comparison_small}, both hard and soft colli
 
 Although the hard and soft collision models presented here are not directly comparable to You et al.~\cite{You2018}, because their study assumes constant growth rates while our models use stress-dependent growth, their findings still provide useful context. You et al. show that reduced growth rates lead to larger microdomains. In our models, stress sensitivity $\lambda$ produces a similar effect by inhibiting growth in the densely packed colony center, resulting in larger microdomains. This trend is evident in simulations of the soft model (see \autoref{fig:orientation_comparison}), where higher $\lambda$ values correspond to slower growth and larger microdomains, consistent with You et al.'s observations. The hard model, in contrast, shows no such trend. The consistent microdomain size across $\lambda$ values in the hard model may be related to the global constraint resolution mechanism, but a detailed investigation of the underlying mechanisms is beyond the scope of this comparison.
 
-We saw that both models produce similar orientation patterns in small colonies at a colony radius around $R \approx 50$ (see \autoref{fig:orientation_comparison_small}). However, pronounced differences emerge as colonies grow larger or $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintains distinct patches of similarly-sized aligned cells across all $\lambda$ values. In contrast, the soft model produces elongated, unrealistic bundles of densely packed aligned cells that do not resemble experimentally observed microdomains~\cite{You2018}.
+Both models produce similar orientation patterns in small colonies at a colony radius around $R \approx 50$ (see \autoref{fig:orientation_comparison_small}). However, pronounced differences emerge as colonies grow larger or $\lambda$ decreases. As shown in \autoref{fig:orientation_comparison}, the hard model maintains distinct patches of similarly-sized aligned cells across all $\lambda$ values. In contrast, the soft model produces elongated, unrealistic bundles of densely packed aligned cells that do not resemble experimentally observed microdomains~\cite{You2018}.
 
 This artifact stems directly from the soft model's higher interior growth rates, discussed in the previous section. Without sufficient outward stress propagation, the interior becomes unphysically dense, forcing cells into long, aligned bundles.
 
@@ -787,7 +787,7 @@ The effect of $\lambda$ on microdomain structure is particularly apparent in lar
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/cluster_area_boxplot.png}
-    \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$ values. The hard model produces consistent domain sizes, while the soft model shows high variability with many large clusters, especially at $\lambda = 10^{-4}$. Clusters are identified using a graph-based connected-component algorithm~\cite{You2018}, grouping neighboring cells with similar orientations (within 3\% of each other).}
+    \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$. The hard model yields consistent domain sizes, while the soft model exhibits greater variability with larger clusters, particularly at $\lambda = 10^{-4}$. Clusters are identified via a graph-based connected-component method~\cite{You2018}, grouping neighboring cells with similar orientations.}
     \label{fig:cluster_area_boxplot}
 \end{figure}
 
