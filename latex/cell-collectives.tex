@@ -650,7 +650,7 @@ Despite these qualitatively similar outcomes, visual differences emerge between 
 
 The most striking difference between the models is the cell packing density (see \autoref{fig:dense_packing_comparison}). The soft model exhibits significantly denser packing in the colony center, decreasing radially outward (see \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), local packing fractions (defined as the ratio of cell area to available area) reach values of 5, indicating severe cell overlap. Values exceeding 1.0 are impossible for truly rigid spherocylinders and reflect the soft model's inability to prevent interpenetration. In contrast, the hard model maintains approximately constant packing density of 0.9 throughout the colony, consistent with densely packed non-overlapping rods.
 
-The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge. Combined with a numerical timestep too large to resolve all collisions, this leads to excessive cell overlap and overcrowding in the interior. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model's maximum cell overlap steadily increases throughout the simulation, reaching nearly complete interpenetration by the end. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ by enforcing the strict non-overlap constraints.
+The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge. Combined with a numerical timestep too large to resolve all collisions, this leads to excessive cell overlap and overcrowding in the interior. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model exhibits substantially elevated cell overlap at all distances from the colony center, approaching full cell overlap near the colony boundary. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ at every radial position, confirming that the strict non-overlap constraints are enforced globally.
 
 A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ solely on cell velocities but not on current overlap. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$. Such an improvement is, however, beyond the scope of this work.
 
@@ -675,18 +675,18 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
-        \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models. Here, $A_{\text{cells}}$ denotes the total area occupied by cells within a radial bin of width 2 at distance $r$ from the colony center, and $A_{\text{total}}$ is the corresponding annular bin area. The hard model maintains nearly optimal packing, while the soft model exhibits elevated fractions in the colony center, particularly at low stress-sensitivity ($\lambda = 10^{-4}$).}
+        \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models. Here, $A_{\text{cells}}$ denotes the total area occupied by cells within a spatial bin of width 2 at distance $r$ from the colony center, and $A_{\text{total}}$ is the corresponding annular bin area. The hard model maintains nearly optimal packing, while the soft model exhibits elevated fractions in the colony center, particularly at low stress-sensitivity ($\lambda = 10^{-4}$).}
         \label{fig:radial_distribution_packing_fraction}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
-        \caption{Maximum overlap vs.\ colony radius. The hard model remains near solver tolerance $\epsilon = 10^{-3}$, whereas the soft model accumulates overlap over time, approaching full overlap at late stages. Overlap decreases radially due to reduced confinement at the colony edge.}
+        \caption{Maximum cell overlap as a function of distance from the colony center. The hard model remains uniformly near solver tolerance $\epsilon = 10^{-3}$, whereas the soft model exhibits substantially elevated overlap at all radial positions, with values near the colony boundary approaching full cell overlap.}
         \label{fig:max_overlap_simulation}
     \end{subfigure}
 
-    \caption{Cell packing analysis comparing hard and soft collision models. (a) Radial packing fraction profiles. (b) Maximum cell overlap vs. colony growth.}
+    \caption{Cell packing analysis comparing hard and soft collision models. (a) Radial packing fraction profiles. (b) Maximum cell overlap vs distance from colony center.}
     \label{fig:combined_packing_analysis}
 \end{figure}
 
@@ -713,7 +713,7 @@ A direct consequence of the overcrowded interior in the soft model is its effect
         \label{fig:sim_time_vs_colony_radius}
     \end{subfigure}
 
-    \caption{Colony growth dynamics and cell scaling comparison between hard and soft models. (a) Number of cells vs. colony radius. (b) Simulation time vs. colony radius.}
+    \caption{Colony growth dynamics and cell scaling comparison between hard and soft models. (a) Number of cells vs. colony radius. (b) Colony radius vs. simulation time.}
     \label{fig:comparison_combined}
 \end{figure}
 
@@ -783,14 +783,14 @@ Future work could further examine the influence of the stress-sensitivity parame
 
 \subsection{Radial Stress Distribution and Growth Rate}
 
-Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $\tilde{\sigma}(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$~\cite{Weady2024SM}, which predicts a logarithmic dependence on the colony radius.
+Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $\tilde{\sigma}(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$~\cite{Weady2024SM}, which predicts a logarithmic decay of stress with increasing distance $r$ from the colony center.
 
 Although the overall shape of the profiles is comparable, the magnitude of the predicted stresses differs substantially between the two models. Quantitatively, the hard model produces stress values that are up to two times higher than the analytical prediction, whereas the soft model yields stresses that are only about half the analytical value. This variation in stress magnitude is significant and likely plays a central role in explaining the discrepancies in growth dynamics and microdomain organization discussed in \autoref{sec:colony_growth_dynamics} and \autoref{sec:microdomain_formation}.
 
 \begin{figure*}[b]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
-    \caption{Radial stress profiles for both models across different $\lambda$ values. Both models exhibit similar qualitative trends, with stresses peaking at the colony center and decreasing toward the edge. However, the hard model consistently produces higher stress magnitudes compared to the soft model. The dashed lines represent the analytical prediction from~\cite{Weady2024SM}.}
+    \caption{Radial stress profiles for both models across different $\lambda$ values. Both models exhibit similar qualitative trends, with stresses peaking at the colony center and decreasing toward the edge. However, the hard model consistently produces higher stress magnitudes compared to the soft model. The black curves represent the analytical prediction from~\cite{Weady2024SM}, shown for each $\lambda$ value with the corresponding line style.}
     \label{fig:radial_distribution_stress}
 \end{figure*}
 
@@ -841,15 +841,15 @@ The decrease in performance at higher ranks arises from the domain decomposition
     \centering
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_runtime_hard_soft.png}
-        \caption{Runtime to reach colony radius of 100 versus CPU cores. The hard model is consistently faster, with the performance gap widening at high core counts.}
+        \caption{Runtime to reach colony radius of 100 versus MPI ranks. The hard model is consistently faster, with the performance gap widening at high core counts.}
         \label{fig:runtime_hard_soft}
     \end{subfigure}
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_speedup_hard_soft.png}
-        \caption{Speedup versus CPU cores. The hard and soft models scale reasonably up to 64 and 32 cores, respectively.}
+        \caption{Speedup versus MPI ranks. The hard and soft models scale reasonably up to 64 and 32 ranks, respectively.}
         \label{fig:speedup_hard_soft}
     \end{subfigure}
-    \caption{Strong scaling comparisons between hard and soft collision models. (a) Runtime vs. CPU cores. (b) Speedup vs. CPU cores.}
+    \caption{Strong scaling comparisons between hard and soft collision models. (a) Runtime vs. MPI ranks. (b) Speedup vs. MPI ranks.}
 \end{figure}
 
 \subsection{Adaptive Timestep Analysis}
