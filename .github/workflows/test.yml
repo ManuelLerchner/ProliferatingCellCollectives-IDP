@@ -84,34 +84,3 @@ jobs:
         name: coverage-report
         path: ${{github.workspace}}/code/cpp/build/coverage_report/
         retention-days: 30
-        
-    - name: Comment coverage on PR
-      if: github.event_name == 'pull_request' && matrix.mpi_ranks == 1
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const coverage = fs.readFileSync('${{github.workspace}}/code/cpp/build/coverage_filtered.info', 'utf8');
-          
-          // Parse coverage data
-          const lines = coverage.match(/LF:(\d+)/g);
-          const linesHit = coverage.match(/LH:(\d+)/g);
-          
-          if (lines && linesHit) {
-            const totalLines = lines.reduce((sum, l) => sum + parseInt(l.split(':')[1]), 0);
-            const hitLines = linesHit.reduce((sum, l) => sum + parseInt(l.split(':')[1]), 0);
-            const percentage = totalLines > 0 ? ((hitLines / totalLines) * 100).toFixed(2) : 0;
-            
-            const comment = `## Test Results ✅\n\n` +
-              `All tests passed! 🎉\n\n` +
-              `**Coverage:** ${percentage}% (${hitLines}/${totalLines} lines)\n\n` +
-              `**MPI Testing:** Tests validated with 1, 4, and 8 ranks\n\n` +
-              `[View detailed coverage report](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
-          }
