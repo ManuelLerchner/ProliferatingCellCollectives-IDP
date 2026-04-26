@@ -29,7 +29,6 @@
 \usepackage{textcomp}
 \usepackage{url}
 \usepackage{enumitem}
-\usepackage{caption} 
 \usepackage{tcolorbox}
 \usepackage{empheq}
 \usepackage{varwidth}
@@ -309,7 +308,7 @@ To account for Brownian motion and other sources of random fluctuations, we appl
 \section{Unified Computational Framework}
 
 Both models share an identical colony representation, growth law, stress computation, and time-stepping framework. The only difference lies in the computation of contact force magnitudes. In both formulations, forces are aligned with the contact normal. In the hard-contact model, force magnitudes are obtained via Lagrange multipliers enforcing a non-overlap constraint, whereas in the soft-contact model they arise from a local repulsive potential.
-All subsequent mechanical responses are identical in form, such that any observed differences in behaviour or computational performance can be attributed solely to the contact formulation. This controlled setup enables a direct, systematic comparison of hard and soft interaction models, which have previously been studied in isolation.
+All subsequent mechanical responses are identical in form, such that any observed differences in behavior or computational performance can be attributed solely to the contact formulation. This controlled setup enables a direct, systematic comparison of hard and soft interaction models, which have previously been studied in isolation.
 
 \subsection{Colony Representation}
 
@@ -516,7 +515,7 @@ At the optimal solution $\boldsymbol{\gamma}^*$, the Karush–Kuhn–Tucker (KKT
 \begin{enumerate}
     \item \textbf{Primal feasibility} ($\boldsymbol{\gamma}^* \geq 0$): We enforce this explicitly through a projection (\texttt{max} operator) during minimization, which prevents forces from becoming attractive. Physically, this ensures that contact forces only push cells apart according to the \textbf{Repulsive Forces} constraint.
 
-    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) \geq 0$): At the solution $\boldsymbol{\gamma}^*$, the directional derivative of the energy must be non-negative in every feasible direction. A negative partial derivative would indicate that the energy could be reduced by increasing $\gamma_\alpha$, contradicting the optimality of $\boldsymbol{\gamma}^*$. Given the identity $\nabla E(\boldsymbol{\gamma}^*) = \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*)$, this condition ensures $\boldsymbol{\Phi}^{k+1} \geq 0$, enforcing the \textbf{No-Overlap} constraint.
+    \item \textbf{Dual feasibility} ($\nabla E(\boldsymbol{\gamma}^*) \geq 0$): At the solution $\boldsymbol{\gamma}^*$, the directional derivative of the energy must be non-negative in every feasible direction. A negative partial derivative would indicate that the energy could be reduced by increasing $\gamma_\alpha$, contradicting the optimality of $\boldsymbol{\gamma}^*$. Given that $\nabla E(\boldsymbol{\gamma}^*) \approx \boldsymbol{\Phi}^{k+1}(\boldsymbol{\gamma}^*)$ (from \autoref{eq:phi_expanded}), this condition ensures $\boldsymbol{\Phi}^{k+1} \geq 0$, enforcing the \textbf{No-Overlap} constraint.
 
     \item \textbf{Complementary slackness} ($\boldsymbol{\gamma}^{*\top} \boldsymbol{\Phi}^{k+1} = 0$): Since both terms are non-negative, each contact must satisfy either $\gamma_\alpha = 0$ (no force at a gap) or $\Phi^{k+1}_\alpha = 0$ (force active only at contact). Physically, forces act only where cells are actually touching, satisfying the \textbf{Complementarity Condition}.
 \end{enumerate}
@@ -529,13 +528,13 @@ We solve the constrained optimization problem using the Barzilai-Borwein project
 
 The iteration is continued until convergence, yielding optimal contact forces $\boldsymbol{\gamma}^*$. These are then used to compute $\mathbfcal{F}(\boldsymbol{\gamma}^*)$ and $\dot{\boldsymbol{\ell}}(\boldsymbol{\gamma}^*)$ for updating the colony state via \autoref{eq:colony_update}.
 
-Following Weady et al.~\cite{Weady2024SM}, we adopt a convergence criterion based on a residual that directly measures physical overlap. The solver terminates when this residual falls below a user-specified tolerance of $\epsilon = d/500 = 0.5/500 = 10^{-3}$, ensuring that the maximum overlap between any pair of cells remains below $0.1\%$ of the cell diameter $d = 0.5$.
+Following Weady et al.~\cite{Weady2024SM}, we adopt a convergence criterion based on a residual that directly measures physical overlap. The solver terminates when this residual falls below a user-specified tolerance of $\varepsilon = d/500 = 0.5/500 = 10^{-3}$, ensuring that the maximum overlap between any pair of cells remains below $0.1\%$ of the cell diameter $d = 0.5$.
 
 \subsubsection{Limitations of the Linearization}
 
-A fundamental limitation of the linearization is that orthogonal motions, specifically rotations about contact points and translations parallel to the contact plane, are unconstrained within the linear approximation~\cite{Weady2024SM}. Consequently, even after the BBPGD algorithm converges to the specified tolerance $\epsilon$, residual overlaps may still be present that violate the non-overlap constraint.
+A fundamental limitation of the linearization is that orthogonal motions, specifically rotations about contact points and translations parallel to the contact plane, are unconstrained within the linear approximation~\cite{Weady2024SM}. Consequently, even after the BBPGD algorithm converges to the specified tolerance $\varepsilon$, residual overlaps may still be present that violate the non-overlap constraint.
 
-To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recursively generated linear complementarity problem (ReLCP) method. After each BBPGD convergence, ReLCP identifies any remaining overlaps by examining all pairwise cell distances, generates new constraints for these violations, and re-solves the complementarity problem with the augmented constraint set. This process iterates until all cell overlaps fall below the tolerance $\epsilon$. This hierarchical approach ensures that the non-overlap condition is strictly enforced, even in the presence of complex contact geometries and coupled motions (see \autoref{fig:bbpgd_residual}). The iterative refinement procedure typically converges within a small number of iterations, making it computationally tractable for most simulations~\cite{Weady2024SM}.
+To address this limitation, Weady et al.~\cite{Weady2024SM} developed the recursively generated linear complementarity problem (ReLCP) method. After each BBPGD convergence, ReLCP identifies any remaining overlaps by examining all pairwise cell distances, generates new constraints for these violations, and re-solves the complementarity problem with the augmented constraint set. This process iterates until all cell overlaps fall below the tolerance $\varepsilon$. This hierarchical approach ensures that the non-overlap condition is strictly enforced, even in the presence of complex contact geometries and coupled motions (see \autoref{fig:bbpgd_residual}). The iterative refinement procedure typically converges within a small number of iterations, making it computationally tractable for most simulations~\cite{Weady2024SM}.
 
 Nevertheless, this approach still requires a sufficiently small timestep, $\Delta t \sim 2 \cdot 10^{-3}$ (see \autoref{fig:cfl_vs_runtime}), to prevent excessive cell motion~\cite{Yan2022}. If cells move too far in a single timestep, new overlaps can form that the linearization does not capture, preventing constraint resolution. In practice, this can cause the BBPGD method to fail to converge or the ReLCP solver to be unable to resolve all overlaps within a reasonable number of iterations, leading to simulation failure.
 
@@ -543,14 +542,14 @@ Despite this computational restriction, the hard model's timestep requirement is
 
 \section{Implementation}
 
-All simulations in this paper were performed with a custom C++ framework designed for large-scale simulations of proliferating cell collectives. The framework leverages distributed-memory parallel computing and standard HPC libraries to achieve scalability, enabling simulations of hundreds of thousands of cells across hundreds of CPU cores. The implementation combines concepts from Weady et al.~\cite{Weady2024SM} and similar frameworks~\cite{Tasora2008,Yan2019}.
+All simulations in this paper were performed with a custom C++ framework designed for large-scale simulations of proliferating cell collectives. The framework leverages distributed-memory parallel computing and standard high-performance computing (HPC) libraries to achieve scalability, enabling simulations of hundreds of thousands of cells across hundreds of CPU cores. The implementation combines concepts from Weady et al.~\cite{Weady2024SM} and similar frameworks~\cite{Tasora2008,Yan2019}.
 
 \subsection{Distributed Computing Architecture}
 
 The core architecture is built on two foundational libraries:
 \begin{itemize}
     \item \textbf{PETSc}~\cite{petsc-web-page}: Used as a backend for distributed vectors and sparse matrices, supporting distributed computation across hundreds of CPU cores via MPI. PETSc partitions data across MPI processes and transparently handles inter-process communication for global operations (e.g., sparse matrix-vector products, iterative solvers, and global reductions).
-    \item \textbf{MPI}: Underlies all inter-process communication, including ghost-cell exchanges (copies of boundary particles replicated to neighbouring MPI ranks for cross-boundary collision detection) at domain boundaries to maintain consistent collision handling across partitions.
+    \item \textbf{MPI}: Underlies all inter-process communication, including ghost-cell exchanges (copies of boundary particles replicated to neighboring MPI ranks for cross-boundary collision detection) at domain boundaries to maintain consistent collision handling across partitions.
 \end{itemize}
 
 Built on these abstractions, the framework implements the full physics pipeline, including both the ReLCP solver for the hard collision model and the soft collision model.
@@ -574,19 +573,19 @@ The adaptive timestep strategy (outlined in \autoref{alg:adaptive_dt}) is based 
 For our cell-based system, we define a characteristic velocity scale $u_m$ as the median of $u_i = \|v_i\| + \dot{\ell}_i$ over all cells, accounting for both mechanical velocities and growth-induced elongation. The characteristic spatial scale $\Delta x$ is the solver tolerance $\varepsilon = 10^{-3}$, which controls the maximum allowable displacement per step. Enforcing that cells move no more than a fraction of $\varepsilon$ per timestep leads to the following expression for the adaptive timestep:
 
 \begin{equation} \label{eq:cfl_dt}
-    \Delta t = \frac{c \cdot\, \varepsilon}{u_m}
+    \Delta t = \frac{c_{\mathrm{CFL}} \cdot\, \varepsilon}{u_m}
 \end{equation}
 
-where $c = 0.5$ is the CFL safety factor (ensuring cells move at most half the tolerance per step), $\varepsilon = 10^{-3}$ is the solver displacement tolerance, and $u_m$ is the median particle speed including growth as defined above. Choosing $\Delta t$ this way ensures that most cells move less than half the solver tolerance in each timestep, preventing excessive overlaps that could destabilize the simulation.
+where $c_{\mathrm{CFL}} = 0.5$ is the CFL safety factor (ensuring cells move at most half the tolerance per step), $\varepsilon = 10^{-3}$ is the solver displacement tolerance, and $u_m$ is the median particle speed including growth as defined above. Choosing $\Delta t$ this way ensures that most cells move less than half the solver tolerance in each timestep, preventing excessive overlaps that could destabilize the simulation.
 
 \begin{algorithm}[h]
     \caption{Adaptive Timestep Control}
     \label{alg:adaptive_dt}
     \begin{algorithmic}[1]
-        \State \textbf{Input:} Particle set $\{p_i\}$ with velocities $v_i$ and growth rates $\dot{\ell_i}$, current timestep $\Delta t$, solver tolerance $\varepsilon$, smoothing factor $\alpha$.
+        \State \textbf{Input:} Particle set $\{p_i\}$ with velocities $v_i$ and growth rates $\dot{\ell}_i$, current timestep $\Delta t$, solver tolerance $\varepsilon$, smoothing factor $\alpha$.
         \State \textbf{Output:} Updated timestep $\Delta t$.
 
-        \State Compute characteristic velocity $u_i = \|v_i\| + \dot{\ell_i}$ for each particle.
+        \State Compute characteristic velocity $u_i = \|v_i\| + \dot{\ell}_i$ for each particle.
         \State Calculate $u_m$ as the median of $\{u_i\}$.
         \State Determine $\Delta t^*$ using~\autoref{eq:cfl_dt}.
         \State Smooth the timestep change: $\Delta t_{\text{new}} = (1 - \alpha)\Delta t + \alpha \Delta t^*$ with $\alpha = 0.01$.
@@ -603,7 +602,7 @@ The smoothing factor $\alpha = 0.01$ and the 20\% clamping threshold are introdu
 The full framework is openly available at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP} and includes:
 
 \begin{itemize}
-    \item \textbf{Simulation}: Both hard and soft collision models in a shared C++ codebase with MPI parallelization and adaptive timestepping. Simulation state is exported in VTK format at user-defined intervals, recording positions, orientations, lengths, stresses, growth rates, and contact forces for visualization in ParaView~\cite{ahrens2005paraview}.
+    \item \textbf{Simulation}: Both hard and soft collision models in a shared C++ codebase with MPI parallelization and adaptive timestepping. Simulation state is exported in Visualization Toolkit (VTK) format at user-defined intervals, recording positions, orientations, lengths, stresses, growth rates, and contact forces for visualization in ParaView~\cite{ahrens2005paraview}.
 
     \item \textbf{Analysis}: Jupyter notebooks for radial distribution profiles (packing fraction, stress, growth rate, cell length), microdomain cluster analysis, BBPGD convergence diagnostics, and energy landscape visualization.
 
@@ -614,13 +613,13 @@ The full framework is openly available at \url{https://github.com/manuellerchner
 
 \section{Pattern Formation Analysis}
 
-With both models sharing identical growth, stress computation, and time-stepping infrastructure, we now compare their emergent behaviour across a range of observables spanning pattern formation and colony-scale mechanics. In particular, we examine concentric ring patterns, cell density and local packing fraction, colony growth dynamics and total cell number, microdomain formation, and the coupled radial stress and growth rate profiles. This systematic comparison is designed to isolate the effect of the collision model on macroscopic behaviour, and to determine whether differences manifest primarily at the level of local structure, global growth dynamics, or stress-mediated feedback. We further identify parameter regimes in which both formulations produce consistent results, as well as regimes where their predictions diverge.
+With both models sharing identical growth, stress computation, and time-stepping infrastructure, we now compare their emergent behavior across a range of observables spanning pattern formation and colony-scale mechanics. In particular, we examine concentric ring patterns, cell density and local packing fraction, colony growth dynamics and total cell number, microdomain formation, and the coupled radial stress and growth rate profiles. This systematic comparison is designed to isolate the effect of the collision model on macroscopic behavior, and to determine whether differences manifest primarily at the level of local structure, global growth dynamics, or stress-mediated feedback. We further identify parameter regimes in which both formulations produce consistent results, as well as regimes where their predictions diverge.
 
 \subsection{Concentric Ring Patterns}
 
 We validate both implementations by reproducing concentric ring patterns that arise under stress-sensitive growth, as reported in~\cite{Weady2024}. As shown in \autoref{fig:pattern_formation}, both models successfully produce qualitatively similar ring structures, demonstrating that the core mechanics of growth and mechanical feedback are effectively captured by both collision handling approaches.
 
-The effect of $\lambda$ on pattern formation is consistent across both models. At low stress-sensitivity (e.g. $\lambda = 10^{-4}$, corresponding to weak growth inhibition), stress gradients are too weak to generate significant spatial patterns, and thus no rings form. At intermediate sensitivity (e.g. $\lambda = 10^{-3}$), distinct concentric rings emerge early in the simulation and persist as the colony expands, with ring spacing determined by the balance between growth and stress. At high sensitivity ($\lambda = 10^{-2}$, corresponding to strong growth inhibition), an initially formed ring quickly dissipates as cells reorient to random orientations and growth nearly ceases due to strong mechanical inhibition throughout most of the colony.
+The effect of $\lambda$ on pattern formation is consistent across both models. At low stress-sensitivity (e.g., $\lambda = 10^{-4}$, corresponding to weak growth inhibition), stress gradients are too weak to generate significant spatial patterns, and thus no rings form. At intermediate sensitivity (e.g., $\lambda = 10^{-3}$), distinct concentric rings emerge early in the simulation and persist as the colony expands, with ring spacing determined by the balance between growth and stress. At high sensitivity ($\lambda = 10^{-2}$, corresponding to strong growth inhibition), an initially formed ring quickly dissipates as cells reorient to random orientations and growth nearly ceases due to strong mechanical inhibition throughout most of the colony.
 
 Despite these qualitatively similar outcomes, visual differences emerge between the models. The soft model produces visibly denser patterns with a fuzzy appearance due to allowable cell overlap, while the hard model yields sharper, more clearly defined rings. Nevertheless, macroscopic features, such as the number of rings, spacing, and colony expansion rate remain comparable between the two models.
 
@@ -658,7 +657,7 @@ Despite these qualitatively similar outcomes, visual differences emerge between 
 
 The most striking difference between the models is the cell packing density (see \autoref{fig:dense_packing_comparison}). The soft model exhibits significantly denser packing in the colony center, decreasing radially outward (see \autoref{fig:radial_distribution_packing_fraction}). For very low stress-sensitivity ($\lambda = 10^{-4}$), local packing fractions (defined as the ratio of cell area to available area) reach values of 5, indicating severe cell overlap. Values exceeding 1.0 are impossible for truly rigid spherocylinders and reflect the soft model's inability to prevent interpenetration. In contrast, the hard model maintains approximately constant packing density of 0.9 throughout the colony, consistent with densely packed non-overlapping rods.
 
-The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge. Combined with a numerical timestep too large to resolve all collisions, this leads to excessive cell overlap and overcrowding in the interior. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model exhibits substantially elevated cell overlap at all distances from the colony center, approaching full cell overlap near the colony boundary. In contrast, the hard model maintains maximum overlap near the solver tolerance $\epsilon = 10^{-3}$ at every radial position, confirming that the strict non-overlap constraints are enforced globally.
+The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge. Combined with a numerical timestep too large to resolve all collisions, this leads to excessive cell overlap and overcrowding in the interior. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model exhibits substantially elevated cell overlap at all distances from the colony center, approaching full cell overlap near the colony boundary. In contrast, the hard model maintains maximum overlap near the solver tolerance $\varepsilon = 10^{-3}$ at every radial position, confirming that the strict non-overlap constraints are enforced globally.
 
 A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ solely on cell velocities but not on current overlap. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$. Such an improvement is, however, beyond the scope of this work.
 
@@ -690,11 +689,11 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
-        \caption{Maximum cell overlap as a function of distance from the colony center. The hard model remains uniformly near solver tolerance $\epsilon = 10^{-3}$, whereas the soft model exhibits substantially elevated overlap at all radial positions, with values near the colony boundary approaching full cell overlap.}
+        \caption{Maximum cell overlap as a function of distance from the colony center. The hard model remains uniformly near solver tolerance $\varepsilon = 10^{-3}$, whereas the soft model exhibits substantially elevated overlap at all radial positions, with values near the colony boundary approaching full cell overlap.}
         \label{fig:max_overlap_simulation}
     \end{subfigure}
 
-    \caption{(a) Radial packing fraction profiles. (b) Maximum cell overlap vs distance from colony center.}
+    \caption{(a) Radial packing fraction profiles. (b) Maximum cell overlap vs.\ distance from colony center.}
     \label{fig:combined_packing_analysis}
 \end{figure}
 
@@ -727,7 +726,7 @@ A direct consequence of the overcrowded interior in the soft model is its effect
 
 \subsection{Radial Stress Distribution and Growth Rate}
 
-Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $\tilde{\sigma}(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$~\cite{Weady2024SM}, which predicts a logarithmic decay of stress with increasing distance $r$ from the colony center.
+Another key difference between the two modeling approaches lies in the radial stress distribution that develops within the colony (see \autoref{fig:radial_distribution_stress}). Both the hard and soft models produce qualitatively similar radially averaged stress profiles, consistent with the behavior originally reported in~\cite{Weady2024}. In both cases, the stresses are highest at the colony center and gradually decrease toward the outer edge, reflecting the buildup of mechanical compression in the densely packed interior. These profiles approximately follow the derived analytical expression $\tilde{\sigma}(r) \approx \frac{2}{\lambda} \ln\left(\frac{1}{8 c} - c\lambda r^2 \right)$~\cite{Weady2024}, predicting a logarithmic decay of stress with distance $r$ from the colony center.
 
 Although the overall shape of the profiles is comparable, the magnitude of the predicted stresses differs substantially between the two models. Quantitatively, the hard model produces stress values that are up to two times higher than the analytical prediction, whereas the soft model yields stresses that are only about half the analytical value. This variation in stress magnitude is significant and likely plays a central role in explaining the discrepancies in growth dynamics and microdomain organization discussed in \autoref{sec:colony_growth_dynamics} and \autoref{sec:microdomain_formation}.
 
@@ -820,14 +819,13 @@ for preliminary exploration. For applications that require accurate characteriza
 \section{Computational Performance}
 \label{sec:performance_analysis}
 
-We now focus on the computational performance of both models. To leverage multiple CPUs, the simulation is parallelized using the Message Passing Interface (MPI), which allows the workload to be distributed efficiently across many cores. All benchmarks are carried out on the \texttt{CoolMUC-4}\footnote{\texttt{CoolMUC-4} is part of the Linux Cluster at the Leibniz Supercomputing Centre (LRZ). It consists of 106 compute nodes equipped with \textit{Intel Xeon Platinum 8480+ (Sapphire Rapids)} CPUs, each providing 112 cores. For details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.}
-HPC cluster.
+We now focus on the computational performance of both models. To leverage multiple CPUs, the simulation is parallelized using the Message Passing Interface (MPI), which allows the workload to be distributed efficiently across many cores. All benchmarks are carried out on the \texttt{CoolMUC-4} HPC cluster\footnote{\texttt{CoolMUC-4} is part of the Linux Cluster at the Leibniz Supercomputing Centre (LRZ). It consists of 106 compute nodes equipped with \textit{Intel Xeon Platinum 8480+ (Sapphire Rapids)} CPUs, each providing 112 cores. For details, see \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.}.
 
 \subsection{Domain Decomposition}
 
 For parallel execution, the simulation domain is divided into evenly spaced angular sectors of the circular colony, as illustrated in \autoref{fig:domain_decomposition}. We introduce this angular sector decomposition specifically suited to the circular geometry of bacterial colonies. The center of the colony is exclusively assigned to rank 1 to avoid a singularity where all ranks would meet at the center. This decomposition ensures better load balancing for circular colonies than regular rectangular slices, which would produce significant load imbalance due to the colony's radial symmetry.
 
-Communication between ranks occurs through ghost particle exchange at sector boundaries. At each timestep, particles near the boundaries are sent to neighboring ranks as ghost particles (copies of boundary particles replicated to neighbouring MPI ranks for cross-boundary collision detection), allowing for correct collision detection across domain borders.
+Communication between ranks occurs through ghost particle exchange at sector boundaries. At each timestep, particles near the boundaries are sent to neighboring ranks as ghost particles (copies of boundary particles replicated to neighboring MPI ranks for cross-boundary collision detection), allowing for correct collision detection across domain borders.
 
 \begin{figure}[H]
     \centering
@@ -841,7 +839,7 @@ Communication between ranks occurs through ghost particle exchange at sector bou
 
 To assess parallel performance, we analyze runtime and speedup as functions of CPU core count. In the strong-scaling tests, colonies grow from a single cell to a radius of 100.
 
-We find that the hard model consistently outperforms the soft model across all core counts ranging from 1.20 at 1 core to 9.36 at 112 cores, see \autoref{fig:runtime_hard_soft}. This performance advantage likely stems from the hard model's significantly larger stable timesteps, which allow more computational work per communication cycle. As shown in \autoref{fig:speedup_hard_soft}, the hard model achieves reasonable speedup up to approximately 64 cores, while the soft model scales well only up to about 32 cores.
+We find that the hard model consistently outperforms the soft model across all core counts, by a factor ranging from $1.20\times$ at 1 core to $9.36\times$ at 112 cores (see \autoref{fig:runtime_hard_soft}). This performance advantage likely stems from the hard model's significantly larger stable timesteps, which allow more computational work per communication cycle. As shown in \autoref{fig:speedup_hard_soft}, the hard model achieves reasonable speedup up to approximately 64 cores, while the soft model scales well only up to about 32 cores.
 
 The decrease in performance at higher ranks arises from the domain decomposition. At very high core counts, each rank handles only a narrow angular slice of the colony (see \autoref{fig:domain_decomposition}), so communication increasingly dominates runtime. With less local work per rank, ghost particle exchanges and global PETSc matrix operations (in the hard model) become more frequent and costly, especially when small timesteps $\Delta t$ are used. This imbalance reduces scaling efficiency and leads to longer runtimes at high core counts.
 
@@ -862,7 +860,7 @@ The decrease in performance at higher ranks arises from the domain decomposition
 
 \subsection{Adaptive Timestep Analysis}
 
-A key factor in the soft model’s poor parallel performance is its very small critical timestep, determined by \autoref{eq:cfl_dt}. As the colony grows, $\Delta t$ decreases sharply (see \autoref{fig:simulation_time_vs_dt}), so each rank advances particles only minimally before triggering costly MPI communication (ghost exchanges and neighbor updates). These operations then dominate runtime, leading to poor scaling.
+A key factor in the soft model’s poor parallel performance is its critically small timestep, determined by \autoref{eq:cfl_dt}. As the colony grows, $\Delta t$ decreases sharply (see \autoref{fig:simulation_time_vs_dt}), so each rank advances particles only minimally before triggering costly MPI communication (ghost exchanges and neighbor updates). These operations then dominate runtime, leading to poor scaling.
 
 In contrast, the hard model maintains a mostly constant timestep that is significantly larger than that of the soft model. This allows each rank to advance particles substantially between communication steps, effectively amortizing the cost of MPI exchanges over more computational work. Consequently, the hard model sustains a favorable computation-to-communication ratio, explaining its better scaling at moderate to high core counts.
 
@@ -882,7 +880,7 @@ Using adaptive timestepping provides both stability and efficiency by adjusting 
 
 The efficiency of the BBPGD solver for the hard model also depends critically on the timestep size. The timestep $\Delta t$ determines both the number of BBPGD iterations per timestep as well as the total number of timesteps required for the simulation. This relationship produces a characteristic U-shaped runtime curve as a function of the CFL number and corresponding timestep, as shown in \autoref{fig:cfl_vs_runtime}.
 
-The total runtime to reach a colony radius of 100 on 112 CPU cores exhibits a pronounced minimum at CFL $\approx 2$, corresponding to cells moving roughly twice the solver tolerance $\epsilon$ per timestep. At small CFL values (CFL $\ll 1$), each timestep requires relatively few solver iterations due to accurate linearization (\autoref{eq:phi_expanded}) and minimal overlaps, but many timesteps are required, making the simulation inefficient. At large CFL values (CFL $\gg 3$), linearization assumptions break down as cells move too far per step, increasing solver iterations, and in extreme cases (CFL $> 3.7$), the solver may fail to converge, as shown in \autoref{fig:cfl_vs_runtime}.
+The total runtime to reach a colony radius of 100 on 112 CPU cores exhibits a pronounced minimum at CFL $\approx 2$, corresponding to cells moving roughly twice the solver tolerance $\varepsilon$ per timestep. At small CFL values (CFL $\ll 1$), each timestep requires relatively few solver iterations due to accurate linearization (\autoref{eq:phi_expanded}) and minimal overlaps, but many timesteps are required, making the simulation inefficient. At large CFL values (CFL $\gg 3$), linearization assumptions break down as cells move too far per step, increasing solver iterations, and in extreme cases (CFL $> 3.7$), the solver may fail to converge, as shown in \autoref{fig:cfl_vs_runtime}.
 
 The average number of solver iterations per timestep increases with the CFL factor at low values, following $\text{iterations} \approx 1800 \cdot \text{CFL}$, reaching about 3600 near the optimum before rising sharply.
 
@@ -905,7 +903,7 @@ This section examines the performance of the BBPGD algorithm used in the hard co
 
 A key metric is the number of BBPGD iterations required per simulation step and how this quantity scales with system size. \autoref{fig:bbpgd_iterations_per_step_vs_num_particles} shows that iteration count remains mostly on the order of $\mathcal{O}(1000)$, with occasional peaks reaching $\mathcal{O}(5000)$ during critical moments such as large-scale rearrangements or near jamming transitions. This count includes additional BBPGD calls from the ReLCP procedure, which requires up to 6 iterations to fully resolve remaining overlaps. The typical order of magnitude for the BBPGD iteration count is consistent with related studies~\cite{Yan2019}, even though our model's collision-growth coupling introduces additional complexity.
 
-The convergence behavior of a single representative time step is illustrated in \autoref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\epsilon = 10^{-3}$ after approximately 280 iterations, with the residual directly corresponding to the maximum overlap between any two cells in the colony. The residual exhibits a highly oscillatory pattern, a well-known characteristic of BBPGD resulting from adaptive step-size selection~\cite{BBPGD,Schneider2021}.
+The convergence behavior of a single representative time step is illustrated in \autoref{fig:bbpgd_residual}. The solver reaches the desired tolerance of $\varepsilon = 10^{-3}$ after approximately 280 iterations, with the residual directly corresponding to the maximum overlap between any two cells in the colony. The residual exhibits a highly oscillatory pattern, a well-known characteristic of BBPGD resulting from adaptive step-size selection~\cite{BBPGD,Schneider2021}.
 
 Since we use the ReLCP procedure~\cite{Weady2024SM}, each simulation step may involve multiple BBPGD iterations until all overlaps are resolved. The overall energy evolution during this convergence process is shown in \autoref{fig:bbpgd_energy}, illustrating that the solver steadily reduces the system's energy until the current overlaps are eliminated. Once this state is reached, new contacts are detected, the system's energy increases, and the process repeats. The system ultimately converges to a feasible, overlap-free configuration within six ReLCP iterations, requiring a total of 960 BBPGD steps. The plot also shows the total number of constraints resolved during the BBPGD iterations, which grows with each new ReLCP iteration. For a colony of size $R \approx 100$ with 36,244 cells, roughly 100,000 new constraints are generated per ReLCP iteration, reaching a maximum of about 600,000 constraints in the final phase.
 
@@ -925,7 +923,7 @@ There remains considerable potential to further improve the performance of BBPGD
     \begin{subfigure}[b]{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_residual.png}
-        \caption{BBPGD residuals over iterations for a single timestep. The solver converges to tolerance $\epsilon = 10^{-3}$ within approximately 280 iterations, showing highly oscillatory behavior. The residual directly represents the current maximum overlap between any two cells in the colony.}
+        \caption{BBPGD residuals over iterations for a single timestep. The solver converges to tolerance $\varepsilon = 10^{-3}$ within approximately 280 iterations, showing highly oscillatory behavior. The residual directly represents the current maximum overlap between any two cells in the colony.}
         \label{fig:bbpgd_residual}
     \end{subfigure}
 
