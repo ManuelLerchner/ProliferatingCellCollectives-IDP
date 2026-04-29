@@ -561,7 +561,7 @@ Built on these abstractions, the framework implements the full physics pipeline,
 
 Collisions are processed through a unified pipeline designed to decouple geometry from physics. The process consists of three phases: (1) broad-phase detection using a spatial grid (reducing neighbor searches to $O(N)$), (2) narrow-phase detection that computes exact contact points, normals, and lever arms, and (3) force and stress assembly. The resulting contact geometry is passed to either the hard or soft collision model, which computes the per-contact forces and torques that are accumulated into the global force vector and used to update the colony stress state. This abstraction allows seamless switching between collision models without altering the overall simulation flow.
 
-Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This over estimation of the cell-pairs requiring constraints is crucial for the stability of the hard model. For the soft model, those non-overlapping cell-pairs contribute no forces (since $\delta < 0$), while for the hard model they provide additional global information that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}.
+Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This over-detection is crucial for the stability of the hard model, where near-contact pairs provide global context that improves constraint resolution. For the soft model, this over-detection does not apply: only truly overlapping pairs ($\delta \geq 0$) generate constraints, so near-contact but non-overlapping pairs contribute neither forces nor constraint objects. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}.
 
 \subsection{Adaptive Timestepping}
 
@@ -570,7 +570,7 @@ To enhance stability and convergence, particularly for fast-moving cells that mi
 The adaptive timestep strategy (outlined in \autoref{alg:adaptive_dt}) is based on the Courant-Friedrichs-Lewy (CFL) condition~\cite{Courant1928}, which provides a stability criterion linking temporal and spatial resolution:
 
 \begin{equation}
-    \text{CFL} = \frac{u \, \Delta t}{\Delta x} \leq C_{\text{max}}.
+    \text{CFL} = \frac{u_m \, \Delta t}{\Delta x} \leq c_{\mathrm{CFL}}.
 \end{equation}
 
 For our cell-based system, we define a characteristic velocity scale $u_m$ as the median of $u_i = \|v_i\| + \dot{\ell}_i$ over all cells, accounting for both mechanical velocities and growth-induced elongation. The characteristic spatial scale $\Delta x$ is the solver tolerance $\varepsilon = 10^{-3}$, which controls the maximum allowable displacement per step. Enforcing that cells move no more than a fraction of $\varepsilon$ per timestep leads to the following expression for the adaptive timestep:
