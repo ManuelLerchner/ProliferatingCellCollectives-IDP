@@ -21,7 +21,7 @@
 
 % Algorithm and code
 \usepackage{algorithm}
-\usepackage{algpseudocode} 
+\usepackage{algpseudocode}
 \usepackage{algorithmicx}
 \usepackage{listings}
 
@@ -33,11 +33,11 @@
 \usepackage{empheq}
 \usepackage{varwidth}
 \usepackage{balance}
-\usepackage{flushend} 
+\usepackage{flushend}
 \usepackage{stfloats}
 
 \usepackage[ngerman,main=english]{babel}
- 
+
 % TikZ for diagrams
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,shapes,positioning}
@@ -81,11 +81,11 @@
 \newcommand{\orientationcomparisonrow}[2]{%
     #1 &
         \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
-    &   
+    &
         \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
     \\
 }
- 
+
 \newcommand{\algorithmautorefname}{Algorithm}
 
 
@@ -138,7 +138,7 @@ An example is found in bacterial colonies, where cell arrangement reflects growt
 
 Computational modeling offers a powerful tool for dissecting the complex dynamics and emergent spatial patterns observed in those colonies. To reproduce such emergent structures and uncover their underlying mechanisms, models must accurately capture the dynamic interplay between cell growth and division, mechanical forces, and intercellular interactions.
 
-Simulating dense, proliferating cell collectives, however, poses significant computational challenges: the large number of cells in realistic colonies, combined with the need to resolve collisions accurately across continuously changing configurations, creates a computational bottleneck. 
+Simulating dense, proliferating cell collectives, however, poses significant computational challenges: the large number of cells in realistic colonies, combined with the need to resolve collisions accurately across continuously changing configurations, creates a computational bottleneck.
 
 Moreover, different collision-handling approaches offer distinct trade-offs in physical fidelity, numerical stability, and computational cost. Soft repulsive models are computationally efficient, but require small step-sizes; whereas hard constraint-based models are computationally more expensive per timestep, but are more numerically stable allowing larger step-sizes. Whilst both approaches have been used in cell collective modeling, to the best of the authors' knowledge, no work has yet compared the two, particularly with a focus on computational efficiency. This work addresses this gap.
 
@@ -561,7 +561,7 @@ Built on these abstractions, the framework implements the full physics pipeline,
 
 Collisions are processed through a unified pipeline designed to decouple geometry from physics. The process consists of three phases: (1) broad-phase detection using a spatial grid (reducing neighbor searches to $O(N)$), (2) narrow-phase detection that computes exact contact points, normals, and lever arms, and (3) force and stress assembly. The resulting contact geometry is passed to either the hard or soft collision model, which computes the per-contact forces and torques that are accumulated into the global force vector and used to update the colony stress state. This abstraction allows seamless switching between collision models without altering the overall simulation flow.
 
-Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This over-detection is crucial for the stability of the hard model, where near-contact pairs provide global context that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}. For the soft model, this over-detection does not apply: only truly overlapping pairs ($\delta \geq 0$) generate constraints, so near-contact but non-overlapping pairs contribute neither forces nor constraint objects. 
+Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This over-detection is crucial for the stability of the hard model, where near-contact pairs provide global context that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}. For the soft model, this over-detection does not apply: only truly overlapping pairs ($\delta \geq 0$) generate constraints, so near-contact but non-overlapping pairs contribute neither forces nor constraint objects.
 
 \subsection{Adaptive Timestepping}
 
@@ -605,13 +605,13 @@ The smoothing factor $\alpha = 0.01$ and the 20\% clamping threshold are introdu
 The full framework is openly available at \url{https://github.com/manuellerchner/MicrobeGrowthSim-IDP} and includes:
 
 \begin{itemize}
-    \item \textbf{Simulation}: Both hard and soft collision models in a shared C++ codebase with MPI parallelization and adaptive timestepping. Simulation state is exported in Visualization Toolkit (VTK) format at user-defined intervals, recording positions, orientations, lengths, stresses, growth rates, and contact forces for visualization in ParaView~\cite{ahrens2005paraview}.
+    \item \textbf{Simulation}: Hard and soft collision models in a shared C++ codebase with MPI parallelization and adaptive timestepping. Simulation state is exported in Visualization Toolkit (VTK) format at user-defined intervals, recording positions, orientations, lengths, stresses, growth rates, and contact forces for visualization in ParaView~\cite{ahrens2005paraview}.
 
     \item \textbf{Analysis}: Jupyter notebooks for radial distribution profiles (packing fraction, stress, growth rate, cell length), microdomain cluster analysis, BBPGD convergence diagnostics, and energy landscape visualization.
 
-    \item \textbf{Benchmarking}: Python scripts and notebooks for strong-scaling studies, CFL factor sweeps, and colony-size runtime profiling, reproducing all performance results in this work.
+    \item \textbf{Benchmarking}: Python scripts for strong-scaling studies, CFL factor sweeps, and colony-size runtime profiling.
 
-    \item \textbf{Utilities}: Modules for parsing VTK output, loading and aligning multi-run datasets, generating simulation configurations, and rendering colony snapshots via ParaView state files.
+    \item \textbf{Utilities}: Modules for parsing VTK output, loading multi-run datasets, generating simulation configurations, and rendering colony snapshots via ParaView state files.
 \end{itemize}
 
 \section{Pattern Formation Analysis}
@@ -662,23 +662,8 @@ The most striking difference between the models is the cell packing density (see
 
 The unphysical packing fraction arises because the soft model relies on local pairwise forces that cannot fully propagate stress to the colony edge. Combined with a numerical step-size too large to resolve all collisions, this leads to excessive cell overlap and overcrowding in the interior. \autoref{fig:max_overlap_simulation} quantifies this effect: the soft model exhibits substantially elevated cell overlap at all distances from the colony center, approaching full cell overlap near the colony boundary. In contrast, the hard model maintains maximum overlap near the solver tolerance $\varepsilon = 10^{-3}$ at every radial position, confirming that the strict non-overlap constraints are enforced globally.
 
-A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ solely on cell velocities but not on current overlap. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$, however smaller step-sizes would come with reduced performance.
+A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ solely on cell velocities but not on current overlap; a more sophisticated scheme could account for maximum overlap, though smaller step-sizes would reduce performance.
 
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{0.49\columnwidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/density_hard.jpeg}
-        \caption{Hard model}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.49\columnwidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/density_soft.jpeg}
-        \caption{Soft model}
-    \end{subfigure}
-    \caption{Close-up comparison of cell packing in the colony center for both collision models. The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding.}
-    \label{fig:dense_packing_comparison}
-\end{figure}
 
 \begin{figure}[H]
     \centering
@@ -698,6 +683,22 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
 
     \caption{(a) Radial packing fraction profiles. (b) Maximum cell overlap vs.\ distance from colony center. Both graphs study a colony of radius $R \approx 100$.}
     \label{fig:combined_packing_analysis}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.49\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/density_hard.jpeg}
+        \caption{Hard model}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/comparison_plots/density_soft.jpeg}
+        \caption{Soft model}
+    \end{subfigure}
+    \caption{Close-up comparison of cell packing in the colony center for both collision models. The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding.}
+    \label{fig:dense_packing_comparison}
 \end{figure}
 
 \subsection{Colony Growth Dynamics and Number of Cells}
@@ -818,6 +819,8 @@ for preliminary exploration. For applications that require accurate characteriza
     \label{fig:orientation_comparison}
 \end{figure*}
 
+
+\clearpage
 
 \section{Computational Performance}
 \label{sec:performance_analysis}
