@@ -1,9 +1,34 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+%% 
+%% Copyright 2019-2024 Elsevier Ltd
+%% 
+%% This file is part of the 'CAS Bundle'.
+%% --------------------------------------
+%% 
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.3c of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.3c or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%% 
+%% The list of all files belonging to the 'CAS Bundle' is
+%% given in the file `manifest.txt'.
+%% 
+%% Template article for cas-dc documentclass for 
+%% double column output.
 
-% Core packages
-\usepackage{cite}
-\usepackage[T1]{fontenc}
+\documentclass[a4paper,fleqn]{cas-dc}
+
+% If the frontmatter runs over more than one page
+% use the longmktitle option.
+
+%\documentclass[a4paper,fleqn,longmktitle]{cas-dc}
+
+%\usepackage[numbers]{natbib}
+%\usepackage[authoryear]{natbib}
+\usepackage[authoryear,longnamesfirst]{natbib}
+
+% \usepackage[T1]{fontenc}
 \usepackage{hyperref}
 \usepackage{orcidlink}
 
@@ -37,11 +62,13 @@
 \usepackage{stfloats}
 
 \usepackage[ngerman,main=english]{babel}
- 
+
 % TikZ for diagrams
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,shapes,positioning}
 \usetikzlibrary{calc,angles,quotes}
+
+%%%Author macros
 
 % --- Macro for drawing a 2D spherocylinder ---
 % #1 = center coordinate
@@ -57,7 +84,6 @@
         \fill [black] (#1) circle (2pt);
     \end{scope}
 }
-
 
 
 \hypersetup{hidelinks}
@@ -87,27 +113,116 @@
 }
  
 \newcommand{\algorithmautorefname}{Algorithm}
+%%%
 
+% Uncomment and use as if needed
+%\newtheorem{theorem}{Theorem}
+%\newtheorem{lemma}[theorem]{Lemma}
+%\newdefinition{rmk}{Remark}
+%\newproof{pf}{Proof}
+%\newproof{pot}{Proof of Theorem \ref{thm}}
 
 \begin{document}
+\let\WriteBookmarks\relax
+\def\floatpagepagefraction{1}
+\def\textpagefraction{.001}
 
-\title{Proliferating Cell Collectives: \\A Comparison of Hard and Soft Collision Models}
+% Short title
+\shorttitle{Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models}    
 
-\author{
-    \IEEEauthorblockN{Manuel Lerchner~\orcidlink{0000-0002-5167-465X}}
-    \IEEEauthorblockA{
-        \textit{Technical University of Munich}\\
-        Munich, Germany}
-    \and
-    \IEEEauthorblockN{Samuel James Newcome~\orcidlink{0000-0003-3044-6057}}
-    \IEEEauthorblockA{
-        \textit{Technical University of Munich}\\
-        Munich, Germany}
-}
+% Short author
+\shortauthors{Lerchner and Newcome}  
 
-\maketitle
+% Main title of the paper
+\title [mode = title]{Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models}  
 
-\begin{abstract}
+% Title footnote mark
+% eg: \tnotemark[1]
+\tnotemark[1] 
+
+% Title footnote 1.
+% eg: \tnotetext[1]{Title footnote text}
+\tnotetext[1]{} 
+
+% First author
+%
+% Options: Use if required
+% eg: \author[1,3]{Author Name}[type=editor,
+%       style=chinese,
+%       auid=000,
+%       bioid=1,
+%       prefix=Sir,
+%       orcid=0000-0000-0000-0000,
+%       facebook=<facebook id>,
+%       twitter=<twitter id>,
+%       linkedin=<linkedin id>,
+%       gplus=<gplus id>]
+
+\author[1]{Manuel Lerchner}[
+  orcid=0000-0002-5167-465X
+]%[<options>]
+
+% Corresponding author indication
+\cormark[1]
+
+% Footnote of the first author
+\fnmark[1]
+
+% Email id of the first author
+\ead{manuel.lerchner@tum.de}
+
+% URL of the first author
+\ead[url]{} % TODO Manuel
+
+% Credit authorship
+% eg: \credit{Conceptualization of this study, Methodology, Software} % Todo Manuel: check this. These are from the CReditT 14 contributor roles
+\credit{Conceptualization, Data curation, Formal analysis, Investigation, Methodology, Software, Validation, Visualization, Writing –- original draft, Writing –- review and editing}
+
+% Address/affiliation
+\affiliation[1]{organization={Chair of Scientific Computing in Computer Science, School of Computation, Information and Technology, Technical University of Munich},
+            addressline={Boltzmannstr. 3}, 
+            city={Garching bei Muenchen},
+         citysep={}, % Uncomment if no comma needed between city and postcode
+            postcode={85748}, 
+            state={Bavaria},
+            country={Germany}}
+
+\author[2]{Samuel James Newcome}[
+  orcid=0000-0003-3044-6057
+]%[]
+
+% Footnote of the second author
+\fnmark[2]
+
+% Email id of the second author
+\ead{samuel.newcome@tum.de}
+
+% URL of the second author
+\ead[url]{https://www.cs.cit.tum.de/sccs/personen/samuel-james-newcome/}
+
+% Credit authorship % TODO Manuel - similar
+\credit{Conceptualization, Supervision, Writing -– review and editing}
+
+% Address/affiliation
+\affiliation[2]{organization={},
+            addressline={}, 
+            city={},
+%          citysep={}, % Uncomment if no comma needed between city and postcode
+            postcode={}, 
+            state={},
+            country={}}
+
+% Corresponding author text
+\cortext[1]{Corresponding author}
+
+% Footnote text
+\fntext[1]{}
+
+% For a title note without a number/mark
+%\nonumnote{}
+
+% Here goes the abstract
+\begin{abstract}  % TODO Manuel -> Cut to 250 words; Remove Reference
     Dense bacterial colonies self-organize into striking spatial patterns driven by mechanical feedback between growing cells. Simulating these dynamics requires resolving cell-cell collisions at large scale, yet it remains unclear whether rigid constraint-based or soft potential-based approaches offer a better trade-off between physical accuracy and computational cost.
 
     This work extends the hard (constraint-based) collision model introduced by Weady et al.~\cite{Weady2024} by systematically comparing it with a soft (potential-based) approach for simulating proliferating cell collectives within a unified computational framework. Both models successfully reproduce experimentally observed concentric ring patterns and microdomain formation in small bacterial colonies, indicating that these macroscopic patterns are robust to the specific details of collision resolution.
@@ -119,9 +234,55 @@
     Overall, the hard model is strongly preferred for nearly all applications, while the soft model is limited to exploratory studies of very small colonies focused on macroscopic pattern formation rather than cell-scale details.
 \end{abstract}
 
-\begin{IEEEkeywords}
-    collision models, constraint-based simulation, potential-based repulsion, bacterial colony growth, proliferating cell collectives, adaptive timestepping, pattern formation, computational performance, stress-sensitive growth, microdomain formation, non-overlapping particle simulations, large-scale colony simulation, parallel computing, computational biology
-\end{IEEEkeywords}
+% Use if graphical abstract is present
+%\begin{graphicalabstract}
+%\includegraphics{}
+%\end{graphicalabstract}
+
+% Research highlights % TODO Add highlights (3-5 bullet points: max 85 characters each incl. spaces)
+\begin{highlights}
+\item 
+\item 
+\item 
+\end{highlights}
+
+
+%\nocite{*}
+
+% Keywords
+% Each keyword is seperated by \sep
+
+% TODO: 1-7 words, and should avoid multiple words per keyword
+\begin{keywords}
+ \sep \sep \sep
+\end{keywords}
+
+\maketitle
+
+% Main text
+
+% Numbered list
+% Use the style of numbering in square brackets.
+% If nothing is used, default style will be taken.
+%\begin{enumerate}[a)]
+%\item 
+%\item 
+%\item 
+%\end{enumerate}  
+
+% Unnumbered list
+%\begin{itemize}
+%\item 
+%\item 
+%\item 
+%\end{itemize}  
+
+% Description list
+%\begin{description}
+%\item[]
+%\item[] 
+%\item[] 
+%\end{description}  
 
 \section{Introduction}
 
@@ -1023,22 +1184,6 @@ For the hard model, the primary computational bottleneck at large scales is the 
 
 Future work could also investigate extensions to the current models to capture additional biological phenomena. For instance, external boundaries, nutrient fields, or chemotactic signaling could be incorporated to study their effects on colony growth and pattern formation. Most of these extensions can be integrated into the existing framework with minimal changes to the collision models~\cite{Yan_2020}. Additionally, future work could further examine the influence of the stress-sensitivity parameter $\lambda$ on the emergence, size, and stability of microdomains in the hard model, following an approach similar to the analyses presented by You et al.~\cite{You2018}.
 
-\section*{Acknowledgments}
-
-We gratefully acknowledge the computational and data resources, as well as the support provided by the Leibniz Supercomputing Centre (\url{www.lrz.de}). All benchmarks in this work were carried out on the \texttt{CoolMUC-4} cluster, which is part of the Linux Cluster at LRZ. Further information is available at \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.
-
-
-\clearpage
-
-\balance
-\bibliographystyle{IEEEtran}
-\bibliography{literature}
-\newpage
-\nobalance
-
-
-\onecolumn
-
 \appendix
 \renewcommand{\thefigure}{A\arabic{figure}}
 \renewcommand{\thetable}{A.\arabic{table}}
@@ -1053,8 +1198,30 @@ We gratefully acknowledge the computational and data resources, as well as the s
     \label{fig:huge_colony_hard}
 \end{figure*}
 
-\section*{Supplementary Materials}
+\section{Supplementary Materials}
 
-All high-resolution figures and supplementary videos are available online at \url{https://home.cit.tum.de/~ler/bacteria/}.
+All high-resolution figures and supplementary videos are available online at \url{https://home.cit.tum.de/~ler/bacteria/}. % TODO Manuel -> will this link persist after you have left TUM? It seems like maybe we can directly submit this with the manuscript. Then we may don't need this section?
+
+\section{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
+% Todo Manuel - see https://www.sciencedirect.com/journal/computer-physics-communications/publish/guide-for-authors#toc-14
+
+During the preparation of this work the author(s) used [NAME OF TOOL / SERVICE] in order to [REASON]. After using this tool/service, the author(s) reviewed and edited the content as needed and take(s) full responsibility for the content of the published article.
+
+\section{Acknowledgments}
+
+This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+
+We gratefully acknowledge the computational and data resources, as well as the support provided by the Leibniz Supercomputing Centre (\url{www.lrz.de}). All benchmarks in this work were carried out on the \texttt{CoolMUC-4} cluster, which is part of the Linux Cluster at LRZ. Further information is available at \url{https://doku.lrz.de/coolmuc-4-1082337877.html}.
+
+% To print the credit authorship contribution details
+\printcredits
+
+%% Loading bibliography style file
+%\bibliographystyle{model1-num-names}
+\bibliographystyle{cas-model2-names}
+
+% Loading bibliography database
+\bibliography{literature}
+
 
 \end{document}
