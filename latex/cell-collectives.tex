@@ -106,9 +106,9 @@
 
 \newcommand{\orientationcomparisonrow}[2]{%
     #1 &
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
-    &   
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
+        \includegraphics[height=0.27\textheight]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
+    &
+        \includegraphics[height=0.27\textheight]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
     \\
 }
  
@@ -279,7 +279,7 @@ The collective behaviors of biological entities, from microbial colonies to mult
 
 An example is found in bacterial colonies, where cell arrangement reflects growth dynamics and internal stresses. Continuous cell proliferation within colonies generates significant mechanical forces that accumulate in the densely packed interior~\cite{Wittmann2023}, leading to compressive stresses that suppress cell growth at the colony center. As a result, peripheral cells expand outward over time while internal cells remain densely packed and growth-limited. This outward expansion produces the characteristic concentric ring patterns observed in bacterial species such as \textit{E. coli}, \textit{Bacillus subtilis}, and \textit{Proteus mirabilis}, as well as fungi like \textit{Setosphaeria rostrata} and \textit{Exserohilum turcicum}~\cite{YAMAZAKI2005136}, as illustrated in \autoref{fig:exserohilum_turcicum}.
 
-\begin{figure}[t]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/real-bacteria/Exserohilum turcicum.png}
     \caption{Morphology of the fungus \textit{Exserohilum turcicum}. The left image shows a typical colony with concentric ring patterns, while the right image displays the elongated, rod-shaped morphology of individual fungal cells. Adapted from Bankole et al.~\cite{Bankole2023} (\textit{BMC Plant Biology}, 2023), licensed under CC BY 4.0.}
@@ -364,7 +364,7 @@ Cells divide at a critical length $\ell_{\text{crit}} = 2 \ell_0$, producing two
 
 To account for Brownian motion and other sources of random fluctuations, we apply a small random rotational perturbation to each cell at every timestep. This is particularly important in the early colony phase, where few mechanical interactions exist to break the orientational symmetry: without noise, cells that happen to be aligned would remain so indefinitely, producing artificially ordered initial configurations that do not reflect biological reality. The magnitude of the perturbation was determined empirically to produce realistic spreading behavior in very small colonies of only a few cells, while remaining small enough not to artificially disorder larger, mechanically-driven colonies.
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
 
     \begin{tikzpicture}[line cap=round,line join=round,>=Stealth]
@@ -776,35 +776,7 @@ The effect of $\lambda$ on pattern formation is consistent across both models. A
 
 Despite these qualitatively similar outcomes, visual differences emerge between the models. The soft model produces visibly denser patterns with a fuzzy appearance due to allowable cell overlap, while the hard model yields sharper, more clearly defined rings. Nevertheless, macroscopic features, such as the number of rings, spacing, and colony expansion rate remain comparable between the two models.
 
-\begin{figure*}[p]
-    \centering
 
-    % % Lambda = 10^-2 comparison
-
-    Growth Comparison $\lambda=10^{-2}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
-        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
-    \end{tabular}
-    % Lambda = 10^-3 comparison
-
-    Growth Comparison $\lambda=10^{-3}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
-        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
-    \end{tabular}
-
-    % Lambda = 10^-4 comparison
-
-    Growth Comparison $\lambda=10^{-4}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
-        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
-    \end{tabular}
-
-    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring patterns are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
-    \label{fig:pattern_formation}
-\end{figure*}
 
 \subsection{Cell Density and Local Packing Fraction}
 
@@ -814,7 +786,7 @@ The unphysical packing fraction arises because the soft model relies on local pa
 
 A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ solely on cell velocities but not on current overlap. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$, however smaller step-sizes would come with reduced performance.
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
@@ -830,7 +802,7 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
     \label{fig:dense_packing_comparison}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
@@ -857,7 +829,7 @@ A direct consequence of the overcrowded interior in the soft model is its effect
 
 \autoref{fig:sim_time_vs_colony_radius} compares simulation time and colony radius for both models. Despite the difference in cell numbers, their overall growth dynamics are similar, with the soft model growing slightly more slowly due to cell overlap. At high stress-sensitivity ($\lambda = 10^{-2}$), both models transition from early exponential growth to stress-limited linear growth as mechanical stress accumulates in the colony interior.
 
-\begin{figure}[h]
+\begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
@@ -883,7 +855,7 @@ Another key difference between the two modeling approaches lies in the radial st
 
 Although the overall shape of the profiles is comparable, the magnitude of the predicted stresses differs substantially between the two models. Quantitatively, the hard model produces stress values that are up to two times higher than the analytical prediction, whereas the soft model yields stresses that are only about half the analytical value. This variation in stress magnitude is significant and likely plays a central role in explaining the discrepancies in growth dynamics and microdomain organization discussed in \autoref{sec:colony_growth_dynamics} and \autoref{sec:microdomain_formation}.
 
-\begin{figure*}[t]
+\begin{figure*}[pos=tp]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
     \caption{Radial stress profiles for both models across different $\lambda$ values. Both models exhibit similar qualitative trends, with stresses peaking at the colony center and decreasing toward the edge. However, the hard model consistently produces higher stress magnitudes compared to the soft model. The black curves represent the analytical prediction from~\cite{Weady2024SM}, shown for each $\lambda$ value with the corresponding line style.}
@@ -897,7 +869,7 @@ In contrast, the soft model produces lower stresses because it lacks a global fo
 As shown in \autoref{fig:radial_distribution_growth_rate}, the differences in stress transmission directly manifest in the radial growth rate profiles. Cells in the soft model exhibit substantially higher growth rates than those in the hard model across most of the colony interior, particularly at low stress-sensitivity values. At higher stress-sensitivity ($\lambda = 10^{-2}$), growth becomes strongly suppressed in the colony interior for both models, and only cells located near the periphery remain actively dividing. The resulting shift from interior-driven to edge-driven proliferation is also clearly visible in \autoref{fig:sim_time_vs_colony_radius} and mirrors a well-documented behavior in real microbial systems, such as in bacterial and yeast colonies, including \textit{E. coli} and \textit{Saccharomyces cerevisiae}, where both mechanical feedback and nutrient depletion drive this transition~\cite{Warren2019,Hallatschek2007,Giometto2018}; our model isolates the mechanical contribution alone.
 
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
     \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity values. At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing. The black lines indicate the theoretical growth rates derived from the continuum model in~\cite{Weady2024}.}
@@ -912,7 +884,7 @@ Similar to You et al.~\cite{You2018,You_2021}, we observe the formation of micro
 
 As shown in \autoref{fig:orientation_comparison_small}, both hard and soft collision models reproduce this phenomenon for small colonies ($R \approx 50$), producing patterns that closely resemble experimental observations of real \textit{E. coli} colonies~\cite{You2018}. This agreement suggests that at small scales, where the soft model's packing artifacts remain limited, the key features of microdomain formation can be captured through both collision handling approaches.
 
-\begin{figure}[h]
+\begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
@@ -936,7 +908,7 @@ This artifact stems directly from the soft model's higher interior growth rates,
 
 The effect of $\lambda$ on microdomain structure is particularly apparent in larger colonies. As shown in \autoref{fig:cluster_area_boxplot}, the hard model produces microdomains of fairly uniform size across all stress-sensitivity values, while the soft model produces larger microdomains with higher variability, as $\lambda$ decreases.
 
-\begin{figure}[h]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/cluster_area_boxplot.png}
     \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$. The hard model yields consistent domain sizes, while the soft model exhibits greater variability with larger clusters, particularly at $\lambda = 10^{-4}$. Clusters are identified via a graph-based connected-component method~\cite{You2018}, grouping neighboring cells with similar orientations.}
@@ -952,22 +924,6 @@ Within these limited conditions, it may serve as a computationally efficient too
 for preliminary exploration. For applications that require accurate characterization of microdomain properties or the exploration of weak stress-sensitivity regimes, the hard model remains the preferred choice.
 
 
-\begin{figure*}[p]
-    \makebox[\textwidth][c]{
-        \centering
-
-        \begin{tabular}{r M{0.36\textwidth} M{0.36\textwidth} }
-             & Hard Model & Soft Model \\
-            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
-            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
-            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
-        \end{tabular}
-    }
-
-    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cell's orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed cells for low stress sensitivities. This effect is caused by a lack of separation forces, causing cells in the center of the colony to pile up.}
-    \label{fig:orientation_comparison}
-\end{figure*}
-
 
 \section{Computational Performance}
 \label{sec:performance_analysis}
@@ -980,7 +936,7 @@ For parallel execution, the simulation domain is divided into evenly spaced angu
 
 Communication between ranks occurs through ghost particle exchange at sector boundaries. At each timestep, particles near the boundaries are sent to neighboring ranks as ghost particles (copies of boundary particles replicated to neighboring MPI ranks for cross-boundary collision detection), allowing for correct collision detection across domain borders.
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/runtimes/domain_decomposition.jpeg}
     \caption{Domain decomposition for 8 MPI ranks showing evenly spaced angular sectors of a colony with radius 50. Each rank owns one angular sector. Ghost particles at rank boundaries are shown in brighter colors.}
@@ -996,7 +952,7 @@ We find that the hard model consistently outperforms the soft model across all c
 
 The decrease in performance at higher ranks arises from the domain decomposition. At very high core counts, each rank handles only a narrow angular slice of the colony (see \autoref{fig:domain_decomposition}), so communication increasingly dominates runtime. With less local work per rank, ghost particle exchanges and global PETSc matrix operations (in the hard model) become more frequent and costly, especially when small step-sizes $\Delta t$ are used. This imbalance reduces scaling efficiency and leads to longer runtimes at high core counts.
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{1\linewidth}
         \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_runtime_hard_soft.png}
@@ -1021,7 +977,7 @@ As shown in \autoref{fig:simulation_time_vs_dt}, the hard model stabilizes aroun
 
 Using adaptive timestepping provides both stability and efficiency by adjusting the step-size to the colony's current dynamics. A fixed step-size cannot achieve this balance: steps that are too small waste computational effort when interactions are sparse, while steps that are too large can lead to numerical instability in dense regions. This adaptivity enables long-term simulations to proceed efficiently without compromising accuracy or stability.
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time_vs_dt.png}
     \caption{Adaptive step-size $\Delta t$ over simulation time for both models. During early growth, $\Delta t$ is similar and set by cell growth velocities. As the colony densifies, the soft model becomes collision-dominated, with large overlaps increasing velocities and reducing $\Delta t$ to $\approx 10^{-5}$. The hard model avoids this, maintaining stable or increasing $\Delta t$ due to constraint-based separation and reduced interior growth.}
@@ -1041,7 +997,7 @@ By selecting an appropriate CFL factor, adaptive timestepping maximizes physical
 
 All benchmarks in the previous section used a conservative CFL factor of 0.5, indicating that runtimes could be improved even more by using a larger CFL value closer to the optimal point.
 
-\begin{figure}[h]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/bbpgd/cfl_vs_runtime_and_constraints.png}
     \caption{Total runtime to reach colony radius 100 versus CFL factor on 112 cores (each point is an independent run). A U-shaped trend emerges: small CFL values increase timestep count, while large values raise BBPGD iterations per step. The annotated $\Delta t$ denotes the mean step-size. The red region indicates CFL values where the solver fails to converge.}
@@ -1060,9 +1016,8 @@ Since we use the ReLCP procedure~\cite{Weady2024SM}, each simulation step may in
 
 There remains considerable potential to further improve the performance of BBPGD. As demonstrated in \autoref{sec:cfl_analysis}, the step-size critically influences solver efficiency. We propose the following directions as open research problems not yet explored in the literature: more advanced adaptive schemes that directly leverage solver feedback, for instance by adjusting $\Delta t$ based on the number of BBPGD iterations or the ReLCP convergence rate; and warm-start techniques that initialize the solver with multipliers from previous timesteps to reduce iteration counts.
 
-\newpage
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
@@ -1105,14 +1060,14 @@ The solver workload is illustrated in \autoref{fig:huge_bbpgd_iterations_per_ste
 
 Finally, \autoref{fig:huge_combined_stress_shared} shows the corresponding radial stress distribution. In contrast to the results in \autoref{fig:radial_distribution_stress}, the simulated stress profile closely follows the analytical prediction of Weady et al.~\cite{Weady2024SM}.
 
-\begin{figure}[h]
+\begin{figure}[pos=htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/huge/huge_wall_time_vs_radius_with_fit.png}
     \caption{Wall time as a function of colony radius. The wall time roughly follows $T_\text{wall}\,[\mathrm{h}] \approx 1.94\cdot10^{-11}\,R^{5} + 0.37$.}
     \label{fig:huge_wall_time_vs_radius_with_fit}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[pos=htbp]
     \centering
 
     \begin{subfigure}[b]{\linewidth}
@@ -1201,8 +1156,54 @@ We gratefully acknowledge the computational and data resources, as well as the s
 \setcounter{figure}{0}
 \setcounter{table}{0}
 
+\begin{figure*}[pos=p]
+    \centering
+
+    % % Lambda = 10^-2 comparison
+
+    Growth Comparison $\lambda=10^{-2}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
+        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
+    \end{tabular}
+    % Lambda = 10^-3 comparison
+
+    Growth Comparison $\lambda=10^{-3}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
+        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
+    \end{tabular}
+
+    % Lambda = 10^-4 comparison
+
+    Growth Comparison $\lambda=10^{-4}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
+        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
+    \end{tabular}
+
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring patterns are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
+    \label{fig:pattern_formation}
+\end{figure*}
+
 \clearpage
-\begin{figure*}[h]
+\begin{figure*}[pos=p]
+    \makebox[\textwidth][c]{
+        \centering
+
+        \begin{tabular}{>{\raggedleft\arraybackslash}m{2cm} >{\centering\arraybackslash}m{6.5cm} >{\centering\arraybackslash}m{6.5cm}}
+             & Hard Model & Soft Model \\
+            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
+            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
+            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
+        \end{tabular}
+    }
+
+    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cell's orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed cells for low stress sensitivities. This effect is caused by a lack of separation forces, causing cells in the center of the colony to pile up.}
+    \label{fig:orientation_comparison}
+\end{figure*}
+
+\begin{figure*}[pos=p]
     \centering
     \includegraphics[width=1\linewidth]{figures/huge/huge_hard.jpeg}
 
