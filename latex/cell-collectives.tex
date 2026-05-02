@@ -138,11 +138,11 @@
 
 % Title footnote mark
 % eg: \tnotemark[1]
-\tnotemark[1]
+%\tnotemark[1]
 
 % Title footnote 1.
 % eg: \tnotetext[1]{Title footnote text}
-\tnotetext[1]{}
+%\tnotetext[1]{}
 
 % First author
 %
@@ -166,33 +166,30 @@
 \cormark[1]
 
 % Footnote of the first author
-\fnmark[1]
+%\fnmark[1]
 
 % Email id of the first author
 \ead{manuel.lerchner@tum.de}
 
 % URL of the first author
-\ead[url]{} % TODO Manuel
+\ead[url]{https://github.com/ManuelLerchner}
 
 % Credit authorship
-% eg: \credit{Conceptualization of this study, Methodology, Software} % Todo Manuel: check this. These are from the CReditT 14 contributor roles
+% eg: \credit{Conceptualization of this study, Methodology, Software}
 \credit{Conceptualization, Data curation, Formal analysis, Investigation, Methodology, Software, Validation, Visualization, Writing –- original draft, Writing –- review and editing}
 
 % Address/affiliation
 \affiliation[1]{organization={Chair of Scientific Computing in Computer Science, School of Computation, Information and Technology, Technical University of Munich},
     addressline={Boltzmannstr. 3},
     city={Garching bei Muenchen},
-    citysep={}, % Uncomment if no comma needed between city and postcode
+    citysep={},
     postcode={85748},
     state={Bavaria},
     country={Germany}}
 
-\author[2]{Samuel James Newcome}[
+\author[1]{Samuel James Newcome}[
     orcid=0000-0003-3044-6057
 ]%[]
-
-% Footnote of the second author
-\fnmark[2]
 
 % Email id of the second author
 \ead{samuel.newcome@tum.de}
@@ -200,38 +197,29 @@
 % URL of the second author
 \ead[url]{https://www.cs.cit.tum.de/sccs/personen/samuel-james-newcome/}
 
-% Credit authorship % TODO Manuel - similar
+% Credit authorship
 \credit{Conceptualization, Supervision, Writing -– review and editing}
-
-% Address/affiliation
-\affiliation[2]{organization={},
-    addressline={},
-    city={},
-    %          citysep={}, % Uncomment if no comma needed between city and postcode
-    postcode={},
-    state={},
-    country={}}
 
 % Corresponding author text
 \cortext[1]{Corresponding author}
 
 % Footnote text
-\fntext[1]{}
+%\fntext[1]{}
 
 % For a title note without a number/mark
 %\nonumnote{}
 
 % Here goes the abstract
-\begin{abstract}  % TODO Manuel -> Cut to 250 words; Remove Reference
-    Dense bacterial colonies self-organize into striking spatial patterns driven by mechanical feedback between growing cells. Simulating these dynamics requires resolving cell-cell collisions at large scale, yet it remains unclear whether rigid constraint-based or soft potential-based approaches offer a better trade-off between physical accuracy and computational cost.
+\begin{abstract}
+    Dense bacterial colonies self-organize into striking spatial patterns driven by mechanical feedback between growing cells. It is unclear whether rigid constraint-based or soft potential-based approaches offer a better trade-off between physical accuracy and computational cost when simulating these dynamics at large scale.
 
-    This work extends the hard (constraint-based) collision model introduced by Weady et al.~\cite{Weady2024} by systematically comparing it with a soft (potential-based) approach for simulating proliferating cell collectives within a unified computational framework. Both models successfully reproduce experimentally observed concentric ring patterns and microdomain formation in small bacterial colonies, indicating that these macroscopic patterns are robust to the specific details of collision resolution.
+    This work systematically compares hard (constraint-based) and soft (potential-based) collision models for simulating proliferating cell collectives. Both reproduce experimentally observed concentric ring patterns and microdomain formation in bacterial colonies, indicating macroscopic patterns are robust to the specific details of collision resolution.
 
-    At the microscopic scale, the models differ significantly. The hard model enforces strict non-overlap, maintaining realistic packing fractions around 0.9 and producing accurate stress distributions and microdomain structures. The soft model allows substantial, unphysical overlap, with packing fractions exceeding 5 in colony centers, resulting in distorted microdomains and elongated, unrealistic cell bundles. These artifacts limit its applicability for detailed analyses of cell-scale organization or mechanical stresses.
+    At the microscopic scale, the models differ significantly. The hard model enforces strict non-overlap, maintaining realistic packing fractions around 0.9 and producing accurate stress distributions and microdomain structures. The soft model allows substantial overlap, with packing fractions exceeding 5 in colony centers, resulting in distorted microdomains and elongated cell bundles, limiting applicability for cell-scale analyses.
 
-    Performance benchmarks show the hard model consistently outperforms the soft model, achieving up to 9.36 times faster runtimes on 112 cores due to step-sizes that can be chosen roughly 30 times larger while maintaining numerical stability, along with better parallel scaling. Adaptive timestepping based on the Courant-Friedrichs-Lewy condition proves essential, for both models, to efficiently handle the rapidly changing configurations during colony growth.
+    Performance benchmarks show the hard model consistently outperforms the soft model, achieving up to 9.36 times faster runtimes on 112 cores due to step-sizes roughly 30 times larger while maintaining numerical stability and better parallel scaling. Adaptive timestepping based on the Courant-Friedrichs-Lewy condition proves essential for both models to handle the rapidly changing configurations during colony growth.
 
-    Overall, the hard model is strongly preferred for nearly all applications, while the soft model is limited to exploratory studies of very small colonies focused on macroscopic pattern formation rather than cell-scale details.
+    Overall, the hard model is strongly preferred for nearly all applications, while the soft model suits only small-colony exploratory studies focused on macroscopic pattern formation.
 \end{abstract}
 
 % Use if graphical abstract is present
@@ -239,11 +227,13 @@
 %\includegraphics{}
 %\end{graphicalabstract}
 
-% Research highlights % TODO Add highlights (3-5 bullet points: max 85 characters each incl. spaces)
+% Research highlight
 \begin{highlights}
-    \item
-    \item
-    \item
+    \item Hard and soft collision models for proliferating bacteria are systematically compared
+    \item Both models reproduce macroscopic concentric ring patterns and microdomain formation
+    \item Hard model enforces strict non-overlap; soft model shows unphysical cell overlap
+    \item Hard model achieves up to 9.36$\times$ speedup via 30$\times$ larger step-sizes
+    \item CFL-adaptive timestepping proves essential for efficient colony growth simulation
 \end{highlights}
 
 
@@ -252,9 +242,8 @@
 % Keywords
 % Each keyword is seperated by \sep
 
-% TODO: 1-7 words, and should avoid multiple words per keyword
 \begin{keywords}
-    \sep \sep \sep
+    bacteria \sep pattern formation \sep cell interactions \sep collision models \sep high-performance computing \sep computational biology
 \end{keywords}
 
 \maketitle
@@ -1184,12 +1173,11 @@ Future work could also investigate extensions to the current models to capture a
 
 \section{Supplementary Materials}
 
-All high-resolution figures and supplementary videos are available online at \url{https://home.cit.tum.de/~ler/bacteria/}. % TODO Manuel -> will this link persist after you have left TUM? It seems like maybe we can directly submit this with the manuscript. Then we may don't need this section?
+All high-resolution figures and supplementary videos are available online at \url{https://doi.org/10.5281/zenodo.19931308}.
 
 \section{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
-% Todo Manuel - see https://www.sciencedirect.com/journal/computer-physics-communications/publish/guide-for-authors#toc-14
 
-During the preparation of this work the author(s) used [NAME OF TOOL / SERVICE] in order to [REASON]. After using this tool/service, the author(s) reviewed and edited the content as needed and take(s) full responsibility for the content of the published article.
+During the preparation of this work the authors used generative AI tools, including ChatGPT (OpenAI) and GitHub Copilot (GitHub/Microsoft), in order to improve spelling, grammar, and phrasing during manuscript writing and to assist with software development. After using these tools, the authors reviewed and edited the content as needed and take full responsibility for the content of the published article.
 
 \section{Acknowledgments}
 
