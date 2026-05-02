@@ -128,21 +128,21 @@
 \def\textpagefraction{.001}
 
 % Short title
-\shorttitle{Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models}    
+\shorttitle{Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models}
 
 % Short author
-\shortauthors{Lerchner and Newcome}  
+\shortauthors{Lerchner and Newcome}
 
 % Main title of the paper
-\title [mode = title]{Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models}  
+\title [mode = title]{Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models}
 
 % Title footnote mark
 % eg: \tnotemark[1]
-\tnotemark[1] 
+\tnotemark[1]
 
 % Title footnote 1.
 % eg: \tnotetext[1]{Title footnote text}
-\tnotetext[1]{} 
+\tnotetext[1]{}
 
 % First author
 %
@@ -159,7 +159,7 @@
 %       gplus=<gplus id>]
 
 \author[1]{Manuel Lerchner}[
-  orcid=0000-0002-5167-465X
+    orcid=0000-0002-5167-465X
 ]%[<options>]
 
 % Corresponding author indication
@@ -180,15 +180,15 @@
 
 % Address/affiliation
 \affiliation[1]{organization={Chair of Scientific Computing in Computer Science, School of Computation, Information and Technology, Technical University of Munich},
-            addressline={Boltzmannstr. 3}, 
-            city={Garching bei Muenchen},
-         citysep={}, % Uncomment if no comma needed between city and postcode
-            postcode={85748}, 
-            state={Bavaria},
-            country={Germany}}
+    addressline={Boltzmannstr. 3},
+    city={Garching bei Muenchen},
+    citysep={}, % Uncomment if no comma needed between city and postcode
+    postcode={85748},
+    state={Bavaria},
+    country={Germany}}
 
 \author[2]{Samuel James Newcome}[
-  orcid=0000-0003-3044-6057
+    orcid=0000-0003-3044-6057
 ]%[]
 
 % Footnote of the second author
@@ -205,12 +205,12 @@
 
 % Address/affiliation
 \affiliation[2]{organization={},
-            addressline={}, 
-            city={},
-%          citysep={}, % Uncomment if no comma needed between city and postcode
-            postcode={}, 
-            state={},
-            country={}}
+    addressline={},
+    city={},
+    %          citysep={}, % Uncomment if no comma needed between city and postcode
+    postcode={},
+    state={},
+    country={}}
 
 % Corresponding author text
 \cortext[1]{Corresponding author}
@@ -241,9 +241,9 @@
 
 % Research highlights % TODO Add highlights (3-5 bullet points: max 85 characters each incl. spaces)
 \begin{highlights}
-\item 
-\item 
-\item 
+    \item
+    \item
+    \item
 \end{highlights}
 
 
@@ -254,7 +254,7 @@
 
 % TODO: 1-7 words, and should avoid multiple words per keyword
 \begin{keywords}
- \sep \sep \sep
+    \sep \sep \sep
 \end{keywords}
 
 \maketitle
@@ -299,7 +299,7 @@ An example is found in bacterial colonies, where cell arrangement reflects growt
 
 Computational modeling offers a powerful tool for dissecting the complex dynamics and emergent spatial patterns observed in those colonies. To reproduce such emergent structures and uncover their underlying mechanisms, models must accurately capture the dynamic interplay between cell growth and division, mechanical forces, and intercellular interactions.
 
-Simulating dense, proliferating cell collectives, however, poses significant computational challenges: the large number of cells in realistic colonies, combined with the need to resolve collisions accurately across continuously changing configurations, creates a computational bottleneck. 
+Simulating dense, proliferating cell collectives, however, poses significant computational challenges: the large number of cells in realistic colonies, combined with the need to resolve collisions accurately across continuously changing configurations, creates a computational bottleneck.
 
 Moreover, different collision-handling approaches offer distinct trade-offs in physical fidelity, numerical stability, and computational cost. Soft repulsive models are computationally efficient, but require small step-sizes; whereas hard constraint-based models are computationally more expensive per timestep, but are more numerically stable allowing larger step-sizes. Whilst both approaches have been used in cell collective modeling, to the best of the authors' knowledge, no work has yet compared the two, particularly with a focus on computational efficiency. This work addresses this gap.
 
@@ -722,7 +722,7 @@ Built on these abstractions, the framework implements the full physics pipeline,
 
 Collisions are processed through a unified pipeline designed to decouple geometry from physics. The process consists of three phases: (1) broad-phase detection using a spatial grid (reducing neighbor searches to $O(N)$), (2) narrow-phase detection that computes exact contact points, normals, and lever arms, and (3) force and stress assembly. The resulting contact geometry is passed to either the hard or soft collision model, which computes the per-contact forces and torques that are accumulated into the global force vector and used to update the colony stress state. This abstraction allows seamless switching between collision models without altering the overall simulation flow.
 
-Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This over-detection is crucial for the stability of the hard model, where near-contact pairs provide global context that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}. For the soft model, this over-detection does not apply: only truly overlapping pairs ($\delta \geq 0$) generate constraints, so near-contact but non-overlapping pairs contribute neither forces nor constraint objects. 
+Each collision detector call generates a single constraint per neighboring cell-pair within a threshold distance $d = 0.5$, equal to one cell diameter, ensuring both overlapping cells and cells in near-contact are captured for constraint generation. This over-detection is crucial for the stability of the hard model, where near-contact pairs provide global context that improves constraint resolution. Ideally, constraints would be constructed between all cell pairs regardless of distance, but for computational efficiency only nearby cells are considered~\cite{Yan2019, Yan2022,Yan_2020}. For the soft model, this over-detection does not apply: only truly overlapping pairs ($\delta \geq 0$) generate constraints, so near-contact but non-overlapping pairs contribute neither forces nor constraint objects.
 
 \subsection{Adaptive Timestepping}
 
