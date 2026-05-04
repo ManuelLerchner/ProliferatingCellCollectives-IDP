@@ -106,10 +106,10 @@
 
 \newcommand{\orientationcomparisonrow}[2]{%
     #1 &
-        \includegraphics[height=0.27\textheight]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
     &
-        \includegraphics[height=0.27\textheight]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
-    \\
+        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
+    \\ \\[0.1em]
 }
  
 \newcommand{\algorithmautorefname}{Algorithm}
@@ -766,6 +766,36 @@ The full framework is openly available at \url{https://github.com/manuellerchner
 
 \section{Pattern Formation Analysis}
 
+\begin{figure*}[pos=p]
+    \centering
+
+    % % Lambda = 10^-2 comparison
+
+    Growth Comparison $\lambda=10^{-2}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
+        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
+    \end{tabular}
+    % Lambda = 10^-3 comparison
+
+    Growth Comparison $\lambda=10^{-3}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
+        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
+    \end{tabular}
+
+    % Lambda = 10^-4 comparison
+
+    Growth Comparison $\lambda=10^{-4}$
+    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
+        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
+        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
+    \end{tabular}
+    
+    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Concentric ring patterns are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
+    \label{fig:pattern_formation}
+\end{figure*}
+
 With both models sharing identical growth, stress computation, and timestepping infrastructure, we now compare their emergent behavior across a range of observables spanning pattern formation and colony-scale mechanics. In particular, we examine concentric ring patterns, cell density and local packing fraction, colony growth dynamics and total cell number, microdomain formation, and the coupled radial stress and growth rate profiles. This systematic comparison is designed to isolate the effect of the collision model on macroscopic behavior, and to determine whether differences manifest primarily at the level of local structure, global growth dynamics, or stress-mediated feedback. We further identify parameter regimes in which both formulations produce consistent results, as well as regimes where their predictions diverge.
 
 \subsection{Concentric Ring Patterns}
@@ -786,7 +816,7 @@ The unphysical packing fraction arises because the soft model relies on local pa
 
 A contributing factor to this excessive overlap is the adaptive timestep method (see \autoref{alg:adaptive_dt}), which bases $\Delta t$ solely on cell velocities but not on current overlap. A more sophisticated scheme could consider maximum overlap when adjusting $\Delta t$, however smaller step-sizes would come with reduced performance.
 
-\begin{figure}[pos=htbp]
+\begin{figure}[pos=H]
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
@@ -899,6 +929,22 @@ As shown in \autoref{fig:orientation_comparison_small}, both hard and soft colli
     \caption{Cell orientation patterns for both models. The color indicates cell orientation angle, with similar colors representing similar angles. Both models produce comparable microdomain structures in small colonies.}
     \label{fig:orientation_comparison_small}
 \end{figure}
+
+\begin{figure*}[pos=p]
+    \centering
+
+    \makebox[\textwidth][c]{
+        \begin{tabular}{>{\raggedleft\arraybackslash}m{2cm} >{\centering\arraybackslash}m{6.5cm} >{\centering\arraybackslash}m{6.5cm}}
+             & Hard Model & Soft Model \\[1em]
+            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
+            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
+            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
+        \end{tabular}
+    }
+    
+    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cell's orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed cells for low stress sensitivities. This effect is caused by a lack of separation forces, causing cells in the center of the colony to pile up.}
+    \label{fig:orientation_comparison}
+\end{figure*}
 
 Although the hard and soft collision models presented here are not directly comparable to You et al.~\cite{You2018}, because their study assumes constant growth rates while our models use stress-dependent growth, their findings still provide useful context. You et al. show that reduced growth rates lead to larger microdomains. In our models, stress sensitivity $\lambda$ produces a similar effect by inhibiting growth in the densely packed colony center, resulting in larger microdomains. This trend is evident in simulations of the soft model (see \autoref{fig:orientation_comparison}), where higher $\lambda$ values correspond to slower growth and larger microdomains, consistent with You et al.'s observations. The hard model, in contrast, shows no such trend. The consistent microdomain size across $\lambda$ values in the hard model may be related to the global constraint resolution mechanism, but a detailed investigation of the underlying mechanisms is beyond the scope of this comparison.
 
@@ -1156,52 +1202,7 @@ We gratefully acknowledge the computational and data resources, as well as the s
 \setcounter{figure}{0}
 \setcounter{table}{0}
 
-\begin{figure*}[pos=p]
-    \centering
-
-    % % Lambda = 10^-2 comparison
-
-    Growth Comparison $\lambda=10^{-2}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-2}{0055}{0100}{0150}{0199}
-        \growthcomparisonrow{soft}{e-2}{0055}{0100}{0150}{0200}
-    \end{tabular}
-    % Lambda = 10^-3 comparison
-
-    Growth Comparison $\lambda=10^{-3}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-3}{0052}{0100}{0150}{0198}
-        \growthcomparisonrow{soft}{e-3}{0048}{0110}{0149}{0187}
-    \end{tabular}
-
-    % Lambda = 10^-4 comparison
-
-    Growth Comparison $\lambda=10^{-4}$
-    \begin{tabular}{r M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth} M{0.2\textwidth}}
-        \growthcomparisonrow{hard}{e-4}{0051}{0100}{0140}{0192}
-        \growthcomparisonrow{soft}{e-4}{0048}{0105}{0134}{0198}
-    \end{tabular}
-
-    \caption{Comparison of pattern formation between hard and soft collision models at similar colony sizes. Each row shows the colony evolutions up to a maximum colony radius of 100. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring patterns are visible for both models at $\lambda = 10^{-3}$ confirming the results from~\cite{Weady2024}.}
-    \label{fig:pattern_formation}
-\end{figure*}
-
 \clearpage
-\begin{figure*}[pos=p]
-    \makebox[\textwidth][c]{
-        \centering
-
-        \begin{tabular}{>{\raggedleft\arraybackslash}m{2cm} >{\centering\arraybackslash}m{6.5cm} >{\centering\arraybackslash}m{6.5cm}}
-             & Hard Model & Soft Model \\
-            \orientationcomparisonrow{$\lambda=10^{-2}$}{-2}
-            \orientationcomparisonrow{$\lambda=10^{-3}$}{-3}
-            \orientationcomparisonrow{$\lambda=10^{-4}$}{-4}
-        \end{tabular}
-    }
-
-    \caption{Comparison of orientation patterns at different stress sensitivities in the center of the colony. The color indicates the cell's orientation, with similar colors representing similar angles. The hard model is able to maintain visible patches of aligned cells for all stress sensitivities, whereas the soft model tends to produce long bundles of densely packed cells for low stress sensitivities. This effect is caused by a lack of separation forces, causing cells in the center of the colony to pile up.}
-    \label{fig:orientation_comparison}
-\end{figure*}
 
 \begin{figure*}[pos=p]
     \centering
