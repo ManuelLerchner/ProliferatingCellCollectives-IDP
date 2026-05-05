@@ -46,21 +46,6 @@
   abstract = {Bacteria self-organize into a dense multicellular community known as a biofilm, in which cells are embedded in self-secreted extracellular polymeric substances (EPSs). A number of processes can contribute to spatial heterogeneity in a growing biofilm; among them, the effect of macromolecular crowding enhanced by the EPSs has largely remained unexplored. To understand the effect of macromolecular crowding in spontaneous spatial organization, we develop a computational model to investigate the explicit role of mechanical interactions in driving the collective behavior of bacterial cells in the presence of EPS particles in a colony growing on a solid substrate. Our findings demonstrate that an entropy-driven depletion interaction between bacteria and EPSs can induce significant phase separation and spatial heterogeneity in a biofilm. Secretion of extracellular polymeric substances (EPSs) by growing bacteria is an integral part of forming biofilm-like structures. In such dense systems, mechanical interactions among the structural components can be expected to significantly contribute to morphological properties. Here, we use a particle-based modeling approach to study the self-organization of nonmotile rod-shaped bacterial cells growing on a solid substrate in the presence of self-produced EPSs. In our simulation, all of the components interact mechanically via repulsive forces, occurring as the bacterial cells grow and divide (via consuming diffusing nutrient) and produce EPSs. Based on our simulation, we show that mechanical interactions control the collective behavior of the system. In particular, we find that the presence of nonadsorbing EPSs can lead to spontaneous aggregation of bacterial cells by a depletion attraction and thereby generates phase separated patterns in the nonequilibrium growing colony. Both repulsive interactions between cell and EPSs and the overall concentration of EPSs are important factors in the self-organization in a nonequilibrium growing colony. Furthermore, we investigate the interplay of mechanics with the nutrient diffusion and consumption by bacterial cells and observe that suppression of branch formation occurs due to EPSs compared with the case where no EPS is produced.}
 }
 
-@inproceedings{Gratl2019,
-  author    = {Gratl, Fabio Alexander and Seckler, Steffen and Tchipev, Nikola and Bungartz, Hans-Joachim and Neumann, Philipp},
-  booktitle = {2019 IEEE International Parallel and Distributed Processing Symposium Workshops (IPDPSW)},
-  title     = {AutoPas: Auto-Tuning for Particle Simulations},
-  year      = {2019},
-  volume    = {},
-  number    = {},
-  pages     = {748-757},
-  keywords  = {Force;Heuristic algorithms;Computational modeling;Dynamics;Optimization;Software algorithms;Adaptation models;HPC;Molecular Dynamics;Auto-Tuning;Automatic Algorithm Selection;Dynamic Tuning},
-  doi       = {10.1109/IPDPSW.2019.00125}
-}
-
-
-
-
 @article{Khan_2024,
   title     = {Toward a realistic model of multilayered bacterial colonies},
   volume    = {27},
@@ -218,16 +203,6 @@
   isbn      = {978-0-387-30303-1}
 }
 
-@misc{SantosDiaz2025,
-  title         = {Relevance of the Computational Models of Bacterial Interactions in the simulation of Biofilm Growth},
-  author        = {Gabriel Santos-Díaz and Álvaro Rodríguez-Rivas and Alejandro Cuetos},
-  year          = {2025},
-  eprint        = {2503.23998},
-  archiveprefix = {arXiv},
-  primaryclass  = {cond-mat.soft},
-  url           = {https://arxiv.org/abs/2503.23998}
-}
-
 @article{You_2021,
   title     = {Confinement-induced self-organization in growing bacterial colonies},
   volume    = {7},
@@ -242,27 +217,6 @@
   month     = jan
 }
 
-@article{Newcome2023,
-  title    = {Towards auto-tuning Multi-Site Molecular Dynamics simulations with AutoPas},
-  journal  = {Journal of Computational and Applied Mathematics},
-  volume   = {433},
-  pages    = {115278},
-  year     = {2023},
-  issn     = {0377-0427},
-  doi      = {https://doi.org/10.1016/j.cam.2023.115278},
-  url      = {https://www.sciencedirect.com/science/article/pii/S0377042723002224},
-  author   = {Samuel James Newcome and Fabio Alexander Gratl and Philipp Neumann and Hans-Joachim Bungartz},
-  keywords = {Molecular Dynamics, High performance computing, Auto-tuning, AutoPas, Multi-Site Molecular Dynamics},
-  abstract = {There exists an extensive literature of algorithms for short-range pairwise interactions in particle simulations, however, there is no single algorithm that performs the most optimally in every scenario, motivating the use of auto-tuning to select the optimal pairwise interaction algorithm. Previous efforts to auto-tune Molecular Dynamics have focused on Single-Site Molecular Dynamics, where the computational cost for the intermolecular force calculation is constant. Alternatively, for Multi-Site Molecular Dynamics, the cost of this calculation varies with the number of sites, which, as we show in this paper, can result in different optimal algorithms. Despite this further benefit for auto-tuning, it has yet to be applied to Multi-Site Molecules. In this paper, we introduce an implementation of Multi-Site Molecular Dynamics that is integrated with AutoPas. Using this implementation, we analyse how the relative performance between these algorithms varies as the number of sites varies, for both homogeneous and heterogeneous molecule distributions, and for two different hardware. Furthermore, we demonstrate the advantage of auto-tuning in the context of Multi-Site Molecular Dynamics using the node-level short-range particle simulation library, AutoPas.}
-}
-
-@misc{AutoPasGithub,
-  author       = {Gratl, Florian A. and Seckler, Stefan and Bungartz, Hans-Joachim and Neumann, Peter and others},
-  title        = {AutoPas: A node-level auto-tuned particle simulation library},
-  howpublished = {\url{https://github.com/AutoPas/AutoPas}},
-  year         = {2019},
-  note         = {Version 2.0.0; BSD-2-Clause License}
-}
 
 @article{Yan2019,
   author   = {Yan, Wen and Zhang, Huan and Shelley, Michael J.},
@@ -528,18 +482,4 @@
   year      = {2020},
   month     = sep,
   pages     = {109524}
-}
-
-@article{DellArciprete2018,
-  author   = {Dell’Arciprete, D. and Blow, M. L. and Brown, A. T. and Farrell, F. D. C. and Lintuvuori, J. S. and McVey, A. F. and Marenduzzo, D. and Poon, W. C. K.},
-  title    = {A growing bacterial colony in two dimensions as an active nematic},
-  journal  = {Nature Communications},
-  year     = {2018},
-  volume   = {9},
-  number   = {1},
-  pages    = {4190},
-  doi      = {10.1038/s41467-018-06370-3},
-  url      = {https://doi.org/10.1038/s41467-018-06370-3},
-  issn     = {2041-1723},
-  abstract = {How a single bacterium becomes a colony of many thousand cells is important in biomedicine and food safety. Much is known about the molecular and genetic bases of this process, but less about the underlying physical mechanisms. Here we study the growth of single-layer micro-colonies of rod-shaped Escherichia coli bacteria confined to just under the surface of soft agarose by a glass slide. Analysing this system as a liquid crystal, we find that growth-induced activity fragments the colony into microdomains of well-defined size, whilst the associated flow orients it tangentially at the boundary. Topological defect pairs with charges ±1/2 are produced at a constant rate, with the +1/2 defects being propelled to the periphery. Theoretical modelling suggests that these phenomena have different physical origins from similar observations in other extensile active nematics, and a growing bacterial colony belongs to a new universality class, with features reminiscent of the expanding universe.}
 }
