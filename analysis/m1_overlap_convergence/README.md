@@ -41,6 +41,25 @@ percentile of cell distance from center. Runs use `lambda = 1e-4` (largest-overl
 Raw VTK output is large and **not committed**; only the derived CSVs are kept. Regenerate
 raw data with the `sweep*.sh` / `stab_grid.sh` scripts, then `gen_*.py`, then the notebook.
 
+## Orientational correlation length (Reviewer 2, major concern 2)
+
+Also here (same simulator, same folder): the nematic orientational correlation function
+`C(r) = <cos 2(theta_i - theta_j)>` and correlation length `xi_theta`, producing paper
+**Fig. 14** (`orientation_correlation.png`, §6.5). Runs = hard + soft at
+λ ∈ {1e-2, 1e-3, 1e-4}, grown to R≈48.
+
+**Result:** `xi_theta` grows with stress sensitivity (≈1.2 cell lengths at λ=1e-4 → ≈1.9 at
+λ=1e-2) and is comparable between the hard and soft models → the collision scheme sets the
+large-scale domain size (Fig. 13), not the local orientational order.
+
+| File | Purpose |
+|------|---------|
+| `sweep_lambda.sh` | Run hard+soft at λ∈{1e-2,1e-3} to R=50 (λ=1e-4 reuses the R=50 runs). |
+| `orient_corr.py` | Compute `C(r)` and `xi_theta` from a run's snapshots (core cells, cos-2θ, snapshot-averaged). |
+| `orient_fig.py` | Produce `orientation_correlation.png` (repo style: hard=blue/soft=red, λ by line style). |
+| `orient_corr_curves.csv` | `C(r)` per (mode, λ). |
+| `orient_xi.csv` | `xi_theta` per (mode, λ) at R≈48. |
+
 ## Building the simulator on macOS
 
 The production build targets Linux/GCC. On macOS (Apple clang) two **local, uncommitted**
