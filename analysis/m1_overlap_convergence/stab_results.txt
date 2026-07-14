@@ -1,0 +1,19 @@
+2e4 3.0 warns=944 lastR=21.328 dt=
+2e4 2.0 warns=2747 lastR=20.439 dt=
+2e4 1.5 warns=10912 lastR=23.118 dt=9.12e-04
+5e4 1.2 warns=1747 lastR=22.352 dt=9.63e-04
+5e4 0.8 warns=266 lastR=20.000 dt=6.14e-05
+5e4 0.5 warns=0 lastR=20.000 dt=4.34e-05
+1e5 0.45 warns=4351 lastR=21.453 dt=2.67e-04
+1e5 0.2 warns=0 lastR=20.000 dt=1.92e-05
+1e5 0.3 warns=0 lastR=20.000 dt=3.11e-05
+2e5 0.28 warns=2042 lastR=20.748 dt=1.70e-04
+5e5 0.06 warns=11491 lastR=20.301 dt=4.43e-05
+5e5 0.1 warns=1649 lastR=20.565 dt=4.57e-05
+5e5 0.16 warns=577 lastR=20.163 dt=7.16e-05
+2e5 0.1 warns=0 lastR=20.000 dt=1.46e-05
+2e4 1.0 warns=0 lastR=20.000 dt=7.62e-05
+2e5 0.18 warns=0 lastR=20.000 dt=1.64e-05
+STAB_GRID_DONE
+2e5 0.14 warns=0 lastR=20.000 dt=1.47e-05
+5e5 0.04 warns=0 lastR=20.000 dt=5.07e-06
