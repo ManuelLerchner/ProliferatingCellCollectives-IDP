@@ -33,10 +33,18 @@ percentile of cell distance from center. Runs use `lambda = 1e-4` (largest-overl
 | `kcc_phi.csv` | `phi_center` at `R~20` per stiffness — panel (b). |
 | `stab_results.txt` | Stability grid: `kcc  cfl  warns=<n>` (warns==0 => stable) — panel (c). |
 | `sweep.sh`, `sweep_r50.sh` | Run the R=30 / R=50 convergence + stiffness sweeps. |
+| `kcc_resweep.sh` | Uniform 5-stiffness sweep for panel (b): soft to R=22 at a stable CFL per `k_cc`. |
 | `stab_grid.sh` | Run the `(k_cc, cfl)` stability grid. |
 | `phi_vs_r.py` | Extract `phi_center` vs radius from a run's VTK snapshots. |
 | `gen_curves.py`, `gen_kcc.py` | Build `conv_curves.csv` / `kcc_phi.csv` from raw runs. |
+| `measure_kcc_phi.py` | Build `kcc_phi.csv` from `kcc_resweep.sh` output, `phi_center` averaged over R∈[18,22]. |
 | `make_combined.py` | Standalone-script equivalent of the notebook. |
+
+Panel (b) uses one uniform protocol across stiffness: each `k_cc` at a CFL below its
+measured stability threshold (panel c), grown to R=22, with `phi_center` averaged over the
+R∈[18,22] snapshot window. Single-snapshot sampling of `phi_center` is noisy at the ~1–2%
+level; the window average removes it (an earlier single-snapshot version showed a spurious
+non-monotonic bump at `k_cc=2e5`). Run `kcc_resweep.sh`, then `measure_kcc_phi.py`.
 
 Raw VTK output is large and **not committed**; only the derived CSVs are kept. Regenerate
 raw data with the `sweep*.sh` / `stab_grid.sh` scripts, then `gen_*.py`, then the notebook.
