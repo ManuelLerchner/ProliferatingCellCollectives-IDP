@@ -94,21 +94,21 @@
 
 \newcommand{\growthcomparisonrow}[6]{%
     #1 &
-        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#3.jpeg}
+        \includegraphics[width=\linewidth]{#1_#2.#3.jpeg}
     &
-        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#4.jpeg}
+        \includegraphics[width=\linewidth]{#1_#2.#4.jpeg}
     &
-        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#5.jpeg}
+        \includegraphics[width=\linewidth]{#1_#2.#5.jpeg}
     &
-        \includegraphics[width=\linewidth]{figures/growth/#1_#2/#1_#2.#6.jpeg}
+        \includegraphics[width=\linewidth]{#1_#2.#6.jpeg}
     \\
 }
 
 \newcommand{\orientationcomparisonrow}[2]{%
     #1 &
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/hard_e#2_orient.jpeg}
+        \includegraphics[width=\linewidth]{hard_e#2_orient.jpeg}
     &
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/zoomed_images/soft_e#2_orient.jpeg}
+        \includegraphics[width=\linewidth]{soft_e#2_orient.jpeg}
     \\ \\[0.1em]
 }
  
@@ -281,8 +281,8 @@ An example is found in bacterial colonies, where cell arrangement reflects growt
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/real-bacteria/Exserohilum turcicum.png}
-    \caption{Morphology of the fungus \textit{Exserohilum turcicum}. The left image shows a typical colony with concentric ring patterns, while the right image displays the elongated, rod-shaped morphology of individual fungal cells. Adapted from Bankole et al.~\cite{Bankole2023} (\textit{BMC Plant Biology}, 2023), licensed under CC BY 4.0.}
+    \includegraphics[width=\linewidth]{Exserohilum turcicum.png}
+    \caption{Morphology of the fungus \textit{Exserohilum turcicum}. The left image shows a typical colony with concentric ring patterns, while the right image displays the elongated, rod-shaped morphology of individual fungal cells. Adapted from Bankole et al.~\cite{Bankole2023} (\textit{BMC Plant Biology}, 2023), licensed under \href{http://creativecommons.org/licenses/by/4.0/}{CC BY 4.0} .}
     \label{fig:exserohilum_turcicum}
 \end{figure}
 
@@ -820,12 +820,12 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/density_hard.jpeg}
+        \includegraphics[width=\linewidth]{density_hard.jpeg}
         \caption{Hard model}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/density_soft.jpeg}
+        \includegraphics[width=\linewidth]{density_soft.jpeg}
         \caption{Soft model}
     \end{subfigure}
     \caption{Close-up comparison of cell packing in the colony center for both collision models. The hard model (a) maintains near-optimal packing, while the soft model (b) exhibits significant overlap and overcrowding.}
@@ -836,14 +836,14 @@ A contributing factor to this excessive overlap is the adaptive timestep method 
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_packing_fraction.png}
+        \includegraphics[width=\linewidth]{combined_radial_packing_fraction.png}
         \caption{Radial packing fraction profiles ($\phi = \frac{A_{\text{cells}}}{A_{\text{total}}}$) for both models. Here, $A_{\text{cells}}$ denotes the total area occupied by cells within a spatial bin of width 2 at distance $r$ from the colony center, and $A_{\text{total}}$ is the corresponding annular bin area. The hard model maintains nearly optimal packing, while the soft model exhibits elevated fractions in the colony center, particularly at low stress-sensitivity ($\lambda = 10^{-4}$).}
         \label{fig:radial_distribution_packing_fraction}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_max_overlap_with_lines.png}
+        \includegraphics[width=\linewidth]{combined_colony_radius_vs_max_overlap_with_lines.png}
         \caption{Maximum cell overlap as a function of distance from the colony center. The hard model remains uniformly near solver tolerance $\varepsilon = 10^{-3}$, whereas the soft model exhibits substantially elevated overlap at all radial positions, with values near the colony boundary approaching full cell overlap.}
         \label{fig:max_overlap_simulation}
     \end{subfigure}
@@ -863,14 +863,14 @@ A direct consequence of the overcrowded interior in the soft model is its effect
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_colony_radius_vs_num_particles.png}
+        \includegraphics[width=\linewidth]{combined_colony_radius_vs_num_particles.png}
         \caption{Number of cells required to reach a given colony radius. The soft model requires substantially more cells, particularly at low stress-sensitivity ($\lambda = 10^{-4}$).}
         \label{fig:colony_radius_vs_num_cells}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time_vs_colony_radius.png}
+        \includegraphics[width=\linewidth]{combined_simulation_time_vs_colony_radius.png}
         \caption{Simulation time vs. colony radius. Both models exhibit similar growth dynamics, though the soft model is slightly slower due to allowable cell overlap.}
         \label{fig:sim_time_vs_colony_radius}
     \end{subfigure}
@@ -887,7 +887,7 @@ Although the overall shape of the profiles is comparable, the magnitude of the p
 
 \begin{figure*}[pos=tp]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_stress_shared.png}
+    \includegraphics[width=\linewidth]{combined_stress_shared.png}
     \caption{Radial stress profiles for both models across different $\lambda$ values. Both models exhibit similar qualitative trends, with stresses peaking at the colony center and decreasing toward the edge. However, the hard model consistently produces higher stress magnitudes compared to the soft model. The black curves represent the analytical prediction from~\cite{Weady2024SM}, shown for each $\lambda$ value with the corresponding line style.}
     \label{fig:radial_distribution_stress}
 \end{figure*}
@@ -901,7 +901,7 @@ As shown in \autoref{fig:radial_distribution_growth_rate}, the differences in st
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_radial_impedance.png}
+    \includegraphics[width=\linewidth]{combined_radial_impedance.png}
     \caption{Radial relative growth rate profiles ($e^{-\lambda \sigma}$) for both models. Cells in the soft model grow significantly faster than those in the hard model across most of the colony, particularly at low stress-sensitivity values. At high stress-sensitivity ($\lambda = 10^{-2}$), growth is strongly suppressed in the interior of both models, with only cells at the colony edge actively dividing. The black lines indicate the theoretical growth rates derived from the continuum model in~\cite{Weady2024}.}
     \label{fig:radial_distribution_growth_rate}
 \end{figure}
@@ -918,12 +918,12 @@ As shown in \autoref{fig:orientation_comparison_small}, both hard and soft colli
     \centering
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/r50_soft_e-2.jpeg}
+        \includegraphics[width=\linewidth]{r50_soft_e-2.jpeg}
         \caption{Soft model with $\lambda = 10^{-2}$ at colony radius $R \approx 50$.}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/orientation_comparisons/r50_hard_e-2.jpeg}
+        \includegraphics[width=\linewidth]{r50_hard_e-2.jpeg}
         \caption{Hard model with $\lambda = 10^{-2}$ at colony radius $R \approx 50$.}
     \end{subfigure}
     \caption{Cell orientation patterns for both models. The color indicates cell orientation angle, with similar colors representing similar angles. Both models produce comparable microdomain structures in small colonies.}
@@ -956,7 +956,7 @@ The effect of $\lambda$ on microdomain structure is particularly apparent in lar
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/cluster_area_boxplot.png}
+    \includegraphics[width=\linewidth]{cluster_area_boxplot.png}
     \caption{Microdomain area distributions for large colonies ($R \approx 100$) across $\lambda$. The hard model yields consistent domain sizes, while the soft model exhibits greater variability with larger clusters, particularly at $\lambda = 10^{-4}$. Clusters are identified via a graph-based connected-component method~\cite{You2018}, grouping neighboring cells with similar orientations.}
     \label{fig:cluster_area_boxplot}
 \end{figure}
@@ -984,7 +984,7 @@ Communication between ranks occurs through ghost particle exchange at sector bou
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/runtimes/domain_decomposition.jpeg}
+    \includegraphics[width=\linewidth]{domain_decomposition.jpeg}
     \caption{Domain decomposition for 8 MPI ranks showing evenly spaced angular sectors of a colony with radius 50. Each rank owns one angular sector. Ghost particles at rank boundaries are shown in brighter colors.}
     \label{fig:domain_decomposition}
 \end{figure}
@@ -1001,12 +1001,12 @@ The decrease in performance at higher ranks arises from the domain decomposition
 \begin{figure}[pos=htbp]
     \centering
     \begin{subfigure}[b]{1\linewidth}
-        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_runtime_hard_soft.png}
+        \includegraphics[width=\linewidth]{strong_scaling_runtime_hard_soft.png}
         \caption{Runtime to reach colony radius of 100 versus MPI ranks. The hard model is consistently faster, with the performance gap widening at high core counts.}
         \label{fig:runtime_hard_soft}
     \end{subfigure}
     \begin{subfigure}[b]{1\linewidth}
-        \includegraphics[width=\linewidth]{figures/runtimes/strong_scaling_speedup_hard_soft.png}
+        \includegraphics[width=\linewidth]{strong_scaling_speedup_hard_soft.png}
         \caption{Speedup versus MPI ranks. The hard and soft models scale reasonably up to 64 and 32 ranks, respectively.}
         \label{fig:speedup_hard_soft}
     \end{subfigure}
@@ -1025,7 +1025,7 @@ Using adaptive timestepping provides both stability and efficiency by adjusting 
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/comparison_plots/combined_simulation_time_vs_dt.png}
+    \includegraphics[width=\linewidth]{combined_simulation_time_vs_dt.png}
     \caption{Adaptive step-size $\Delta t$ over simulation time for both models. During early growth, $\Delta t$ is similar and set by cell growth velocities. As the colony densifies, the soft model becomes collision-dominated, with large overlaps increasing velocities and reducing $\Delta t$ to $\approx 10^{-5}$. The hard model avoids this, maintaining stable or increasing $\Delta t$ due to constraint-based separation and reduced interior growth.}
     \label{fig:simulation_time_vs_dt}
 \end{figure}
@@ -1045,7 +1045,7 @@ All benchmarks in the previous section used a conservative CFL factor of 0.5, in
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/bbpgd/cfl_vs_runtime_and_constraints.png}
+    \includegraphics[width=\linewidth]{cfl_vs_runtime_and_constraints.png}
     \caption{Total runtime to reach colony radius 100 versus CFL factor on 112 cores (each point is an independent run). A U-shaped trend emerges: small CFL values increase timestep count, while large values raise BBPGD iterations per step. The annotated $\Delta t$ denotes the mean step-size. The red region indicates CFL values where the solver fails to converge.}
     \label{fig:cfl_vs_runtime}
 \end{figure}
@@ -1067,21 +1067,21 @@ There remains considerable potential to further improve the performance of BBPGD
     \centering
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_num_particles_vs_bbpgd_steps.png}
+        \includegraphics[width=\linewidth]{bbpgd_num_particles_vs_bbpgd_steps.png}
         \caption{Number of BBPGD iterations per timestep as a function of particle count for a representative run at $R \approx 100$. Iterations remain roughly $\mathcal{O}(1000)$ on average, with occasional spikes up to $\mathcal{O}(5000)$.}
         \label{fig:bbpgd_iterations_per_step_vs_num_particles}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_residual.png}
+        \includegraphics[width=\linewidth]{bbpgd_residual.png}
         \caption{BBPGD residuals over iterations for a single timestep. The solver converges to tolerance $\varepsilon = 10^{-3}$ within approximately 280 iterations, showing highly oscillatory behavior. The residual directly represents the current maximum overlap between any two cells in the colony.}
         \label{fig:bbpgd_residual}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/bbpgd/bbpgd_total_energy.png}
+        \includegraphics[width=\linewidth]{bbpgd_total_energy.png}
         \caption{System energy (\autoref{eq:energy_function}) throughout the ReLCP procedure during a single timestep. The energy consistently decreases as BBPGD iterations progress. After each set of constraints is resolved, new overlaps are detected, and the process repeats until a feasible configuration is reached within six ReLCP iterations. The rightmost segment (ReLCP Iter 6) shows the final feasible configuration where all constraints are resolved.}
         \label{fig:bbpgd_energy}
     \end{subfigure}
@@ -1108,7 +1108,7 @@ Finally, \autoref{fig:huge_combined_stress_shared} shows the corresponding radia
 
 \begin{figure}[pos=htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/huge/huge_wall_time_vs_radius_with_fit.png}
+    \includegraphics[width=\linewidth]{huge_wall_time_vs_radius_with_fit.png}
     \caption{Wall time as a function of colony radius. The wall time roughly follows $T_\text{wall}\,[\mathrm{h}] \approx 1.94\cdot10^{-11}\,R^{5} + 0.37$.}
     \label{fig:huge_wall_time_vs_radius_with_fit}
 \end{figure}
@@ -1118,21 +1118,21 @@ Finally, \autoref{fig:huge_combined_stress_shared} shows the corresponding radia
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/huge/huge_bbpgd_iterations_per_step_vs_num_particles.png}
+        \includegraphics[width=\linewidth]{huge_bbpgd_iterations_per_step_vs_num_particles.png}
         \caption{BBPGD iterations per timestep as a function of particle count for the hard model. Each timestep at $R = 260$ resolves about 5{,}131{,}551 constraints over 8 ReLCP phases, requiring on average 7{,}800 iterations, with occasional peaks up to 25{,}000.}
         \label{fig:huge_bbpgd_iterations_per_step_vs_num_particles}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/huge/huge_mode_length_wavelengths.png}
+        \includegraphics[width=\linewidth]{huge_mode_length_wavelengths.png}
         \caption{Radial distribution of the average cell length for the hard model at $R = 260$. The oscillatory pattern has a characteristic ring spacing of $\xi \approx 25$, consistent with the radial ring spacing visible in \autoref{fig:huge_colony_hard}.}
         \label{fig:huge_mode_length_wavelengths}
     \end{subfigure}
 
     \begin{subfigure}[b]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/huge/huge_combined_stress_shared.png}
+        \includegraphics[width=\linewidth]{huge_combined_stress_shared.png}
         \caption{Radial stress profile of the hard model at $R = 260$. The simulated stress closely follows the analytical prediction from \cite{Weady2024SM}, confirming global mechanical balance across the colony.}
         \label{fig:huge_combined_stress_shared}
     \end{subfigure}
@@ -1206,7 +1206,7 @@ We gratefully acknowledge the computational and data resources, as well as the s
 
 \begin{figure*}[pos=p]
     \centering
-    \includegraphics[width=1\linewidth]{figures/huge/huge_hard.jpeg}
+    \includegraphics[width=1\linewidth]{huge_hard.jpeg}
 
     \caption{Snapshot of largest attainable colony size using the hard collision model with $\lambda=10^{-3}$ after 24h of wall time on 112 ranks on the CoolMUC-4 cluster. The colony has a radius of approximately $R \approx 260$ and consists of $301{,}116$ cells. The color indicates the length of the cells (short cells are darker, longer cells are lighter). Clear concentric ring patterns are visible, similar to those observed in smaller colonies (See \autoref{fig:pattern_formation}).}
     \label{fig:huge_colony_hard}
