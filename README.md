@@ -3,8 +3,8 @@
 🦠 | Bacteria Growth using Hard Model             |  Bacteria Growth using Soft Model
 :-------------------------:|:-------------------------:|:-------------------------:
 &nbsp;| $R_{end} = 100$ | $R_{end} = 100$
-Bacteria Lengths (dark=short, bright=long)|![Hard Model](latex/figures/growth/hard_e-3/hard_e-3.0198.jpeg) | ![Soft Model](latex/figures/growth/soft_e-3/soft_e-3.0187.jpeg)
-Bacteria Orientation (color=angle)|![Hard Model](latex/figures/orientation_comparisons/hard_e-2_orient_big.jpeg) | ![Soft Model](latex/figures/orientation_comparisons/soft_e-2_orient_big.jpeg)
+Bacteria Lengths (dark=short, bright=long)|![Hard Model](latex/hard_e-3.0198.jpeg) | ![Soft Model](latex/soft_e-3.0187.jpeg)
+Bacteria Orientation (color=angle)|![Hard Model](misc-extra-figures/hard_e-2_orient_big.jpeg) | ![Soft Model](misc-extra-figures/soft_e-2_orient_big.jpeg)
 
 ## Abstract
 
