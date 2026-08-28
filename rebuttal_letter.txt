@@ -1,0 +1,109 @@
+We thank the reviewers for their review of the manuscript, and have addressed their comments, as dictated below.
+
+Reviewer 1:
+
+Comment 1: 
+"While reading the manuscript, I felt that the discussion of soft-particle approaches could be strengthened by incorporating some recent studies on growing colony simulations that employ soft interaction models. Such works demonstrate that, despite their computational limitations, soft-particle frameworks continue to be widely used and have provided important insights into colony growth and collective dynamics. Including a brief discussion of these studies (for example, some articles Phys. Rev. Lett., 2013, 111, 168101, J. R. Soc., Interface, 2017, 14, 20170073, J. R. Soc., Interface, 2015, 12, 20141290 , Soft Matter, 19 (42), 8136-8149 (2023), Phys. Rev. E, 2017, 96, 052404, Soft Matter 19, 1034-1045 (2023), Soft Matter, 20, 3823-3835 (2024)) would help place the present work in a broader context and provide readers with a more balanced view of the field."
+
+We added a paragraph to the related work section, describing the contributions of the works suggested. In other efforts to present our work in the broader context, we wanted to use the reviewer's listed works to discuss what step-size are typically used, as this is central to our discussion, but none listed this. We did add discussion to the related works section relating to the step-size used in an existing related work for the soft-model section, and we added discussion to the conclusion and future work discussion relating to this. Furthermore, the works listed use a nutrient-based growth-limiting mechanic, and we add a brief discussion in the conclusion about how our comparison might change when using this mechanic.
+
+J. R. Soc., Interface, 2015, 12, 20141290, is a continuum-based model, and so we did not include it under the soft-model approach part of the related work, but added a brief paragraph on the wide use of continuum models in this field, including this work and a reference of a wider review of the topic.
+
+
+Comment 2:
+"The present comparison is restricted to two-dimensional colonies. I was wondering how the conclusions might change in three dimensions, particularly since many biological systems of interest (e.g., biofilms and multicellular aggregates) are intrinsically 3D. Would the computational advantage of the hard model become even more significant in such cases, or might additional challenges arise from contact handling and constraint resolution? I am not suggesting additional simulations, but a short discussion of the expected behavior in 3D would substantially broaden the relevance of the study."
+
+We added a paragraph to the conclusion, discussing our expectations for how the performance difference between the models might change in 3D. This is, of course, largely speculative and based partially off of earlier works discussing this for non-active spherical granular particles, and so actual simulations will need to be run to confirm our hypothese, but hopefully our views on this are of value to the community.
+
+
+Comment 3:
+"The results convincingly demonstrate the advantages of the hard model within the framework considered here. At the same time, it may be worth briefly acknowledging that the choice between hard and soft approaches is often dictated not only by computational efficiency but also by the specific physical processes one wishes to capture. For example, soft-particle models can naturally accommodate deformability and force-based mechanical interactions. A short discussion of this aspect would provide a useful perspective for readers seeking to select an appropriate modeling framework for their own applications."
+
+We added discussion to the conclusion regarding this, discussing such physical differences, how the soft model can be modified to be more rigid (partially based off of work done in response to Reviewer #2, Major concern #1) and how the hard model could be modified to be more deformable.
+
+
+Reviewer 2:
+
+Major concern 1:
+"A central conclusion of the paper is that the hard model is superior to the soft model in both physical accuracy and computational performance. However, the soft model appears to suffer from very large unphysical overlaps, with reported packing fractions exceeding 5 in the colony center. This raises the question of whether the soft model is intrinsically inadequate or whether the chosen stiffness, timestep criterion, force law, or integration scheme under-resolves the soft-contact dynamics."
+
+To address this concern, we added addition experiments to 6.2, where we show that, by increasing the stiffness, we can reduce the packing fraction to below 1, but that this comes with increased computational cost. We tie this finding into discussions in the conclusion suggested by Reviewer #1, comment #3.
+
+
+Major concern 2:
+"The manuscript states that both models reproduce concentric ring patterns and microdomain formation observed experimentally. However, the comparison with experiments is largely visual. The authors should include quantitative measures such as ring spacing, radial density profiles, colony expansion rate, orientational correlation length, microdomain size distribution, and possibly comparison with available experimental data from the cited literature."
+
+Ring spacing: TODO Fig. 21(b) only considers the hard model at R=260, lambda = 10^-4, we should have a soft vs hard comparison at different lambda (for smaller R)
+
+Radial Density Profile: It is not clear exactly what is meant, as Figure 7.(a) provides a radial packing fraction profile, which provides a radial profile of the packing fraction: the ratio of area taken up by the cells versus the total area, which is equivalent to density for our uniform-mass particle model.
+
+Colony Expansion Rate: This is simply the gradient of Fig. 8(b). A comparison of the growth rate was already made between the two models, but a further comparison for the different lambda was added.
+
+TODO: Upload a plot for this to Zenodo. I wouldn't add anything to the paper but might be good to point to.
+
+Orientation Correlation Length: We added to 6.5 further experiments to compare this between the two models and different lambda, including new discussion, a graph of the orientation correlation function, and a table with the lengths.
+
+Microdomain size distribution: This is already provided in 6.5, specifically Fig. 13.
+
+Comparison to experimental data: We did not provide any comparison as the goal of this work is to compare these two existing models in a simulation setting, with a key focus on HPC-computational performance, and providing an open-source parallelized framework (both largely missing from this field). The models themselves have already been compared to experimental data (Hard: Weady et al., Soft: You et al., 2018), and whilst further comparison would be beneficial to the community, the authors' scientific backgrounds make them better equipped to address the model-comparison-within-HPC research gap, than to provide deeper insights than the existing experimental comparisons.
+
+
+Major concern 3:
+"The CFL-type timestep is based on a median velocity scale. While this is computationally convenient, it may miss rare but important fast-moving cells or local overlaps, especially in dense or highly heterogeneous regions. The authors should justify why the median velocity is preferable to a maximum, percentile-based, or local overlap-based criterion."
+
+We added paragraph in 5.3 discussing the original ideas behind the use of median versus maximum. Overlap was not considered in the CFL condition in literature, and was therefore not part of the original choice as to exclude overlap in the adaptive timestepping. We later do include current overlap in discussions as to why this could reduce the overlap, but will ultimately not help the case of the soft model when compared to the hard model.
+We expanded paragraph in 6.2 to discuss that a criterion based on maximum, high-percentile or current-overlap could reduce the overlap in the simulation.
+In the conclusion, we expanded the discussion about the criterion to emphasise that whilst we could use a stricter criterion to reduce the step-size and reduce overlap, this will further disadvantage the soft model regarding computational cost, when it is already more costly, and therefore provide no advantage to the soft model in the comparison central to the paper.
+
+
+Major concern 4:
+"The statement that the hard model is "strongly preferred for nearly all applications" seems too broad. The current simulations are two-dimensional, use one class of rod-like cells, neglect nutrient fields and other biochemical feedbacks, and rely on one specific soft-contact implementation."
+
+We rehprased our abstract and our conclusion to scope our findings to the class of simulation considered, although we add discussion as to how 3D and nutrient fields might impact the comparison.
+
+
+Minor concern 1:
+"The manuscript uses "step-size," "timestep," and "time step" somewhat interchangeably. Please use one consistent terminology throughout."
+
+The terms "step-size" and "timestep" are not used interchangeably but refer to two separate things: "step-size" refers to the change in time between iterations of the numerical iterator and "timestep" refers to the iteration itself. To be clear, we add a short footnote to the first use of "timestep" to be clear that we do not mean "step-size" by it. The one use of "time step" was a mistake, and has been changed to "timestep" to match other usages.
+
+
+Minor concern 2:
+"The manuscript sometimes refers to both bacteria and fungi, but later uses "bacteria" exclusively. Please clarify whether the model is intended for bacterial colonies only or more generally for rod-like microbial collectives."
+
+We added a paragraph explaining that whilst we refer to "bacteria" throughout the work, the model can also be used for other microbes like rod-shaped funghi.
+
+
+Minor concern 3:
+"The statement that the extension to fully three-dimensional simulations is "straightforward" should be qualified, since 3D contact detection, domain decomposition, and solver scalability may introduce substantial additional challenges."
+
+We added to section 3 and the conclusion discussion about how the framework can be alrady used for 3D simulations, and provide in our referenced Zenodo repository and short video demonstrating the usage of the framework in this setting with a toy example. In the conclusion, we give a speculative discussion about solver scalability, and we describe why we expect our 2D domain decomposition to be suitable also for 3D experiments.
+
+
+Minor concern 4:
+"Please define all symbols immediately when they first appear. Some matrix quantities, such as D, L, G, and the stress mapping, would benefit from a clearer explanation or schematic."
+
+We made the following changes regarding symbol definitions:
+- The derived analytical expression in 6.4: added that the expression is for stress in Weady et al.'s continuum model, and provided a definition for c.
+- Defined C as the number of constraints
+- v_i was never defined. This was actually an incorrect variable name, as u_i had already been defined for the velocity. We also define the norm as the L2-norm.
+- We introduce \Delta t as the step-size prior to Eq. 6.
+- Rewrote the first paragraph of 4.2, to introduce definitions for F, U, and M before stating the equation relating them.
+
+A schematic was added for the data flow of the hard collision model (Fig. 3)
+
+
+Minor concern 5:
+"The abstract is quite long and already contains many detailed numerical values. It could be shortened by focusing on the main comparison, the most important physical difference, and the key performance conclusion."
+
+The abstract was reduced in size, removing the detailed numerical values and focusing on the key physical and performance differences qualitatively.
+
+
+Not in review, but spotted during addressing reviewer 2, minor concern 4:
+alpha was used as a variable for two different definitions. We changed the scaling factor from alpha to beta, to avoid this.
+
+
+
+
+
+
