@@ -1,5 +1,7 @@
 We thank the reviewers for their review of the manuscript, and have addressed their comments, as dictated below.
 
+We have provided a "cell-collectives-diff.pdf" which shows the changes made between the submitted manuscript and the revised manuscript.
+
 Reviewer 1:
 
 Comment 1: 
@@ -33,19 +35,17 @@ To address this concern, we added addition experiments to 6.2, where we show tha
 Major concern 2:
 "The manuscript states that both models reproduce concentric ring patterns and microdomain formation observed experimentally. However, the comparison with experiments is largely visual. The authors should include quantitative measures such as ring spacing, radial density profiles, colony expansion rate, orientational correlation length, microdomain size distribution, and possibly comparison with available experimental data from the cited literature."
 
-Ring spacing: TODO Fig. 21(b) only considers the hard model at R=260, lambda = 10^-4, we should have a soft vs hard comparison at different lambda (for smaller R)
+Ring spacing: We added Figure 5 to section 6.1, which shows the average cell length radially, and an accompaning paragraph. As only lambda=10^-3 forms distinct rings, the comparison of ring spacing is limited to this.
 
-Radial Density Profile: It is not clear exactly what is meant, as Figure 7.(a) provides a radial packing fraction profile, which provides a radial profile of the packing fraction: the ratio of area taken up by the cells versus the total area, which is equivalent to density for our uniform-mass particle model.
+Radial Density Profile: It is not clear exactly what is meant, as Figure 8(a) provides a radial packing fraction profile, which provides a radial profile of the packing fraction: the ratio of area taken up by the cells versus the total area, which is equivalent to density for our uniform-mass particle model.
 
-Colony Expansion Rate: This is simply the gradient of Fig. 8(b). A comparison of the growth rate was already made between the two models, but a further comparison for the different lambda was added.
-
-TODO: Upload a plot for this to Zenodo. I wouldn't add anything to the paper but might be good to point to.
+Colony Expansion Rate: This is simply the gradient of Fig. 9(b). A comparison of the growth rate was already made between the two models, but a further comparison for the different lambda was added. A plot of the colony expansion rate dR/dt against R is added to the Zenodo supplementary material, but we do not believe there is much to gain in a dedicated figure in the paper.
 
 Orientation Correlation Length: We added to 6.5 further experiments to compare this between the two models and different lambda, including new discussion, a graph of the orientation correlation function, and a table with the lengths.
 
-Microdomain size distribution: This is already provided in 6.5, specifically Fig. 13.
+Microdomain size distribution: This is already provided in 6.5, specifically Fig. 14.
 
-Comparison to experimental data: We did not provide any comparison as the goal of this work is to compare these two existing models in a simulation setting, with a key focus on HPC-computational performance, and providing an open-source parallelized framework (both largely missing from this field). The models themselves have already been compared to experimental data (Hard: Weady et al., Soft: You et al., 2018), and whilst further comparison would be beneficial to the community, the authors' scientific backgrounds make them better equipped to address the model-comparison-within-HPC research gap, than to provide deeper insights than the existing experimental comparisons.
+Comparison to experimental data: We did not provide any comparison as the goal of this work is to compare these two existing models in a simulation setting, with a key focus on HPC-computational performance, and providing an open-source parallelized framework (both largely missing from this field). The models themselves have already been compared to experimental data (e.g. Hard: Weady et al., Soft: You et al., 2018), and whilst further comparison would be beneficial to the community, goal of this paper is to address the model-comparison-within-HPC research gap, than to provide deeper insights than the existing experimental comparisons.
 
 
 Major concern 3:
