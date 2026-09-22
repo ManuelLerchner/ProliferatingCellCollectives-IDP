@@ -1,5 +1,9 @@
 # Interdisciplinary Project: Proliferating Cell Collectives: A Comparison of Hard and Soft Collision Models
 
+This is the corresponding GitHub repository for the paper "Proliferating cell collectives: A comparison of hard and soft collision models", 2026, by Manuel Lerchner and Samuel James Newcome, published in Computer Physics Communications at https://doi.org/10.1016/j.cpc.2026.110412.
+
+See also the Zenodo repository for the associated data and videos: https://doi.org/10.5281/zenodo.19931308
+
 🦠 | Bacteria Growth using Hard Model             |  Bacteria Growth using Soft Model
 :-------------------------:|:-------------------------:|:-------------------------:
 &nbsp;| $R_{end} = 100$ | $R_{end} = 100$
